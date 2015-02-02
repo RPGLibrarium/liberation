@@ -1,4 +1,4 @@
-package de.rpg_librarium.liberation;
+package de.rpg_librarium.liberation.domain.entity;
 
 
 import javax.persistence.Entity;

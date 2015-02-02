@@ -12,32 +12,36 @@
        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
 
 	<context:component-scan base-package="de.rpg_librarium.liberation" />
-
+	
+	<!-- JNDI Database Connection - Details in Servers Context.xml -->
 	<bean id="dataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
 		<property name="jndiName" value="java:comp/env/jdbc/LiberationDB" />
 	</bean>
-
-	<bean id="sessionFactory"
-		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
-		<property name="dataSource" ref="dataSource" />
+	
+	<!-- JPA Hibernate - Autodetecting Entities - Autogenerating Tables -->
+	<bean id="entityManagerFactory" 
+      class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+   		<property name="dataSource" ref="dataSource" />
 		<property name="packagesToScan" value="de.rpg_librarium.liberation" />
-		<property name="hibernateProperties">
-			<props>
+	    <property name="jpaVendorAdapter">
+	        <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+	    </property>
+
+	    <property name="jpaProperties">
+	        <props>
 				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
 				<prop key="hibernate.show_sql">true</prop>
 				<prop key="hibernate.archive.autodetection">class</prop>
 				<prop key="hibernate.hbm2ddl.auto">update</prop>
 			</props>
-		</property>
+	    </property>
 	</bean>
 
 	<!-- Transaction related configuration for working with database -->
-	<tx:annotation-driven />
 	<bean id="transactionManager"
-		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
-		<property name="sessionFactory" ref="sessionFactory" />
+		class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
 	</bean>
-
-	<mvc:annotation-driven />
+	<tx:annotation-driven transaction-manager="transactionManager"/>
 
 </beans>
