@@ -1,6 +1,7 @@
 <div class="row marketing">
   <h4>Büchersammlung</h4>
-  <p>
-    Hier steht später die Büchersammlung
-  </p>
+  <ul>
+  	<li ng-repeat="book in books">{{book.title}} {{book.price | currency}}</li>
+  </ul>
 </div>
+

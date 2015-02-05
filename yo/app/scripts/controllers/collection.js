@@ -9,9 +9,22 @@
  */
 angular.module('liberationApp')
   .controller('CollectionCtrl', function ($scope) {
-    $scope.awesomeThings = [
-      'HTML5 Boilerplate',
-      'AngularJS',
-      'Karma'
+  	var buch1 = {
+  		title:"Wege der Helden", 
+  		system:"DSA 4.1", 
+  		publisher:"Ulisses Spiele", 
+  		owner:"Yoann Kehler",
+  		price: 33
+  	}
+  	var buch2 = {
+  		title:"Wege der Helden", 
+  		system:"DSA 4.1", 
+  		publisher:"Ulisses Spiele", 
+  		owner:"Yoann Kehler",
+  		price: 44
+  	}
+    $scope.books = [
+      buch1,
+      buch2 
     ];
   });
