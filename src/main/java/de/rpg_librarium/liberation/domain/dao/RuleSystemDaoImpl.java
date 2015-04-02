@@ -1,0 +1,10 @@
+package de.rpg_librarium.liberation.domain.dao;
+
+import de.rpg_librarium.liberation.domain.dao.generic.GenericHibernateDaoImpl;
+import de.rpg_librarium.liberation.domain.entity.RuleSystem;
+
+
+public class RuleSystemDaoImpl extends GenericHibernateDaoImpl<RuleSystem, Long> implements
+		RuleSystemDao {
+
+}

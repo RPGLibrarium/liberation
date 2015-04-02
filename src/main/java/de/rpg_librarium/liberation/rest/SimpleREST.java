@@ -24,7 +24,7 @@ public class SimpleREST {
 	@Transactional
 	public String getGreeting(@PathVariable String name) {
         Item item = new Item();
-        item.setProduct("name");
+       // item.setProduct("name");
         em.persist(item);
 		return item.toString();
 	}
