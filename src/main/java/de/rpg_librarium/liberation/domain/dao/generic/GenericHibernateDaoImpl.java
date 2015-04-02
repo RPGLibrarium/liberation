@@ -8,13 +8,13 @@ import java.lang.reflect.ParameterizedType;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import javax.transaction.Transactional;
 
+import org.springframework.transaction.annotation.Transactional;
 /**
  * @author librarium
  *
  */
-@Transactional
+
 public class GenericHibernateDaoImpl<E, K extends Serializable> implements GenericDao<E, K> {
 	
 	@PersistenceContext
@@ -22,7 +22,7 @@ public class GenericHibernateDaoImpl<E, K extends Serializable> implements Gener
 	
 	private Class<E> entityClass;
 	
-	 public GenericHibernateDaoImpl() {
+	public GenericHibernateDaoImpl() {
 	        ParameterizedType genericSuperclass = (ParameterizedType) getClass()
 	             .getGenericSuperclass();
 	        this.entityClass = (Class<E>) genericSuperclass
@@ -30,6 +30,7 @@ public class GenericHibernateDaoImpl<E, K extends Serializable> implements Gener
 	    }
 
 	@Override
+	@Transactional
 	public E persist(E object) {
 		this.em.persist(object);
 		return object;
