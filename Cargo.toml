@@ -1,0 +1,6 @@
+[package]
+name = "Liberation"
+version = "0.1.0"
+authors = ["Yoann Kehler <privat@yoann.de>"]
+
+[dependencies]
