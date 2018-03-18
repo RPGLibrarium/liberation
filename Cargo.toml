@@ -1,6 +1,10 @@
 [package]
-name = "Liberation"
+name = "liberation"
 version = "0.1.0"
 authors = ["Yoann Kehler <privat@yoann.de>"]
 
 [dependencies]
+
+[dependencies.mysql]
+version = "*"
+features = ["rustc-serialize"]
