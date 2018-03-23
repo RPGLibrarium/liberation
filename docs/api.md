@@ -206,15 +206,31 @@ GET /v1/members/
 GET /v1/members/{memberid}
 ```
 
-**Content-Type:** application/json
-- [200: OK](#200-ok-titles)
-- [400: Bad Request](#400-bad-request)
-- [401: Unauthroized](#401-unauthorized)
-- [403: Forbidden](#403-forbidden)
-- [429: Too Many Requests](#429-too-many-requests)
+#### Parameters
+| Name | Type  | Required | Description |
+|--------------|--------|----------|----------------------------------------------------------------------------------|
+| Authorization | header | true | Oauth token |
 
+```json
+{
+  "member": {
+    "id": "123143",
+    "name": "Eva Musterapfel",
+    "email": "eva.musterapfel@example.com",
+    "roles": [
+      {
+        "identifier": "admin"
+      }
+      {
+        "identifier": "member"
+      }
+    ],
+    "inventory": [
 
-
+    ]
+  }
+}
+```
 ### Get member informations
 ```
 GET /v1/members/{memberid}
