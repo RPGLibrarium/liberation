@@ -3,6 +3,14 @@
 
 @import "{{ site.theme }}";
 
+table, td, th {
+	border: 1px solid black;
+	border-collapse: collapse;
+	padding: 5px;
+	margin: 1px;
+	vertical-align: baseline;
+}
+
 .api-ref-title {
 	font-size: 1.17em;
 	color: #111;
@@ -29,7 +37,6 @@ a.api-ref-title, a.api-ref-subtitle {
 		margin: 1px;
 		vertical-align: baseline;
     }
-
 }
 
 .api-ref-rule {
