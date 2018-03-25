@@ -21,10 +21,10 @@ POST /v1/books/
 ```json
 {
   "book": {
-    "title": 567548,
+    "title": "567548",
     "owner": {
       "type": "member",
-      "id": 123456754
+      "id": "123456754"
     },
     "quality": "Bad"
   }

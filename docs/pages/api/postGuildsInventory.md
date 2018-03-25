@@ -21,7 +21,7 @@ POST /v1/guilds/{guildid}/inventory
 ```json
 {
   "book": {
-    "title": 567548,
+    "title": "567548",
     "quality": "good"
   }
 }
