@@ -40,6 +40,7 @@ POST /v1/titles
 #### 201: Created
 Headers:
 ```http
+HTTP/1.1 201 Created
 Location: /v1/titles/<new id>
 ```
 
