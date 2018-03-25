@@ -26,7 +26,6 @@ GET /v1/rpgsystem/{systemid}
 - [429: Too Many Requests](#429getTitlesByRpgSystem)
 
 #### 200: Ok
-{: #200getTitlesByRpgSystem}
 ```json
 {
   "rpgsystem": {

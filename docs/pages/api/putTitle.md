@@ -1,14 +1,14 @@
 ---
-title: Update RpgSystem
+title: Update Title
 layout: page
-nav_link: Update RpgSystem
-nav_order: 314
+nav_link: Update Title
+nav_order: 324
 nav_level: 3
 lang: en
 ---
 
 ```
-PUT /v1/rpgsystem/{systemid}
+PUT /v1/titles/{titleid}
 ```
 ### Parameters
 
@@ -18,18 +18,27 @@ PUT /v1/rpgsystem/{systemid}
 
 ### Responses
 **Content-Type:** application/json
-- [200: OK](#200getTitlesByRpgSystem)
-- [400: Bad Request](#400getTitlesByRpgSystem)
-- [401: Unauthroized](#401getTitlesByRpgSystem)
-- [403: Forbidden](#403getTitlesByRpgSystem)
-- [404: Not Found](#404getTitlesByRpgSystem)
-- [429: Too Many Requests](#429getTitlesByRpgSystem)
+- [200: OK](#200-ok)
+- [400: Bad Request](#400-bad-request)
+- [401: Unauthroized](#401-unauthorized)
+- [403: Forbidden](#403-forbidden)
+- [404: Not Found](#404-not-found)
+- [429: Too Many Requests](#429-too-many-requests)
 
-#### 200: Ok
+#### 200: OK
+The response body contains a list of all registered titles in JSON format.
 ```json
 {
-  "rpgsystem": {
+  "title":
+  {
     "name": "Wege der Helden",
+    "system": {
+      "id": "3042975",
+    },
+    "language": "DE",
+    "publisher": "Ulisses",
+    "year": "2007",
+    "coverimage": "https://example.com/wege-der-helden.jpg",
   }
 }
 ```
