@@ -9,7 +9,7 @@ lang: en
 
 # Objects
 ## Book
-- Title: String
+- Title: Title
 - Owner: Entity
 - Rentals: List\<Rental\>
 - Quality: Enum
