@@ -2,7 +2,7 @@
 title: Create Guild
 layout: page
 nav_link: Create Guild
-nav_order: 352
+nav_order: 353
 nav_level: 3
 lang: en
 ---
