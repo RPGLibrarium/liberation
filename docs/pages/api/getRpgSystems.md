@@ -11,13 +11,13 @@ lang: en
 GET /v1/rpgsystems
 ```
 
-#### Parameters
+### Parameters
 
 | Name | Type  | Required | Description |
 |:--------------|:--------|:----------:|:----------------------------------------------------------------------------------|
 {% include_relative partials/param_authorization.md required=false %}
 
-#### Responses
+### Responses
 **Content-Type:** application/json
 - [200: OK](#200-ok)
 - [400: Bad Request](#400-bad-request)
