@@ -10,11 +10,11 @@ lang: en
 | Tables | Description |
 |-------------|--------------------------------------------|
 | [rpg_systems](#rpg_systems) | All the RpgSystems |
-| [titles(#titles)] | Titles with RpgSystems |
+| [titles](#titles) | Titles with RpgSystems |
 | [books](#books) | Books with Titles |
 | [members](#members) | Mapping between memberIds and keycload Ids |
-| guilds | All guilds |
-| rentals | All rentals |
+| [guilds](#guilds) | All guilds |
+| [rentals](#rentals) | All rentals |
 
 ### rpg_systems
 | Column | Type | |
