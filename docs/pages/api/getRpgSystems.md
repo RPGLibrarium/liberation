@@ -32,7 +32,8 @@ GET /v1/rpgsystems
       "id": "123829",
       "name": "DSA 4.1",
     }
-  ]
+  ],
+  "editable": true
 }
 ```
 

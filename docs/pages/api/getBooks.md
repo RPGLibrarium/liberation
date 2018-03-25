@@ -1,14 +1,14 @@
 ---
-title: Get Member's Inventory
+title: Get Books
 layout: page
-nav_link: Get Member's Inventory
-nav_order: 343
+nav_link: Get Books
+nav_order: 331
 nav_level: 3
 lang: en
 ---
 
 ```
-GET /v1/members/{memberid}/inventory
+GET /v1/books/
 ```
 
 ### Parameters
@@ -23,48 +23,47 @@ GET /v1/members/{memberid}/inventory
 - [400: Bad Request](#400-bad-request)
 - [401: Unauthroized](#401-unauthorized)
 - [403: Forbidden](#403-forbidden)
-- [404: Not Found](#404-not-found)
 - [429: Too Many Requests](#429-too-many-requests)
 
 #### 200: Ok
 ```json
 {
-  "inventory": {
-    "memberid": "22341",
-    "ownedbooks": [
-      {
-        "id": "123432",
-        "quality": "Bad",
-        "avaliable": true,
-        "rental": {
-          "from": "1997-07-16",
-          "to": "1997-07-25",
-          "rentee": {
-            "type": "member",
-            "id": "12931",
-            "name": "Eva Musterapfel"
-          }
-        }
-      }
-    ],
-    "rentals": [
-      {
-        "id": "123432",
-        "owner": {
+  "books": [
+    {
+      "id": "123432",
+      "title": {
+        "id": "123829",
+        "name": "Wege der Helden",
+        "system": {
+          "id": "3042975",
+          "name": "DSA 4.1"
+        },
+        "language": "DE",
+        "publisher": "Ulisses",
+        "year": "2007",
+        "coverimage": "https://example.com/wege-der-helden.jpg",
+        "stock": 5,
+        "avaliable": 5,
+      },
+      "owner": {
+        "type": "member",
+        "id": "12931",
+        "name": "Eva Musterapfel"
+      },
+      "quality": "Bad",
+      "avaliable": true,
+      "rental": {
+        "from": "1997-07-16",
+        "to": "1997-07-25",
+        "rentee": {
           "type": "member",
           "id": "12931",
           "name": "Eva Musterapfel"
-        },
-        "quality": "Bad",
-        "avaliable": true,
-        "rental": {
-          "from": "1997-07-16",
-          "to": "1997-07-25",
         }
       }
-    ],
-  },
-  "editable": true,
+    }
+  ],
+  "editable": true
 }
 ```
 
@@ -73,7 +72,5 @@ GET /v1/members/{memberid}/inventory
 {% include_relative partials/unauthorized.md %}
 
 {% include_relative partials/forbidden.md %}
-
-{% include_relative partials/notFound.md %}
 
 {% include_relative partials/tooManyRequests.md %}

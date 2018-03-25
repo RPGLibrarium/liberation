@@ -1,13 +1,14 @@
 ---
-title: Get Guilds Details
+title: Get Book Details
 layout: page
-nav_link: Get Guild Details
-nav_order: 352
+nav_link: Get Book Details
+nav_order: 332
 nav_level: 3
 lang: en
 ---
+
 ```
-GET /v1/guilds/{guildid}
+GET /v1/books/
 ```
 
 ### Parameters
@@ -22,22 +23,46 @@ GET /v1/guilds/{guildid}
 - [400: Bad Request](#400-bad-request)
 - [401: Unauthroized](#401-unauthorized)
 - [403: Forbidden](#403-forbidden)
+- [404: Not Found](#404-not-found)
 - [429: Too Many Requests](#429-too-many-requests)
 
 #### 200: Ok
 ```json
 {
-  "guild": {
-    "id": "123143",
-    "name": "Librarium Kapu2",
-    "address": "Schusterstraße 23, 12345 Entenhausen",
-    "contact": {
-      "id": "123143",
-      "name": "Eva Musterapfel",
-      "email": "eva.musterapfel@example.com"
+  "books": {
+    "id": "123432",
+    "title": {
+      "id": "123829",
+      "name": "Wege der Helden",
+      "system": {
+        "id": "3042975",
+        "name": "DSA 4.1"
+      },
+      "language": "DE",
+      "publisher": "Ulisses",
+      "year": "2007",
+      "coverimage": "https://example.com/wege-der-helden.jpg",
+      "stock": 5,
+      "avaliable": 5,
+    },
+    "owner": {
+      "type": "member",
+      "id": "12931",
+      "name": "Eva Musterapfel"
+    },
+    "quality": "Bad",
+    "avaliable": true,
+    "rental": {
+      "from": "1997-07-16",
+      "to": "1997-07-25",
+      "rentee": {
+        "type": "member",
+        "id": "12931",
+        "name": "Eva Musterapfel"
+      }
     }
   },
-  "editable": true,
+  "editable": true
 }
 ```
 

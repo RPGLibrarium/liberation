@@ -41,7 +41,8 @@ The response body contains a list of all registered titles in JSON format.
       "stock": 5,
       "avaliable": 5,
     }
-  ]
+  ],
+  "editable": true,
 }
 ```
 
