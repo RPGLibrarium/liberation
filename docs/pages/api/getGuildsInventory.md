@@ -8,7 +8,7 @@ lang: en
 ---
 
 ```
-GET /v1/members/{memberid}/inventory
+GET /v1/guilds/{guildid}/inventory
 ```
 
 ### Parameters
@@ -30,7 +30,7 @@ GET /v1/members/{memberid}/inventory
 ```json
 {
   "inventory": {
-    "memberid": "22341",
+    "guildid": "22341",
     "ownedbooks": [
       {
         "id": "123432",

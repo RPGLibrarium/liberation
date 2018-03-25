@@ -1,14 +1,14 @@
 ---
-title: Update Guild
+title: Add to Guilds's Inventory
 layout: page
-nav_link: Update Guild
-nav_order: 356
+nav_link: Add to Guilds's Inventory
+nav_order: 355
 nav_level: 3
 lang: en
 ---
 
 ```
-PUT /v1/guilds/{guildid}
+POST /v1/guilds/{guildid}/inventory
 ```
 
 ### Parameters
@@ -20,26 +20,27 @@ PUT /v1/guilds/{guildid}
 ### Request Body
 ```json
 {
-  "guild": {
-    "name": "Librarium Kapu2",
-    "address": "Schusterstraße 23, 12345 Entenhausen",
-    "contact": {
-      "id": "123143",
-    }
+  "book": {
+    "title": 567548,
+    "quality": "good"
   }
 }
 ```
 
 ### Responses
 **Content-Type:** application/json
-- [204: No Content](#204-no-content)
+- [201: Created](#201-created)
 - [400: Bad Request](#400-bad-request)
 - [401: Unauthroized](#401-unauthorized)
 - [403: Forbidden](#403-forbidden)
+- [404: Not Found](#404-not-found)
 - [429: Too Many Requests](#429-too-many-requests)
 
-#### 204: No Content
-
+#### 201: Created
+Headers:
+```http
+Location: /v1/books/<new id>
+```
 
 {% include_relative partials/badRequest.md %}
 
