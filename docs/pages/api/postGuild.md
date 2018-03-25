@@ -46,6 +46,7 @@ POST /v1/guilds
 #### 201: Created
 Headers:
 ```http
+HTTP/1.1 201 Created
 Location: /v1/guilds/<new id>
 ```
 

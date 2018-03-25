@@ -39,6 +39,7 @@ POST /v1/members/{memberid}/inventory
 #### 201: Created
 Headers:
 ```http
+HTTP/1.1 201 Created
 Location: /v1/books/<new id>
 ```
 

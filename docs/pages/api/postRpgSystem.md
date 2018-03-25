@@ -37,6 +37,7 @@ POST /v1/rpgsystems
 #### 201: Created
 Haders:
 ```http
+HTTP/1.1 201 Created
 Location: /v1/rpgsystems/<new id>
 ```
 
