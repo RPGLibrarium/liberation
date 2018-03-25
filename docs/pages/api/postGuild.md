@@ -2,7 +2,7 @@
 title: Create Guild
 layout: page
 nav_link: Create Guild
-nav_order: 352
+nav_order: 354
 nav_level: 3
 lang: en
 ---
@@ -15,13 +15,6 @@ POST /v1/guilds
 | Name | Type  | Required | Description |
 |:--------------|:--------|:----------:|:----------------------------------------------------------------------------------|
 {% include_relative partials/param_authorization.md required=true %}
-### Responses
-**Content-Type:** application/json
-- [201: Created](#201-created)
-- [400: Bad Request](#400-bad-request)
-- [401: Unauthroized](#401-unauthorized)
-- [403: Forbidden](#403-forbidden)
-- [429: Too Many Requests](#429-too-many-requests)
 
 #### Request Body
 ```json
@@ -33,6 +26,22 @@ POST /v1/guilds
   }
 }
 ```
+
+### Responses
+**Content-Type:** application/json
+- [201: Created](#201-created)
+- [400: Bad Request](#400-bad-request)
+- [401: Unauthroized](#401-unauthorized)
+- [403: Forbidden](#403-forbidden)
+- [429: Too Many Requests](#429-too-many-requests)
+
+### Responses
+**Content-Type:** application/json
+- [201: Created](#201-created)
+- [400: Bad Request](#400-bad-request)
+- [401: Unauthroized](#401-unauthorized)
+- [403: Forbidden](#403-forbidden)
+- [429: Too Many Requests](#429-too-many-requests)
 
 #### 201: Created
 Headers:
