@@ -17,12 +17,14 @@ lang: en
 | [rentals](#rentals) | All rentals |
 
 ### rpg_systems
+
 | Column | Type | |
 |--------|--------------------------------|--|
 | id | int auto_increment primary key |
 | name | varchar(255) not null unique |
 
 ### titles
+
 | Column | Type | References |
 |------------|--------------------------------|---------------|
 | id | int auto_increment primary key |  |
@@ -34,6 +36,7 @@ lang: en
 | coverimage | text |  |
 
 ### books
+
 | Column | Type | References |
 |------------|--------------------------------|---------------------|
 | id | int auto_increment primary key |  |
@@ -43,12 +46,14 @@ lang: en
 | quality | text |  |
 
 ### members
+
 | Column | Type | References |
 |-------------|--------------------------------|---------------------|
 | id | int auto_increment primary key |  |
 | external_id | varchar unique |  |
 
 ### guilds
+
 | Column | Type | References |
 |------------|--------------------------------|------------|
 | id | int auto_increment primary key |  |
@@ -57,6 +62,7 @@ lang: en
 | contact | int  | member.id |
 
 ### rentals
+
 | Column | Type | References |
 |-------------|--------------------------------|---------------------|
 | id | int auto_increment primary key |  |
