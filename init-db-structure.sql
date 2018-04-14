@@ -44,8 +44,6 @@ create table if not exists books (
   owner_member    int null,
   owner_type      enum('guild', 'member')
       as (if(owner_guild is not null, 'guild', 'member')) STORED,
-  owner_id        int
-      as (if(owner_guild is not null, owner_guild, owner_member)) STORED,
   quality         text not null,
   foreign key (title) references titles (id),
   foreign key (owner_guild) references guilds (id),
@@ -63,8 +61,6 @@ create table if not exists rentals (
   rentee_member   int null,
   rentee_type      enum('guild', 'member')
       as (if(rentee_guild is not null, 'guild', 'member')) STORED,
-  rentee_id        int
-      as (if(rentee_guild is not null, rentee_guild, rentee_member)) STORED,
   quality         text not null,
   foreign key (book) references books (id),
   foreign key (title) references titles (id),
