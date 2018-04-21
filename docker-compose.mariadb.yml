@@ -1,4 +1,4 @@
-version: '3'
+version: '3.6'
 
 services:
     db:
@@ -6,3 +6,10 @@ services:
         environment:
             - MYSQL_ROOT_PASSWORD=thereIsNoPassword!
             - MYSQL_DATABASE=liberation
+
+    test-db:
+        image: mariadb
+        environment:
+            - MYSQL_ROOT_PASSWORD=thereIsNoPassword!
+            - MYSQL_DATABASE=test_liberation
+        tmpfs: /var/lib/mysql

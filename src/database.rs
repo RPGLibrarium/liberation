@@ -275,3 +275,53 @@ impl Database {
             }).and(Ok(()));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use database::Database;
+    use mysql;
+    use rand::{Rng, thread_rng};
+
+    fn setup() -> String {
+        let pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
+        let mut conn = pool.get_conn().unwrap();
+
+        let mut rng = thread_rng();
+        let dbname: String = String::from(format!("test_{}", rng.next_u32()));
+        conn.query(format!("create database {}", dbname)).unwrap();
+        return dbname;
+    }
+
+    fn teardown(dbname: String) {
+        let pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
+        let mut conn = pool.get_conn().unwrap();
+
+        conn.query(format!("drop database {}", dbname)).unwrap();
+    }
+
+    #[test]
+    fn connect() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        teardown(dbname);
+    }
+
+    #[test]
+    fn insert_rpg_system_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+
+        let system_in = db.insert_rpg_system(String::from("SR5👿")).unwrap();
+        let system_out = db.get_rpg_systems().unwrap().pop().unwrap();
+        assert_eq!(system_in, system_out);
+        teardown(dbname);
+    }
+
+    fn insert_rpg_system() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+
+        db.insert_rpg_system(String::from("Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==")).unwrap();
+        teardown(dbname);
+    }
+}
