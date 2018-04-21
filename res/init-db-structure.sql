@@ -59,7 +59,6 @@ create table if not exists rentals (
   rentee_member   int null,
   rentee_type      enum('guild', 'member')
       as (if(rentee_guild is not null, 'guild', 'member')) STORED,
-  quality         text not null,
   foreign key (book) references books (id),
   foreign key (title) references titles (id),
   foreign key (rentee_guild) references guilds (id),
