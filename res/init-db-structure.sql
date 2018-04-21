@@ -4,7 +4,6 @@
 
 -- Entity (aka members and guilds) tables
 -- Have to be created created before books+rentals due to foreign keys
-
 create table if not exists members (
   id              int auto_increment primary key,
   external_id     varchar(255) not null unique
@@ -17,7 +16,6 @@ create table if not exists guilds (
   contact         int not null,
   foreign key (contact) references members (id)
 ) character set utf8mb4 collate utf8mb4_general_ci;
-
 
 -- "Book-related" tables
 
