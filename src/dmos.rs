@@ -10,6 +10,7 @@ pub type RentalId = Id;
 pub type Year = u16;
 pub type Date = String;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum EntityType {
     Member,
     Guild,
@@ -32,12 +33,13 @@ impl EntityType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct RpgSystem {
     pub id: RpgSystemId,
     pub name: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Title {
     pub id: TitleId,
     pub name: String,
@@ -48,6 +50,7 @@ pub struct Title {
     pub coverimage: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Book {
     pub id: BookId,
     pub title: TitleId,
@@ -56,11 +59,13 @@ pub struct Book {
     pub quality: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Member {
     pub id: MemberId,
     pub external_id: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Guild {
     pub id: GuildId,
     pub name: String,
@@ -68,6 +73,7 @@ pub struct Guild {
     pub contact: MemberId,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Rental {
     pub id: RentalId,
     pub from: Date,
@@ -133,5 +139,13 @@ impl Rental {
         };
 
         Ok(Rental::new(id, from, to, book, rentee, rentee_type))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works(){
+        assert_eq!(2+2,4);
     }
 }
