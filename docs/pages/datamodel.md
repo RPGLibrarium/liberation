@@ -41,8 +41,9 @@ lang: en
 |------------|--------------------------------|---------------------|
 | id | int auto_increment primary key |  |
 | title | int | titles |
+| owner_member | int null | member.id |
+| owner_guild | int null | guild.id |
 | owner_type | ENUM(member, guild) |  |
-| owner_id | int  | member.id, guild.id |
 | quality | text |  |
 
 ### members
@@ -69,5 +70,6 @@ lang: en
 | from | date |  |
 | to | date |  |
 | book | int  | books.id |
+| rentee_member | int null | member.id |
+| rentee_guild | int null | guild.id |
 | rentee_type | ENUM(member, guild) |  |
-| rentee_id | int | member.id, guild.id |

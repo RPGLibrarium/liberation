@@ -21,14 +21,14 @@ impl Database {
         })
     }
 
-    pub fn insert_rpg_system(&self, name: &String) -> Result<dmos::RpgSystem, Error> {
+    pub fn insert_rpg_system(&self, name: String) -> Result<dmos::RpgSystem, Error> {
         return self.pool.prep_exec("insert into rpg_systems (name) values (:name)",
             params!{
-                "name" => name,
+                "name" => name.clone(),
             }).map(|result| {
                 dmos::RpgSystem {
                     id: result.last_insert_id(),
-                    name: name.clone(),
+                    name: name,
                 }
             })
     }
@@ -46,5 +46,232 @@ impl Database {
         });
     }
 
+    pub fn update_rpg_system(&self, system: &dmos::RpgSystem) ->  Result<(), Error> {
+        return self.pool.prep_exec("update rpg_systems set name=:name where id=:id;",
+            params!{
+                "name" => system.name.clone(),
+                "id" => system.id,
+            }).and(Ok(()));
+    }
 
+    pub fn get_titles(&self) -> Result<Vec<dmos::Title>, Error> {
+        return self.pool.prep_exec("select id, name, system, language, publisher, year, coverimage from titles;",())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
+                dmos::Title {
+                    id: id,
+                    name: name,
+                    system: system,
+                    language: language,
+                    publisher: publisher,
+                    year: year,
+                    coverimage: coverimage,
+                }
+            }).collect()
+        });
+    }
+
+    pub fn insert_title(&self, name: String, system: dmos::RpgSystemId, language: String, publisher: String, year: dmos::Year, coverimage: Option<String>) -> Result<dmos::Title, Error>{
+        return self.pool.prep_exec("insert into titles (name, system, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
+            params!{
+                "name" => name.clone(),
+                "system" => system,
+                "language" => language.clone(),
+                "publisher" => publisher.clone(),
+                "year" => year,
+                "coverimage" => coverimage.clone(),
+            }).map(|result| {
+                dmos::Title {
+                    id: result.last_insert_id(),
+                    name: name,
+                    system: system,
+                    language: language,
+                    publisher: publisher,
+                    year: year,
+                    coverimage: coverimage,
+                }
+            })
+    }
+
+    pub fn update_title(&self, title: &dmos::Title) -> Result<(), Error> {
+        return self.pool.prep_exec("update titles set name=:name, system=:system, language=:language, publisher=:publisher, year=:year, coverimage=:coverimage where id=:id;",
+            params!{
+                "name" => title.name.clone(),
+                "system" => title.system,
+                "language" => title.language.clone(),
+                "publisher" => title.publisher.clone(),
+                "year" => title.year,
+                "coverimage" => title.coverimage.clone(),
+                "id" => title.id,
+            }).and(Ok(()));
+    }
+
+    pub fn get_books(&self) -> Result<Vec<dmos::Book>, Error> {
+        return self.pool.prep_exec("select id, title, owner_member, owner_guild, owner_type, quality from books;",())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, title, owner_member, owner_guild, owner_type, quality) = mysql::from_row(row);
+                //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
+                dmos::Book::from_db(id, title, owner_member, owner_guild, owner_type, quality).unwrap()
+            }).collect()
+        });
+    }
+
+    pub fn insert_book(&self, title: dmos::TitleId, owner: dmos::EntityId, owner_type: dmos::EntityType, quality: String) -> Result<dmos::Book, Error>{
+        return self.pool.prep_exec("insert into titles (title, owner_member, owner_guild, quality) values (:title, :owner_member, :owner_guild, :quality)",
+            params!{
+                "title" => title,
+                "owner_member" => match owner_type {
+                    dmos::EntityType::Member => Some(owner),
+                    dmos::EntityType::Guild => None,
+                },
+                "owner_guild" => match owner_type {
+                    dmos::EntityType::Member => None,
+                    dmos::EntityType::Guild => Some(owner),
+                },
+                "quality" => quality.clone(),
+            }).map(|result| {
+                dmos::Book::new(result.last_insert_id(), title, owner, owner_type, quality)
+            })
+    }
+
+    pub fn update_book(&self, book: &dmos::Book) -> Result<(), Error> {
+        return self.pool.prep_exec("update books set title=:title, owner_member=:owner_member, owner_guild=:owner_guild, quality=:quality where id=:id;",
+            params!{
+                "title" => book.title,
+                "owner_member" => match book.owner_type {
+                    dmos::EntityType::Member => Some(book.owner),
+                    dmos::EntityType::Guild => None,
+                },
+                "owner_guild" => match book.owner_type {
+                    dmos::EntityType::Member => None,
+                    dmos::EntityType::Guild => Some(book.owner),
+                },
+                "quality" => book.quality.clone(),
+                "id" => book.id,
+            }).and(Ok(()));
+    }
+
+    pub fn insert_member(&self, external_id: String) -> Result<dmos::Member, Error> {
+        return self.pool.prep_exec("insert into members (external_id) values (:external_id)",
+            params!{
+                "external_id" => external_id.clone(),
+            }).map(|result| {
+                dmos::Member {
+                    id: result.last_insert_id(),
+                    external_id: external_id,
+                }
+            })
+    }
+
+    pub fn get_members(&self) -> Result<Vec<dmos::Member>, Error> {
+        return self.pool.prep_exec("select id, external_id from members;",())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, external_id) = mysql::from_row(row);
+                dmos::Member {
+                    id: id,
+                    external_id: external_id,
+                }
+            }).collect()
+        });
+    }
+
+    pub fn update_member(&self, member: &dmos::Member) ->  Result<(), Error> {
+        return self.pool.prep_exec("update members set external_id=:external_id where id=:id",
+            params!{
+                "external_id" => member.external_id.clone(),
+                "id" => member.id,
+            }).and(Ok(()));
+    }
+
+    pub fn insert_guild(&self, name: String, address: String, contact: dmos::MemberId) -> Result<dmos::Guild, Error> {
+        return self.pool.prep_exec("insert into guilds (name, address, contact) values (:name, :address, :contact)",
+            params!{
+                "name" => name.clone(),
+                "address" => address.clone(),
+                "contact" => contact,
+            }).map(|result| {
+                dmos::Guild {
+                    id: result.last_insert_id(),
+                    name: name,
+                    address: address,
+                    contact: contact,
+                }
+            })
+    }
+
+    pub fn get_guilds(&self) -> Result<Vec<dmos::Guild>, Error> {
+        return self.pool.prep_exec("select id, name, address, contact from guilds;",())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name, address, contact) = mysql::from_row(row);
+                dmos::Guild {
+                    id: id,
+                    name: name,
+                    address: address,
+                    contact: contact,
+                }
+            }).collect()
+        });
+    }
+
+    pub fn update_guild(&self, guild: &dmos::Guild) ->  Result<(), Error> {
+        return self.pool.prep_exec("update guilds set name=:name, address=:address, contact=:contact where id=:id",
+            params!{
+                "name" => guild.name.clone(),
+                "address" => guild.address.clone(),
+                "contact" => guild.contact,
+                "id" => guild.id,
+            }).and(Ok(()));
+    }
+
+    pub fn get_rentals(&self) -> Result<Vec<dmos::Rental>, Error> {
+        return self.pool.prep_exec("select id, from, to, book, rentee_member, rentee_guild, rentee_type from rentals;",())
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, from, to, book, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row);
+                //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
+                dmos::Rental::from_db(id, from, to, book, rentee_member, rentee_guild, rentee_type).unwrap()
+            }).collect()
+        });
+    }
+
+    pub fn insert_rental(&self, id: dmos::RentalId, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
+        return self.pool.prep_exec("insert into titles ( from, to, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
+            params!{
+                "from" => from.clone(),
+                "to" => to.clone(),
+                "book" => book,
+                "rentee_member" => match rentee_type {
+                    dmos::EntityType::Member => Some(rentee),
+                    dmos::EntityType::Guild => None,
+                },
+                "rentee_guild" => match rentee_type {
+                    dmos::EntityType::Member => None,
+                    dmos::EntityType::Guild => Some(rentee),
+                },
+            }).map(|result| {
+                dmos::Rental::new(result.last_insert_id(), from, to, book, rentee, rentee_type)
+            })
+    }
+
+    pub fn update_rental(&self, rental: &dmos::Rental) -> Result<(), Error> {
+        return self.pool.prep_exec("update rentals set from=:from, to=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
+            params!{
+                "from" => rental.from.clone(),
+                "to" => rental.to.clone(),
+                "book" => rental.book,
+                "rentee_member" => match rental.rentee_type {
+                    dmos::EntityType::Member => Some(rental.rentee),
+                    dmos::EntityType::Guild => None,
+                },
+                "rentee_guild" => match rental.rentee_type {
+                    dmos::EntityType::Member => None,
+                    dmos::EntityType::Guild => Some(rental.rentee),
+                },
+                "id" => rental.id,
+            }).and(Ok(()));
+    }
 }
