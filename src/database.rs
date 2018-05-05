@@ -517,4 +517,28 @@ mod tests {
             _ => panic!(EXPECTED_TOO_LONG),
         }
     }
+
+    #[test]
+    fn update_title_correct(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None))
+            .and_then(|mut title| {
+                title.name = _s("new name");
+                title.year = 1999;
+                title.publisher = _s("new publisher");
+                db.update_title(&title)
+                    .and_then(|_| {
+                        db.get_titles()
+                            .and_then(|mut titles| Ok(titles.pop().map_or(false, |fetched_title| title == fetched_title)))
+                    })
+            });
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Expected updated title to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
+        }
+    }
 }
