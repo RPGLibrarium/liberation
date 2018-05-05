@@ -302,6 +302,11 @@ mod tests {
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
 
+    fn _S(s: &str) -> String { String::from(s) }
+
+    const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
+    const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
+
     fn setup() -> String {
         let pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
         let mut conn = pool.get_conn().unwrap();
@@ -362,6 +367,66 @@ mod tests {
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(name))) => assert_eq!(name, "name"),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+        }
+    }
+
+    #[test]
+    fn insert_title_name_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(String::from(TOO_LONG_STRING), system.id, String::from("de"), String::from("??"), 1248, None));
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            //_ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+        }
+    }
+
+    #[test]
+    fn insert_title_language_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from(TOO_LONG_STRING), String::from("??"), 1248, None));
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            //_ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+        }
+    }
+
+    #[test]
+    fn insert_title_publisher_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from("de"), String::from(TOO_LONG_STRING), 1248, None));
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!(EXPECTED_TOO_LONG),
+        }
+    }
+
+    #[test]
+    fn update_title_name_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 1248, None))
+            .and_then(|mut title| {
+                //let title = t;
+                title.name = _S(TOO_LONG_STRING);
+                return db.update_title(&title)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(_) => result.unwrap(),
+            _ => panic!(EXPECTED_TOO_LONG),
         }
     }
 }
