@@ -456,16 +456,48 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 1248, None))
+            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
             .and_then(|mut title| {
-                //let title = t;
                 title.name = _S(TOO_LONG_STRING);
                 return db.update_title(&title)
             });
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            Err(_) => result.unwrap(),
+            _ => panic!(EXPECTED_TOO_LONG),
+        }
+    }
+
+    #[test]
+    fn update_title_language_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
+            .and_then(|mut title| {
+                title.language = _S(TOO_LONG_STRING);
+                return db.update_title(&title)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!(EXPECTED_TOO_LONG),
+        }
+    }
+
+    #[test]
+    fn update_title_publisher_too_long(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
+            .and_then(|mut title| {
+                title.publisher = _S(TOO_LONG_STRING);
+                return db.update_title(&title)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
             _ => panic!(EXPECTED_TOO_LONG),
         }
     }
