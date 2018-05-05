@@ -362,18 +362,22 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
 
-        let system = db.insert_rpg_system(_s("SR5👿")).unwrap();
+        let result = db.insert_rpg_system(_s("SR5👿"))
+            .and_then(|mut system| {
+                system.name = _s("SR5");
+                db.update_rpg_system(&system)
+                .and_then(|_| {
+                    db.get_rpg_systems()
+                    .and_then(|mut systems| Ok(systems.pop().map_or(false, |fetched_system| system == fetched_system)))
+                })
+            });
 
-        let rpgsystem = dmos::RpgSystem{
-            id: 1,
-            name: String::from(TOO_LONG_STRING)
-        };
-        let result = db.update_rpg_system(&rpgsystem);
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
+            Ok(true) => (),
+            Ok(false) => panic!("Expected updated rpgsystem to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
         }
     }
 
@@ -393,20 +397,6 @@ mod tests {
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
-        }
-    }
-
-    #[test]
-    fn insert_book_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
-
-        let result = db.insert_book(123, 456, dmos::EntityType::Member, String::from(TOO_LONG_STRING));
-        teardown(dbname);
-
-        match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"quality\")"),
         }
     }
 
