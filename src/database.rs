@@ -303,7 +303,7 @@ mod tests {
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
 
-    fn _S(s: &str) -> String { String::from(s) }
+    fn _s(s: &str) -> String { String::from(s) }
 
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
@@ -419,8 +419,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            //_ => panic!(EXPECTED_TOO_LONG),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+            _ => panic!(EXPECTED_TOO_LONG),
         }
     }
 
@@ -433,8 +432,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            //_ => panic!(EXPECTED_TOO_LONG),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+            _ => panic!(EXPECTED_TOO_LONG),
         }
     }
 
@@ -452,13 +450,31 @@ mod tests {
     }
 
     #[test]
+    fn insert_title_correct(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(String::from("Kobolde"))
+            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None))
+            .and_then(|title| {
+                db.get_titles()
+                    .and_then(|mut titles| Ok(titles.pop().map_or(false, |fetched_title| title == fetched_title)))
+            });
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Inserted title was not in DB :("),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
     fn update_title_name_too_long(){
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
+            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
-                title.name = _S(TOO_LONG_STRING);
+                title.name = _s(TOO_LONG_STRING);
                 return db.update_title(&title)
             });
         teardown(dbname);
@@ -473,9 +489,9 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
+            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
-                title.language = _S(TOO_LONG_STRING);
+                title.language = _s(TOO_LONG_STRING);
                 return db.update_title(&title)
             });
         teardown(dbname);
@@ -490,9 +506,9 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_S("Kobolde"), system.id, _S("de"), _S("??"), 2022, None))
+            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
-                title.publisher = _S(TOO_LONG_STRING);
+                title.publisher = _s(TOO_LONG_STRING);
                 return db.update_title(&title)
             });
         teardown(dbname);
