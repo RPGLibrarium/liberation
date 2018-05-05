@@ -57,12 +57,12 @@ impl Database {
         })?)
     }
 
-    pub fn update_rpg_system(&self, system: &dmos::RpgSystem) ->  Result<(), Error> {
-        check_varchar_length!(system.name);
+    pub fn update_rpg_system(&self, rpgsystem: &dmos::RpgSystem) ->  Result<(), Error> {
+        check_varchar_length!(rpgsystem.name);
         Ok(self.pool.prep_exec("update rpg_systems set name=:name where id=:id;",
             params!{
-                "name" => system.name.clone(),
-                "id" => system.id,
+                "name" => rpgsystem.name.clone(),
+                "id" => rpgsystem.id,
             }).and(Ok(()))?)
     }
 
@@ -298,13 +298,14 @@ impl Database {
 mod tests {
     use database::Database;
     use mysql;
+    use dmos;
     use error::FieldError;
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
 
     fn setup() -> String {
-        let pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
-        let mut conn = pool.get_conn().unwrap();
+        let setup_pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
+        let mut conn = setup_pool.get_conn().unwrap();
 
         let mut rng = thread_rng();
         let dbname: String = String::from(format!("test_{}", rng.next_u32()));
@@ -346,7 +347,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(name))) => assert_eq!(name, "name"),
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
         }
     }
@@ -356,12 +357,51 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
 
-        let result = db.insert_rpg_system(String::from("Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich=="));
+        let rpgsystem = dmos::RpgSystem{
+            id: 1,
+            name: String::from("Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==")
+        };
+        let result = db.update_rpg_system(&rpgsystem);
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(name))) => assert_eq!(name, "name"),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
+        }
+    }
+
+    #[test]
+    fn insert_book_name_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+
+        let result = db.insert_book(123, 456, dmos::EntityType::Member, String::from("Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich=="));
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"quality\")"),
+        }
+    }
+
+    #[test]
+    fn update_book_name_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+
+        let book = dmos::Book{
+            id: 123,
+            title: 123,
+            owner: 456,
+            owner_type: dmos::EntityType::Member,
+            quality: String::from("Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==")
+        };
+        let result = db.update_book(&book);
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
         }
     }
 }
