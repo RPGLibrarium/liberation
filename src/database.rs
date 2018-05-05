@@ -560,13 +560,13 @@ mod tests {
         let result = db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-                    .and_then(|title| Ok((system, title)))
+                    .and_then(|title| Ok(title))
             )
-            .and_then(|(system, title)|
+            .and_then(|title|
                 db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((system, title, member)))
+                    .and_then(|member| Ok((title, member)))
             )
-            .and_then(|(system, title, member)|
+            .and_then(|(title, member)|
                 db.insert_book(title.id, member.id, dmos::EntityType::Member, _s("vähri guhd!"))
             )
             .and_then(|orig_book|
