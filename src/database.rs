@@ -134,7 +134,7 @@ impl Database {
 
     pub fn insert_book(&self, title: dmos::TitleId, owner: dmos::EntityId, owner_type: dmos::EntityType, quality: String) -> Result<dmos::Book, Error>{
         check_varchar_length!(quality);
-        Ok(self.pool.prep_exec("insert into titles (title, owner_member, owner_guild, quality) values (:title, :owner_member, :owner_guild, :quality)",
+        Ok(self.pool.prep_exec("insert into books (title, owner_member, owner_guild, quality) values (:title, :owner_member, :owner_guild, :quality)",
             params!{
                 "title" => title,
                 "owner_member" => match owner_type {
@@ -538,6 +538,36 @@ mod tests {
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated title to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn insert_book_correct(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let result = db.insert_rpg_system(_s("Kobolde"))
+            .and_then(|system|
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
+                    .and_then(|title| Ok((system, title)))
+            )
+            .and_then(|(system, title)|
+                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
+                    .and_then(|member| Ok((system, title, member)))
+            )
+            .and_then(|(system, title, member)|
+                db.insert_book(title.id, member.id, dmos::EntityType::Member, _s("vähri guhd!"))
+            )
+            .and_then(|orig_book|
+                db.get_books().and_then(|books| Ok((orig_book, books)))
+            )
+            .and_then(|(orig_book, mut books)|
+                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
+            );
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Inserted book is not in DB :("),
             _ => { result.unwrap(); () },
         }
     }
