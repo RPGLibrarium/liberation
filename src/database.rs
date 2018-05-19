@@ -307,9 +307,9 @@ mod tests {
 
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
-
+    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.2";
     fn setup() -> String {
-        let setup_pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
+        let setup_pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
 
         let mut rng = thread_rng();
@@ -319,7 +319,7 @@ mod tests {
     }
 
     fn teardown(dbname: String) {
-        let pool = mysql::Pool::new("mysql://root:thereIsNoPassword!@172.18.0.3").unwrap();
+        let pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
         let mut conn = pool.get_conn().unwrap();
 
         conn.query(format!("drop database {}", dbname)).unwrap();
@@ -328,14 +328,14 @@ mod tests {
     #[test]
     fn connect() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         teardown(dbname);
     }
 
     #[test]
     fn insert_rpg_system_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
 
         let system_in = db.insert_rpg_system(String::from("SR5👿")).unwrap();
         let system_out = db.get_rpg_systems().unwrap().pop().unwrap();
@@ -346,7 +346,7 @@ mod tests {
     #[test]
     fn insert_rpg_system_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
 
         let result = db.insert_rpg_system(String::from(TOO_LONG_STRING));
         teardown(dbname);
@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn update_rpg_system_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
 
         let result = db.insert_rpg_system(_s("SR5👿"))
             .and_then(|mut system| {
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn update_rpg_system_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
 
         let result = db.insert_rpg_system(String::from("SR5👿"))
         .and_then(|mut rpgsystem| {
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn update_book_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
 
         let book = dmos::Book{
             id: 123,
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn insert_title_name_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from(TOO_LONG_STRING), system.id, String::from("de"), String::from("??"), 1248, None));
         teardown(dbname);
@@ -437,7 +437,7 @@ mod tests {
     #[test]
     fn insert_title_language_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from(TOO_LONG_STRING), String::from("??"), 1248, None));
         teardown(dbname);
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn insert_title_publisher_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from("de"), String::from(TOO_LONG_STRING), 1248, None));
         teardown(dbname);
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn insert_title_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None))
             .and_then(|title| {
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn update_title_name_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn update_title_language_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -515,7 +515,7 @@ mod tests {
     #[test]
     fn update_title_publisher_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -532,7 +532,7 @@ mod tests {
     #[test]
     fn update_title_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None))
             .and_then(|mut title| {
@@ -556,7 +556,7 @@ mod tests {
     #[test]
     fn insert_book_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("mysql://root:thereIsNoPassword!@172.18.0.3/{}", dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
