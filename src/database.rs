@@ -570,24 +570,6 @@ mod tests {
     fn insert_book_correct(){
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-        /*let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-                    .and_then(|title| Ok(title))
-            )
-            .and_then(|title|
-                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((title, member)))
-            )
-            .and_then(|(title, member)|
-                db.insert_book(title.id, member.id, dmos::EntityType::Member, _s("vähri guhd!"))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );*/
         let result = insert_book_default(&db)
             .and_then(|orig_book|
                 db.get_books().and_then(|books| Ok((orig_book, books)))
@@ -677,7 +659,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_book_invalid_owner_type(){
+    fn insert_book_wrong_owner_type(){
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
@@ -708,7 +690,6 @@ mod tests {
     fn update_book_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-
         let result = db.insert_rpg_system(_s("Cthulhu"))
             .and_then(|system|
                 db.insert_title(_s("Cthulhu 666th Edition"), system.id, _s("en"), _s("Pegasus"), 2066, None)
@@ -721,7 +702,7 @@ mod tests {
                     .and_then(|guild| Ok((title, guild)))
             ).and_then(|(title, guild)|
                 insert_book_default(&db)
-                    .and_then(|mut orig_book| Ok((orig_book, title, guild)))
+                    .and_then(|orig_book| Ok((orig_book, title, guild)))
             )
             .and_then(|(mut orig_book, title, guild)| {
                 orig_book.title = title.id;
@@ -744,25 +725,76 @@ mod tests {
     }
 
     #[test]
+    fn update_book_invalid_title() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.title = 0123481642;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_book_invalid_owner_id() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.owner = 0123481642;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_book_wrong_owner_type() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.owner_type = dmos::EntityType::Guild;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
     fn update_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-
-        let book = dmos::Book{
-            id: 123,
-            title: 123,
-            owner: 456,
-            owner_type: dmos::EntityType::Member,
-            quality: String::from(TOO_LONG_STRING)
-        };
-        let result = db.update_book(&book);
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.quality = _s(TOO_LONG_STRING);
+                db.update_book(&orig_book)
+            });
         teardown(dbname);
-
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
+
+    /*
+    ███    ███ ███████ ███    ███ ██████  ███████ ██████  ███████
+    ████  ████ ██      ████  ████ ██   ██ ██      ██   ██ ██
+    ██ ████ ██ █████   ██ ████ ██ ██████  █████   ██████  ███████
+    ██  ██  ██ ██      ██  ██  ██ ██   ██ ██      ██   ██      ██
+    ██      ██ ███████ ██      ██ ██████  ███████ ██   ██ ███████
+    */
 
     #[test]
     fn insert_member_correct() {
@@ -831,6 +863,14 @@ mod tests {
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"member.external_id\")"),
         }
     }
+
+    /*
+     ██████  ██    ██ ██ ██      ██████  ███████
+    ██       ██    ██ ██ ██      ██   ██ ██
+    ██   ███ ██    ██ ██ ██      ██   ██ ███████
+    ██    ██ ██    ██ ██ ██      ██   ██      ██
+     ██████   ██████  ██ ███████ ██████  ███████
+    */
 
     #[test]
     fn insert_guild_correct() {
