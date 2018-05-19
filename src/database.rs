@@ -324,10 +324,11 @@ mod tests {
     use chrono::prelude::*;
 
     fn _s(s: &str) -> String { String::from(s) }
+    fn _d(y: i32, m: u32, d: u32) -> NaiveDate { NaiveDate::from_ymd(y, m, d) }
 
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
-    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.2";
+    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.3";
     fn setup() -> String {
         let setup_pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
@@ -1067,7 +1068,7 @@ mod tests {
                 insert_book_default(&db)
                     .and_then(|book| Ok((book, member)))
             ).and_then(|(book, member)|
-                db.insert_rental("2018-02-04".parse::<NaiveDate>().expect("Wrong date format in test"), "2018-04-16".parse::<NaiveDate>().expect("Wrong date format in test"), book.id, member.id, dmos::EntityType::Member)
+                db.insert_rental(_d(2018, 2, 4), _d(2018, 4, 16), book.id, member.id, dmos::EntityType::Member)
             ).and_then(|orig_rental|
                 db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
             ).and_then(|(orig_rental, mut rentals)|
@@ -1087,7 +1088,40 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|book|
-                db.insert_rental(NaiveDate::from_ymd(2014,8,16), NaiveDate::from_ymd(3264,12,08), 012481632, book.owner, book.owner_type)
+                db.insert_rental(_d(2014,8,16), _d(3264,12,08), 012481632, book.owner, book.owner_type)
+            );
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn insert_rental_invalid_owner_id() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, 012481632, book.owner_type)
+            );
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn insert_rental_wrong_owner_type() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, book.owner, match book.owner_type {
+                    dmos::EntityType::Member => dmos::EntityType::Guild,
+                    dmos::EntityType::Guild => dmos::EntityType::Member,
+                })
             );
         teardown(dbname);
         match result {
