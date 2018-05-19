@@ -15,7 +15,7 @@ cache: cargo
 sudo: false
 
 addons:
-  mariadb: '10'
+  mariadb: '10.2'
 
 script:
   - cargo build --verbose --all
