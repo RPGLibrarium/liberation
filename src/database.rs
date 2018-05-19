@@ -401,27 +401,6 @@ mod tests {
     }
 
     #[test]
-    fn update_book_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-
-        let book = dmos::Book{
-            id: 123,
-            title: 123,
-            owner: 456,
-            owner_type: dmos::EntityType::Member,
-            quality: String::from(TOO_LONG_STRING)
-        };
-        let result = db.update_book(&book);
-        teardown(dbname);
-
-        match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
-        }
-    }
-
-    #[test]
     fn insert_title_name_too_long(){
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
@@ -580,6 +559,27 @@ mod tests {
             Ok(true) => (),
             Ok(false) => panic!("Inserted book is not in DB :("),
             _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn update_book_name_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let book = dmos::Book{
+            id: 123,
+            title: 123,
+            owner: 456,
+            owner_type: dmos::EntityType::Member,
+            quality: String::from(TOO_LONG_STRING)
+        };
+        let result = db.update_book(&book);
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
         }
     }
 }
