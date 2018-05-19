@@ -2,6 +2,7 @@ use mysql;
 use dmos;
 use error::DatabaseError as Error;
 use error::FieldError;
+use chrono::prelude::*;
 
 pub static INIT_DB_STRUCTURE: &str = include_str!("../res/init-db-structure.sql");
 
@@ -10,6 +11,8 @@ const MAX_VARCHAR_LENGTH: usize = 255;
 pub struct Database {
     pool: mysql::Pool
 }
+
+static SQL_DATEFORMAT: &str = "%Y-%m-%d";
 
 macro_rules! check_varchar_length{
     ($( $x:expr ),+) => {
@@ -253,6 +256,8 @@ impl Database {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, from, to, book, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row);
                 //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
+                let from: NaiveDate = from;
+                let to: NaiveDate = to;
                 dmos::Rental::from_db(id, from, to, book, rentee_member, rentee_guild, rentee_type).unwrap()
             }).collect()
         })?)
@@ -261,8 +266,8 @@ impl Database {
     pub fn insert_rental(&self, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
         Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
             params!{
-                "from" => from.clone(),
-                "to" => to.clone(),
+                "from" => from,
+                "to" => to,
                 "book" => book,
                 "rentee_member" => match rentee_type {
                     dmos::EntityType::Member => Some(rentee),
@@ -280,8 +285,10 @@ impl Database {
     pub fn update_rental(&self, rental: &dmos::Rental) -> Result<(), Error> {
         Ok(self.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
             params!{
-                "from" => rental.from.clone(),
-                "to" => rental.to.clone(),
+                //"from" => rental.from.format(SQL_DATEFORMAT).to_string(),
+                //"to" => rental.to.format(SQL_DATEFORMAT).to_string(),
+                "from" => rental.from,
+                "to" => rental.to,
                 "book" => rental.book,
                 "rentee_member" => match rental.rentee_type {
                     dmos::EntityType::Member => Some(rental.rentee),
@@ -314,12 +321,13 @@ mod tests {
     use error::FieldError;
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
+    use chrono::prelude::*;
 
     fn _s(s: &str) -> String { String::from(s) }
 
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
-    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.3";
+    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.2";
     fn setup() -> String {
         let setup_pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
@@ -1003,6 +1011,41 @@ mod tests {
         }
     }
 
+    #[test]
+    fn insert_guild_invalid_cotact(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_guild(_s("RPG Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), 12345);
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_guild_invalid_contact() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id1"))
+        .and_then(|member|
+            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        )
+        .and_then(|mut guild| {
+            guild.contact = 12345;
+            db.update_guild(&guild)
+        });
+
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
     /*
     ██████  ███████ ███    ██ ████████  █████  ██      ███████
     ██   ██ ██      ████   ██    ██    ██   ██ ██      ██
@@ -1024,7 +1067,7 @@ mod tests {
                 insert_book_default(&db)
                     .and_then(|book| Ok((book, member)))
             ).and_then(|(book, member)|
-                db.insert_rental(_s("2018-02-04"), _s("2018-04-16"), book.id, member.id, dmos::EntityType::Member)
+                db.insert_rental("2018-02-04".parse::<NaiveDate>().expect("Wrong date format in test"), "2018-04-16".parse::<NaiveDate>().expect("Wrong date format in test"), book.id, member.id, dmos::EntityType::Member)
             ).and_then(|orig_rental|
                 db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
             ).and_then(|(orig_rental, mut rentals)|

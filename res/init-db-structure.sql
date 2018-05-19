@@ -30,7 +30,7 @@ create table if not exists titles (
   system          int not null,
   language        varchar(255) not null,
   publisher       varchar(255) not null,
-  year            year not null,
+  year            smallint not null,
   coverimage      text null,
   foreign key (system) references rpg_systems (id)
 ) character set utf8mb4 collate utf8mb4_general_ci;

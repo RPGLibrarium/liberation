@@ -1,3 +1,5 @@
+use chrono::prelude::*;
+
 pub type Id = u64;
 pub type RpgSystemId = Id;
 pub type TitleId = Id;
@@ -7,8 +9,8 @@ pub type MemberId = EntityId;
 pub type GuildId = EntityId;
 pub type RentalId = Id;
 
-pub type Year = u16;
-pub type Date = String;
+pub type Year = i16;
+pub type Date = NaiveDate;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum EntityType {

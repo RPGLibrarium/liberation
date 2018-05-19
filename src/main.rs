@@ -1,6 +1,7 @@
 #[macro_use] extern crate mysql;
 //#[macro_use] extern crate serde_derive;
 extern crate rand;
+extern crate chrono;
 mod dmos;
 mod database;
 mod error;
