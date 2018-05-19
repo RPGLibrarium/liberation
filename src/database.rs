@@ -322,15 +322,20 @@ mod tests {
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
     use chrono::prelude::*;
+    use std::env;
 
     fn _s(s: &str) -> String { String::from(s) }
     fn _d(y: i32, m: u32, d: u32) -> NaiveDate { NaiveDate::from_ymd(y, m, d) }
-
+    fn _serv() -> String {
+        let server = env::var("SQL_SERVER").unwrap();
+        let username = env::var("SQL_USER").unwrap();
+        let password = env::var("SQL_PASSWORD").unwrap();
+        _s(&format!("mysql://{}:{}@{}",username, password, server))
+    }
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
-    const SERVER: &str = "mysql://root:thereIsNoPassword!@172.18.0.3";
     fn setup() -> String {
-        let setup_pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
+        let setup_pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
 
         let mut rng = thread_rng();
@@ -340,7 +345,7 @@ mod tests {
     }
 
     fn teardown(dbname: String) {
-        let pool = mysql::Pool::new_manual(1, 2, SERVER).unwrap();
+        let pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
         let mut conn = pool.get_conn().unwrap();
 
         conn.query(format!("drop database {}", dbname)).unwrap();
@@ -349,7 +354,7 @@ mod tests {
     #[test]
     fn connect() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         teardown(dbname);
     }
 
@@ -364,7 +369,7 @@ mod tests {
     #[test]
     fn insert_rpg_system_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let system_in = db.insert_rpg_system(String::from("SR5👿")).unwrap();
         let system_out = db.get_rpg_systems().unwrap().pop().unwrap();
@@ -375,7 +380,7 @@ mod tests {
     #[test]
     fn insert_rpg_system_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_rpg_system(String::from(TOO_LONG_STRING));
         teardown(dbname);
@@ -389,7 +394,7 @@ mod tests {
     #[test]
     fn update_rpg_system_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_rpg_system(_s("SR5👿"))
             .and_then(|mut system| {
@@ -413,7 +418,7 @@ mod tests {
     #[test]
     fn update_rpg_system_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_rpg_system(String::from("SR5👿"))
         .and_then(|mut rpgsystem| {
@@ -440,7 +445,7 @@ mod tests {
     #[test]
     fn insert_title_name_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from(TOO_LONG_STRING), system.id, String::from("de"), String::from("??"), 1248, None));
         teardown(dbname);
@@ -453,7 +458,7 @@ mod tests {
     #[test]
     fn insert_title_language_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from(TOO_LONG_STRING), String::from("??"), 1248, None));
         teardown(dbname);
@@ -466,7 +471,7 @@ mod tests {
     #[test]
     fn insert_title_publisher_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from("de"), String::from(TOO_LONG_STRING), 1248, None));
         teardown(dbname);
@@ -479,7 +484,7 @@ mod tests {
     #[test]
     fn insert_title_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None))
             .and_then(|title| {
@@ -497,7 +502,7 @@ mod tests {
     #[test]
     fn update_title_name_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -514,7 +519,7 @@ mod tests {
     #[test]
     fn update_title_language_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -531,7 +536,7 @@ mod tests {
     #[test]
     fn update_title_publisher_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
             .and_then(|mut title| {
@@ -548,7 +553,7 @@ mod tests {
     #[test]
     fn update_title_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
             .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None))
             .and_then(|mut title| {
@@ -594,7 +599,7 @@ mod tests {
     #[test]
     fn insert_book_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|orig_book|
                 db.get_books().and_then(|books| Ok((orig_book, books)))
@@ -613,7 +618,7 @@ mod tests {
     #[test]
     fn insert_book_quality_too_long(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
@@ -641,7 +646,7 @@ mod tests {
     #[test]
     fn insert_book_invalid_title(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
             .and_then(|member|
                 db.insert_book(01248163264, member.id, dmos::EntityType::Member, _s("quite good"))
@@ -662,7 +667,7 @@ mod tests {
     #[test]
     fn insert_book_invalid_owner_id(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
@@ -686,7 +691,7 @@ mod tests {
     #[test]
     fn insert_book_wrong_owner_type(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
@@ -714,7 +719,7 @@ mod tests {
     #[test]
     fn update_book_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Cthulhu"))
             .and_then(|system|
                 db.insert_title(_s("Cthulhu 666th Edition"), system.id, _s("en"), _s("Pegasus"), 2066, None)
@@ -752,7 +757,7 @@ mod tests {
     #[test]
     fn update_book_invalid_title() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|mut orig_book| {
                 orig_book.title = 0123481642;
@@ -768,7 +773,7 @@ mod tests {
     #[test]
     fn update_book_invalid_owner_id() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|mut orig_book| {
                 orig_book.owner = 0123481642;
@@ -784,7 +789,7 @@ mod tests {
     #[test]
     fn update_book_wrong_owner_type() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|mut orig_book| {
                 orig_book.owner_type = dmos::EntityType::Guild;
@@ -800,7 +805,7 @@ mod tests {
     #[test]
     fn update_book_quality_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|mut orig_book| {
                 orig_book.quality = _s(TOO_LONG_STRING);
@@ -824,7 +829,7 @@ mod tests {
     #[test]
     fn insert_member_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let member_in = db.insert_member(String::from("someexternalId")).unwrap();
         let member_out = db.get_members().unwrap().pop().unwrap();
@@ -835,7 +840,7 @@ mod tests {
     #[test]
     fn insert_member_external_id_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(String::from(TOO_LONG_STRING));
         teardown(dbname);
@@ -849,7 +854,7 @@ mod tests {
     #[test]
     fn update_member_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("somememberId"))
             .and_then(|mut member| {
@@ -873,7 +878,7 @@ mod tests {
     #[test]
     fn update_member_external_id_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(String::from("somememberId"))
         .and_then(|mut member| {
@@ -900,7 +905,7 @@ mod tests {
     #[test]
     fn insert_guild_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id"))
         .and_then(|member| {
@@ -923,7 +928,7 @@ mod tests {
     #[test]
     fn insert_guild_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id"))
         .and_then(|member|
@@ -939,7 +944,7 @@ mod tests {
     #[test]
     fn update_guild_correct() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
         .and_then(|member|
@@ -971,7 +976,7 @@ mod tests {
     #[test]
     fn update_guild_name_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
         .and_then(|member|
@@ -993,7 +998,7 @@ mod tests {
     #[test]
     fn update_guild_address_too_long() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
         .and_then(|member|
@@ -1015,7 +1020,7 @@ mod tests {
     #[test]
     fn insert_guild_invalid_cotact(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_guild(_s("RPG Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), 12345);
         teardown(dbname);
@@ -1028,7 +1033,7 @@ mod tests {
     #[test]
     fn update_guild_invalid_contact() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
         .and_then(|member|
@@ -1058,7 +1063,7 @@ mod tests {
     #[test]
     fn insert_rental_correct(){
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_member(_s("some-external-id"))
             // .and_then(|member|
             //     db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
@@ -1085,7 +1090,7 @@ mod tests {
     #[test]
     fn insert_rental_invalid_book() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|book|
                 db.insert_rental(_d(2014,8,16), _d(3264,12,08), 012481632, book.owner, book.owner_type)
@@ -1100,7 +1105,7 @@ mod tests {
     #[test]
     fn insert_rental_invalid_owner_id() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|book|
                 db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, 012481632, book.owner_type)
@@ -1115,7 +1120,7 @@ mod tests {
     #[test]
     fn insert_rental_wrong_owner_type() {
         let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
             .and_then(|book|
                 db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, book.owner, match book.owner_type {
