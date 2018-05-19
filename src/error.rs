@@ -14,9 +14,9 @@ pub enum DatabaseError {
 
 #[derive(Debug)]
 pub enum FieldError {
-    ConstraintError(Field),
+    ConstraintError(Option<Field>),
     DataTooLong(Field),
-    IlleagalValueForType(Field),
+    IllegalValueForType(Field),
 }
 
 impl From<FieldError> for DatabaseError {
@@ -27,6 +27,14 @@ impl From<FieldError> for DatabaseError {
 
 impl From<MySqlError> for DatabaseError {
     fn from(error: MySqlError) -> Self {
-        DatabaseError::GenericError(error)
+
+        match error {
+            MySqlError::MySqlError(ref e) if e.code == 1452 => DatabaseError::FieldError(FieldError::ConstraintError(None)),
+            /*MySqlError::MySqlError(e) => match e.code {
+                1452 => DatabaseError::FieldError(FieldError::ConstraintError(None)),
+                _ => DatabaseError::GenericError(MySqlError::MySqlError(e)),
+            },*/
+            _ => DatabaseError::GenericError(error),
+        }
     }
 }
