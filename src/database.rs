@@ -12,15 +12,23 @@ pub struct Database {
     pool: mysql::Pool
 }
 
-static SQL_DATEFORMAT: &str = "%Y-%m-%d";
+//static SQL_DATEFORMAT: &str = "%Y-%m-%d";
 
-macro_rules! check_varchar_length{
+macro_rules! check_varchar_length {
     ($( $x:expr ),+) => {
         $(if $x.chars().count() > MAX_VARCHAR_LENGTH {
             return Err(Error::from(FieldError::DataTooLong(String::from(stringify!($x)))))
         };)*
     }
 }
+macro_rules! check_date {
+    ($( $x:expr ),+) => {
+        $(if 1000 > $x.year() || $x.year() > 9999 {
+            return Err(Error::from(FieldError::IllegalValueForType(String::from(stringify!($x)))))
+        };)*
+    }
+}
+
 impl Database {
 
     pub fn new(url:String) -> Result<Database, Error> {
@@ -264,6 +272,7 @@ impl Database {
     }
 
     pub fn insert_rental(&self, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
+        check_date!(from, to);
         Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
             params!{
                 "from" => from,
@@ -283,6 +292,7 @@ impl Database {
     }
 
     pub fn update_rental(&self, rental: &dmos::Rental) -> Result<(), Error> {
+        check_date!(rental.from, rental.to);
         Ok(self.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
             params!{
                 //"from" => rental.from.format(SQL_DATEFORMAT).to_string(),
@@ -1127,6 +1137,141 @@ mod tests {
         match result {
             Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_rental_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|orig_rental|
+                db.insert_member(_s("rincewind"))
+                    .and_then(|member| Ok((orig_rental, member)))
+            ).and_then(|(orig_rental, member)|
+                db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
+                    .and_then(|guild| Ok((orig_rental, guild)))
+            ).and_then(|(orig_rental, guild)|
+                db.insert_rpg_system(_s("Discworld"))
+                    .and_then(|system| Ok((orig_rental, guild, system)))
+            ).and_then(|(orig_rental, guild, system)|
+                db.insert_title(_s("Unseen University Adventures"), system.id, _s("en"), _s("Twoflower Publishing"), 2048, None)
+                    .and_then(|title| Ok((orig_rental, guild, title)))
+            ).and_then(|(orig_rental, guild, title)|
+                db.insert_book(title.id, guild.id, dmos::EntityType::Guild, _s("impressive"))
+                    .and_then(|book| Ok((orig_rental, book)))
+            ).and_then(|(mut orig_rental, book)| {
+                orig_rental.from = _d(2090,10,11);
+                orig_rental.to = _d(2112,1,3);
+                orig_rental.book = book.id;
+                orig_rental.rentee = book.owner;
+                orig_rental.rentee_type = book.owner_type;
+                db.update_rental(&orig_rental).and_then(|_| Ok(orig_rental))
+            }).and_then(|orig_rental|
+                db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
+            ).and_then(|(orig_rental, mut rentals)|
+                Ok(rentals.pop().map_or(false, |fetched_rental| orig_rental == fetched_rental))
+            );
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Expected updated guild to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn update_rental_invalid_from() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|mut orig_rental| {
+                orig_rental.from = _d(-99,10,11);
+                db.update_rental(&orig_rental)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::IllegalValueForType(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
+        }
+    }
+
+    #[test]
+    fn update_rental_invalid_to() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|mut orig_rental| {
+                orig_rental.to = _d(-99,11,12);
+                db.update_rental(&orig_rental)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::IllegalValueForType(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
+        }
+    }
+
+    #[test]
+    fn update_rental_invalid_book() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|mut orig_rental| {
+                orig_rental.book = 012481632;
+                db.update_rental(&orig_rental)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
+        }
+    }
+
+    #[test]
+    fn update_rental_invalid_rentee_id() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|mut orig_rental| {
+                orig_rental.rentee = 012481632;
+                db.update_rental(&orig_rental)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
+        }
+    }
+
+    #[test]
+    fn update_rental_wrong_rentee_type() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
+            ).and_then(|mut orig_rental| {
+                orig_rental.rentee_type = match orig_rental.rentee_type {
+                    dmos::EntityType::Member => dmos::EntityType::Guild,
+                    dmos::EntityType::Guild => dmos::EntityType::Member,
+                };
+                db.update_rental(&orig_rental)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }
 
