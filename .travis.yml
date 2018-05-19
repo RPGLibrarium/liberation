@@ -1,0 +1,22 @@
+language: rust
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+cache: cargo
+
+sudo: false
+
+addons:
+  mariadb: '10'
+
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
