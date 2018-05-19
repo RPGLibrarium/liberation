@@ -54,13 +54,11 @@ create table if not exists rentals (
   from_date       date not null,
   to_date         date not null,
   book            int not null,
-  title           int not null,
   rentee_guild    int null,
   rentee_member   int null,
   rentee_type      enum('guild', 'member')
       as (if(rentee_guild is not null, 'guild', 'member')) STORED,
   foreign key (book) references books (id),
-  foreign key (title) references titles (id),
   foreign key (rentee_guild) references guilds (id),
   foreign key (rentee_member) references members (id),
   CHECK (rentee_guild IS NOT NULL XOR rentee_member IS NOT NULL)
