@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::prelude::*;
 
 pub type Id = u64;
 pub type RpgSystemId = Id;

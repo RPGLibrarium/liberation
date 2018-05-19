@@ -251,23 +251,23 @@ impl Database {
     }
 
     pub fn get_rentals(&self) -> Result<Vec<dmos::Rental>, Error> {
-        Ok(self.pool.prep_exec("select id, from, to, book, rentee_member, rentee_guild, rentee_type from rentals;",())
+        Ok(self.pool.prep_exec("select id, from_date, to_date, book, rentee_member, rentee_guild, rentee_type from rentals;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, from, to, book, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row);
                 //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
-                let string_from: String = from;
-                let string_to: String = to;
-                dmos::Rental::from_db(id, string_from.parse::<NaiveDate>().expect("Failed to parse field 'from' in database. Expected %Y-%m-%d"), string_to.parse::<NaiveDate>().expect("Failed to parse field 'to' in database. Expected %Y-%m-%d"), book, rentee_member, rentee_guild, rentee_type).unwrap()
+                let from: NaiveDate = from;
+                let to: NaiveDate = to;
+                dmos::Rental::from_db(id, from, to, book, rentee_member, rentee_guild, rentee_type).unwrap()
             }).collect()
         })?)
     }
 
-    pub fn insert_rental(&self, id: dmos::RentalId, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
-        Ok(self.pool.prep_exec("insert into titles ( from, to, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
+    pub fn insert_rental(&self, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
+        Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
             params!{
-                "from" => from.format(SQL_DATEFORMAT).to_string(),
-                "to" => to.format(SQL_DATEFORMAT).to_string(),
+                "from" => from,
+                "to" => to,
                 "book" => book,
                 "rentee_member" => match rentee_type {
                     dmos::EntityType::Member => Some(rentee),
@@ -283,10 +283,12 @@ impl Database {
     }
 
     pub fn update_rental(&self, rental: &dmos::Rental) -> Result<(), Error> {
-        Ok(self.pool.prep_exec("update rentals set from=:from, to=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
+        Ok(self.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
             params!{
-                "from" => rental.from.format(SQL_DATEFORMAT).to_string(),
-                "to" => rental.to.format(SQL_DATEFORMAT).to_string(),
+                //"from" => rental.from.format(SQL_DATEFORMAT).to_string(),
+                //"to" => rental.to.format(SQL_DATEFORMAT).to_string(),
+                "from" => rental.from,
+                "to" => rental.to,
                 "book" => rental.book,
                 "rentee_member" => match rental.rentee_type {
                     dmos::EntityType::Member => Some(rental.rentee),
@@ -319,6 +321,7 @@ mod tests {
     use error::FieldError;
     use error::DatabaseError;
     use rand::{Rng, thread_rng};
+    use chrono::prelude::*;
 
     fn _s(s: &str) -> String { String::from(s) }
 
@@ -348,6 +351,14 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         teardown(dbname);
     }
+
+    /*
+    ███████ ██    ██ ███████ ████████ ███████ ███    ███ ███████
+    ██       ██  ██  ██         ██    ██      ████  ████ ██
+    ███████   ████   ███████    ██    █████   ██ ████ ██ ███████
+         ██    ██         ██    ██    ██      ██  ██  ██      ██
+    ███████    ██    ███████    ██    ███████ ██      ██ ███████
+    */
 
     #[test]
     fn insert_rpg_system_correct() {
@@ -416,6 +427,14 @@ mod tests {
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
         }
     }
+
+    /*
+    ████████ ██ ████████ ██      ███████ ███████
+       ██    ██    ██    ██      ██      ██
+       ██    ██    ██    ██      █████   ███████
+       ██    ██    ██    ██      ██           ██
+       ██    ██    ██    ███████ ███████ ███████
+    */
 
     #[test]
     fn insert_title_name_too_long(){
@@ -575,24 +594,6 @@ mod tests {
     fn insert_book_correct(){
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-        /*let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-                    .and_then(|title| Ok(title))
-            )
-            .and_then(|title|
-                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((title, member)))
-            )
-            .and_then(|(title, member)|
-                db.insert_book(title.id, member.id, dmos::EntityType::Member, _s("vähri guhd!"))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );*/
         let result = insert_book_default(&db)
             .and_then(|orig_book|
                 db.get_books().and_then(|books| Ok((orig_book, books)))
@@ -682,7 +683,7 @@ mod tests {
     }
 
     #[test]
-    fn insert_book_invalid_owner_type(){
+    fn insert_book_wrong_owner_type(){
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
@@ -713,7 +714,6 @@ mod tests {
     fn update_book_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-
         let result = db.insert_rpg_system(_s("Cthulhu"))
             .and_then(|system|
                 db.insert_title(_s("Cthulhu 666th Edition"), system.id, _s("en"), _s("Pegasus"), 2066, None)
@@ -726,7 +726,7 @@ mod tests {
                     .and_then(|guild| Ok((title, guild)))
             ).and_then(|(title, guild)|
                 insert_book_default(&db)
-                    .and_then(|mut orig_book| Ok((orig_book, title, guild)))
+                    .and_then(|orig_book| Ok((orig_book, title, guild)))
             )
             .and_then(|(mut orig_book, title, guild)| {
                 orig_book.title = title.id;
@@ -749,25 +749,76 @@ mod tests {
     }
 
     #[test]
+    fn update_book_invalid_title() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.title = 0123481642;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_book_invalid_owner_id() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.owner = 0123481642;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
+    fn update_book_wrong_owner_type() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.owner_type = dmos::EntityType::Guild;
+                db.update_book(&orig_book)
+            });
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
+    #[test]
     fn update_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
-
-        let book = dmos::Book{
-            id: 123,
-            title: 123,
-            owner: 456,
-            owner_type: dmos::EntityType::Member,
-            quality: String::from(TOO_LONG_STRING)
-        };
-        let result = db.update_book(&book);
+        let result = insert_book_default(&db)
+            .and_then(|mut orig_book| {
+                orig_book.quality = _s(TOO_LONG_STRING);
+                db.update_book(&orig_book)
+            });
         teardown(dbname);
-
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
+
+    /*
+    ███    ███ ███████ ███    ███ ██████  ███████ ██████  ███████
+    ████  ████ ██      ████  ████ ██   ██ ██      ██   ██ ██
+    ██ ████ ██ █████   ██ ████ ██ ██████  █████   ██████  ███████
+    ██  ██  ██ ██      ██  ██  ██ ██   ██ ██      ██   ██      ██
+    ██      ██ ███████ ██      ██ ██████  ███████ ██   ██ ███████
+    */
 
     #[test]
     fn insert_member_correct() {
@@ -836,6 +887,14 @@ mod tests {
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"member.external_id\")"),
         }
     }
+
+    /*
+     ██████  ██    ██ ██ ██      ██████  ███████
+    ██       ██    ██ ██ ██      ██   ██ ██
+    ██   ███ ██    ██ ██ ██      ██   ██ ███████
+    ██    ██ ██    ██ ██ ██      ██   ██      ██
+     ██████   ██████  ██ ███████ ██████  ███████
+    */
 
     #[test]
     fn insert_guild_correct() {
@@ -986,4 +1045,40 @@ mod tests {
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
+
+    /*
+    ██████  ███████ ███    ██ ████████  █████  ██      ███████
+    ██   ██ ██      ████   ██    ██    ██   ██ ██      ██
+    ██████  █████   ██ ██  ██    ██    ███████ ██      ███████
+    ██   ██ ██      ██  ██ ██    ██    ██   ██ ██           ██
+    ██   ██ ███████ ██   ████    ██    ██   ██ ███████ ███████
+    */
+
+    #[test]
+    fn insert_rental_correct(){
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = db.insert_member(_s("some-external-id"))
+            // .and_then(|member|
+            //     db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
+            //         .and_then(|guild| Ok((member, guild)))
+            // )
+            .and_then(|member|
+                insert_book_default(&db)
+                    .and_then(|book| Ok((book, member)))
+            ).and_then(|(book, member)|
+                db.insert_rental("2018-02-04".parse::<NaiveDate>().expect("Wrong date format in test"), "2018-04-16".parse::<NaiveDate>().expect("Wrong date format in test"), book.id, member.id, dmos::EntityType::Member)
+            ).and_then(|orig_rental|
+                db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
+            ).and_then(|(orig_rental, mut rentals)|
+                Ok(rentals.pop().map_or(false, |fetched_rental| orig_rental == fetched_rental))
+            );
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Inserted rental is not in DB :("),
+            _ => { result.unwrap(); () },
+        }
+    }
+
 }
