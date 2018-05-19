@@ -170,6 +170,7 @@ impl Database {
     }
 
     pub fn insert_member(&self, external_id: String) -> Result<dmos::Member, Error> {
+        check_varchar_length!(external_id);
         Ok(self.pool.prep_exec("insert into members (external_id) values (:external_id)",
             params!{
                 "external_id" => external_id.clone(),
@@ -195,6 +196,7 @@ impl Database {
     }
 
     pub fn update_member(&self, member: &dmos::Member) ->  Result<(), Error> {
+        check_varchar_length!(member.external_id);
         Ok(self.pool.prep_exec("update members set external_id=:external_id where id=:id",
             params!{
                 "external_id" => member.external_id.clone(),
@@ -582,4 +584,188 @@ mod tests {
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
         }
     }
+
+    #[test]
+    fn insert_member_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let member_in = db.insert_member(String::from("someexternalId")).unwrap();
+        let member_out = db.get_members().unwrap().pop().unwrap();
+        assert_eq!(member_in, member_out);
+        teardown(dbname);
+    }
+
+    #[test]
+    fn insert_member_external_id_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(String::from(TOO_LONG_STRING));
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"external_id\")"),
+        }
+    }
+
+    #[test]
+    fn update_member_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("somememberId"))
+            .and_then(|mut member| {
+                member.external_id = _s("someotherId");
+                db.update_member(&member)
+                .and_then(|_| {
+                    db.get_members()
+                    .and_then(|mut members| Ok(members.pop().map_or(false, |fetched_member| member == fetched_member)))
+                })
+            });
+
+        teardown(dbname);
+
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Expected updated member to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn update_member_external_id_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(String::from("somememberId"))
+        .and_then(|mut member| {
+            member.external_id = String::from(TOO_LONG_STRING);
+            return db.update_member(&member);
+        });
+
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"member.external_id\")"),
+        }
+    }
+
+    #[test]
+    fn insert_guild_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id"))
+        .and_then(|member| {
+            db.insert_guild(_s("LibrariumAachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        })
+        .and_then(|orig_guild| {
+            db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds)))
+        })
+        .and_then(|(orig_guild, mut guilds)| {
+            Ok(guilds.pop().map_or(false, |fetched_guild| orig_guild == fetched_guild))
+        });
+        teardown(dbname);
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Inserted Guild is not in DB :("),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn insert_guild_name_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id"))
+        .and_then(|member|
+            db.insert_guild(_s(TOO_LONG_STRING), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        );
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
+        }
+    }
+
+    #[test]
+    fn update_guild_correct() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id1"))
+        .and_then(|member|
+            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        )
+        .and_then(|guild|
+            db.insert_member(_s("other_id")).and_then(|other_member| Ok((guild, other_member))))
+        .and_then(|(mut guild, other_member)| {
+            guild.name = _s("RPG Librarium Aaachen");
+            guild.address = _s("postsfadfeddfasdfasdff");
+            guild.contact = other_member.id;
+            db.update_guild(&guild).and_then(|_| Ok(guild))
+        })
+        .and_then(|orig_guild|
+            db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds)))
+        )
+        .and_then(|(orig_guild, mut guilds)|
+            Ok(guilds.pop().map_or(false, |fetched_guild| orig_guild == fetched_guild))
+        );
+        teardown(dbname);
+
+        match result {
+            Ok(true) => (),
+            Ok(false) => panic!("Expected updated guild to be corretly stored in DB"),
+            _ => { result.unwrap(); () },
+        }
+    }
+
+    #[test]
+    fn update_guild_name_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id1"))
+        .and_then(|member|
+            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        )
+        .and_then(|mut guild| {
+            guild.name = _s(TOO_LONG_STRING);
+            db.update_guild(&guild)
+        });
+
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.name\")"),
+        }
+    }
+
+    #[test]
+    fn update_guild_address_too_long() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+
+        let result = db.insert_member(_s("external_id1"))
+        .and_then(|member|
+            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
+        )
+        .and_then(|mut guild| {
+            guild.address = _s(TOO_LONG_STRING);
+            db.update_guild(&guild)
+        });
+
+        teardown(dbname);
+
+        match result {
+            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.address\")"),
+        }
+    }
+
 }
