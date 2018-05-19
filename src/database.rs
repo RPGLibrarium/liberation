@@ -1038,4 +1038,19 @@ mod tests {
         }
     }
 
+    #[test]
+    fn insert_rental_invalid_book() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", SERVER, dbname))).unwrap();
+        let result = insert_book_default(&db)
+            .and_then(|book|
+                db.insert_rental(NaiveDate::from_ymd(2014,8,16), NaiveDate::from_ymd(3264,12,08), 012481632, book.owner, book.owner_type)
+            );
+        teardown(dbname);
+        match result {
+            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
+        }
+    }
+
 }
