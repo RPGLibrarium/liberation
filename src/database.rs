@@ -337,10 +337,13 @@ mod tests {
     fn _s(s: &str) -> String { String::from(s) }
     fn _d(y: i32, m: u32, d: u32) -> NaiveDate { NaiveDate::from_ymd(y, m, d) }
     fn _serv() -> String {
-        let server = env::var("SQL_SERVER").unwrap();
-        let username = env::var("SQL_USER").unwrap();
-        let password = env::var("SQL_PASSWORD").unwrap();
-        _s(&format!("mysql://{}:{}@{}",username, password, server))
+        let server = env::var("SQL_SERVER").expect("SQL_SERVER not set in env");
+        let username = env::var("SQL_USER").expect("SQL_SERVER not set in env");
+        let password = match env::var("SQL_PASSWORD") {
+            Ok(password) => format!(":{}", password),
+            Err(_) => _s(""),
+        };
+        _s(&format!("mysql://{}{}@{}",username, password, server))
     }
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
     const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
