@@ -19,7 +19,7 @@ lang: en
 - System: RpgSystem
 - Language: String
 - Publisher: String
-- Year: String
+- Year: Integer
 - Coverimage: String
 
 # Rental:

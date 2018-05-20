@@ -18,7 +18,8 @@ The tests need a MySQL/MariaDB Database runing. You can use the docker container
 ```
 Set connection settings as environmental variables:
 ```
-> export SQL_SERVER=172.18.0.3
+# export SQL_SERVER=172.18.0.3
+> export SQL_SERVER=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' liberation_test-db_1)
 > export SQL_USER=root
 > export SQL_PASSWORD=thereIsNoPassword!
 ```

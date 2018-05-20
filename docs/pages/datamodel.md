@@ -32,7 +32,7 @@ lang: en
 | system | int not null | rpg_system.id |
 | language | varchar |  |
 | publisher | varchar |  |
-| year | year |  |
+| year | smallint |  |
 | coverimage | text |  |
 
 ### books
