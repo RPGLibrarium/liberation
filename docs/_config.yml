@@ -20,7 +20,8 @@ description: >- # this means to ignore newlines until "baseurl:"
   developted for the role play assosiaction RPG Librarium Aachen e.V.
 
 baseurl: "/Liberation"
-url: "https://rpglibrarium.github.io/Liberation" # the base hostname & protocol for your site, e.g. http://example.com
+url: "https://liberation.rpg-librarium.de"
+#url: "https://rpglibrarium.github.io/Liberation" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  rpglibrarium
 
 # Build settings
