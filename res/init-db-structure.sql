@@ -5,63 +5,63 @@
 -- Entity (aka members and guilds) tables
 -- Have to be created created before books+rentals due to foreign keys
 create table if not exists members (
-  id              int auto_increment primary key,
-  external_id     varchar(255) not null unique
+  member_id                   int auto_increment primary key,
+  external_id                 varchar(255) not null unique
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists guilds (
-  id              int auto_increment primary key,
-  name            varchar(255) not null unique,
-  address         text not null,
-  contact         int not null,
-  foreign key (contact) references members (id)
+  guild_id                    int auto_increment primary key,
+  name                        varchar(255) not null unique,
+  address                     text not null,
+  contact_by_member_id        int not null,
+  foreign key (contact_by_member_id) references members (id)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 -- "Book-related" tables
 
 create table if not exists rpg_systems (
-  id              int auto_increment primary key,
+  rpg_system_id   int auto_increment primary key,
   name            varchar(255) unique not null
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists titles (
-  id              int auto_increment primary key,
+  title_id        int auto_increment primary key,
   name            varchar(255) not null unique,
-  system          int not null,
+  system_by_id    int not null,
   language        varchar(255) not null,
   publisher       varchar(255) not null,
   year            smallint not null,
   coverimage      text null,
-  foreign key (system) references rpg_systems (id)
+  foreign key (system_by_id) references rpg_systems (id)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists books (
-  id              int auto_increment primary key,
-  title           int not null,
-  owner_guild     int null,
-  owner_member    int null,
+  book_id               int auto_increment primary key,
+  title_by_id           int not null,
+  owner_member_by_id    int null,
+  owner_guild_by_id     int null,
   owner_type      enum('guild', 'member')
       as (if(owner_guild is not null, 'guild', 'member')) STORED,
   quality         text not null,
-  foreign key (title) references titles (id),
-  foreign key (owner_guild) references guilds (id),
-  foreign key (owner_member) references members (id),
-  CHECK (owner_guild IS NOT NULL XOR owner_member IS NOT NULL)
+  foreign key (title_by_id) references titles (title_id),
+  foreign key (owner_member_by_id) references members (member_id),
+  foreign key (owner_guild_by_id) references guilds (guild_id),
+  CHECK (owner_guild_by_id IS NOT NULL XOR owner_member_by_id IS NOT NULL)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists rentals (
-  id              int auto_increment primary key,
+  rental_id              int auto_increment primary key,
   from_date       date not null,
   to_date         date not null,
-  book            int not null,
-  rentee_guild    int null,
-  rentee_member   int null,
+  book_by_id            int not null,
+  rentee_member_by_id    int null,
+  rentee_guild_by_id   int null,
   rentee_type      enum('guild', 'member')
       as (if(rentee_guild is not null, 'guild', 'member')) STORED,
-  foreign key (book) references books (id),
-  foreign key (rentee_guild) references guilds (id),
-  foreign key (rentee_member) references members (id),
-  CHECK (rentee_guild IS NOT NULL XOR rentee_member IS NOT NULL)
+  foreign key (book_by_id) references books (book_id),
+  foreign key (rentee_member_by_id) references members (member_id),
+  foreign key (rentee_guild_by_id) references guilds (guild_id),
+  CHECK (rentee_guild_by_id IS NOT NULL XOR rentee_member_by_id IS NOT NULL)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 -- it might be better to remove the generated columns and replace them
