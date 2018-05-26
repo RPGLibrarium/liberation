@@ -353,7 +353,7 @@ mod tests {
         let mut conn = setup_pool.get_conn().unwrap();
 
         let mut rng = thread_rng();
-        let dbname: String = String::from(format!("test_{}", rng.next_u32()));
+        let dbname: String = String::from(format!("test_{}", rng.gen::<u32>()));
         conn.query(format!("create database {}", dbname)).unwrap();
         return dbname;
     }
