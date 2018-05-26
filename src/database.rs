@@ -346,7 +346,7 @@ mod tests {
         _s(&format!("mysql://{}{}@{}",username, password, server))
     }
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
-    const EXPECTED_TOO_LONG: &str = "Expected DatabaseError::FieldError(FieldError::DataTooLong)";
+
     fn setup() -> String {
         let setup_pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
@@ -472,7 +472,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
@@ -485,7 +485,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
@@ -498,7 +498,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
@@ -533,7 +533,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
@@ -550,7 +550,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
@@ -567,7 +567,7 @@ mod tests {
         teardown(dbname);
         match result {
             Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
-            _ => panic!(EXPECTED_TOO_LONG),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
 
