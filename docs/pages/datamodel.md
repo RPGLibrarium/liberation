@@ -20,16 +20,16 @@ lang: en
 
 | Column | Type | |
 |--------|--------------------------------|--|
-| id | int auto_increment primary key |
+| rpg_system_id | int auto_increment primary key |
 | name | varchar(255) not null unique |
 
 ### titles
 
 | Column | Type | References |
 |------------|--------------------------------|---------------|
-| id | int auto_increment primary key |  |
+| title_id | int auto_increment primary key |  |
 | name | varchar(255) not null unique |  |
-| system | int not null | rpg_system.id |
+| system | int not null | rpg_system.rpg_system_id |
 | language | varchar |  |
 | publisher | varchar |  |
 | year | smallint |  |
@@ -39,10 +39,10 @@ lang: en
 
 | Column | Type | References |
 |------------|--------------------------------|---------------------|
-| id | int auto_increment primary key |  |
-| title | int | titles |
-| owner_member | int null | member.id |
-| owner_guild | int null | guild.id |
+| book_id | int auto_increment primary key |  |
+| title | int | titles.title_id |
+| owner_member | int null | member.member_id |
+| owner_guild | int null | guild.guild_id |
 | owner_type | ENUM(member, guild) |  |
 | quality | text |  |
 
@@ -50,26 +50,26 @@ lang: en
 
 | Column | Type | References |
 |-------------|--------------------------------|---------------------|
-| id | int auto_increment primary key |  |
+| member_id | int auto_increment primary key |  |
 | external_id | varchar unique |  |
 
 ### guilds
 
 | Column | Type | References |
 |------------|--------------------------------|------------|
-| id | int auto_increment primary key |  |
+| guild_id | int auto_increment primary key |  |
 | name | varchar unique |  |
 | address | text |  |
-| contact | int  | member.id |
+| contact | int  | member.member_id |
 
 ### rentals
 
 | Column | Type | References |
 |-------------|--------------------------------|---------------------|
-| id | int auto_increment primary key |  |
+| rental_id | int auto_increment primary key |  |
 | from | date |  |
 | to | date |  |
-| book | int  | books.id |
-| rentee_member | int null | member.id |
-| rentee_guild | int null | guild.id |
-| rentee_type | ENUM(member, guild) |  |
+| book | int  | books.book_id |
+| rentee_member | int null | member.member_id |
+| rentee_guild | int null | guild.guild_id |
+| rentee_type | ENUM('member', 'guild') |  |
