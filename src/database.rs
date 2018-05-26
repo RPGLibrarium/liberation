@@ -8,6 +8,7 @@ pub static INIT_DB_STRUCTURE: &str = include_str!("../res/init-db-structure.sql"
 
 const MAX_VARCHAR_LENGTH: usize = 255;
 
+#[derive(Clone)]
 pub struct Database {
     pool: mysql::Pool
 }
