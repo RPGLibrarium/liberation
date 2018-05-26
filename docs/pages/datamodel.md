@@ -29,7 +29,7 @@ lang: en
 |------------|--------------------------------|---------------|
 | title_id | int auto_increment primary key |  |
 | name | varchar(255) not null unique |  |
-| system | int not null | rpg_system.rpg_system_id |
+| system_by_id | int not null | rpg_system.rpg_system_id |
 | language | varchar |  |
 | publisher | varchar |  |
 | year | smallint |  |
@@ -40,9 +40,9 @@ lang: en
 | Column | Type | References |
 |------------|--------------------------------|---------------------|
 | book_id | int auto_increment primary key |  |
-| title | int | titles.title_id |
-| owner_member | int null | member.member_id |
-| owner_guild | int null | guild.guild_id |
+| title_by_id | int | titles.title_id |
+| owner_member_by_id | int null | member.member_id |
+| owner_guild_by_id | int null | guild.guild_id |
 | owner_type | ENUM(member, guild) |  |
 | quality | text |  |
 
@@ -60,7 +60,7 @@ lang: en
 | guild_id | int auto_increment primary key |  |
 | name | varchar unique |  |
 | address | text |  |
-| contact | int  | member.member_id |
+| contact_by_member_id | int  | member.member_id |
 
 ### rentals
 
@@ -69,7 +69,7 @@ lang: en
 | rental_id | int auto_increment primary key |  |
 | from | date |  |
 | to | date |  |
-| book | int  | books.book_id |
-| rentee_member | int null | member.member_id |
-| rentee_guild | int null | guild.guild_id |
+| book_by_id | int  | books.book_id |
+| rentee_member_by_id | int null | member.member_id |
+| rentee_guild_by_id | int null | guild.guild_id |
 | rentee_type | ENUM('member', 'guild') |  |
