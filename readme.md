@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/RPGLibrarium/Liberation.svg?branch=master)](https://travis-ci.org/RPGLibrarium/Liberation)
+[![dependency status](https://deps.rs/repo/github/RPGLibrarium/Liberation/status.svg)](https://deps.rs/repo/github/RPGLibrarium/Liberation)
 # Liberation
 
 Liberation is a rental system programmed exactly to the needs of the [RPG Librarium Aachen e.V.](https://rpg-librarium.de)
