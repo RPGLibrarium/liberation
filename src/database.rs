@@ -56,7 +56,7 @@ impl Database {
         }
 
     pub fn get_rpg_systems(&self) -> Result<Vec<dmos::RpgSystem>, Error> {
-        Ok(self.pool.prep_exec("select * from rpg_systems;",())
+        Ok(self.pool.prep_exec("select rpg_system_id, name from rpg_systems;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, name) = mysql::from_row(row);
@@ -70,7 +70,7 @@ impl Database {
 
     pub fn update_rpg_system(&self, rpgsystem: &dmos::RpgSystem) ->  Result<(), Error> {
         check_varchar_length!(rpgsystem.name);
-        Ok(self.pool.prep_exec("update rpg_systems set name=:name where id=:id;",
+        Ok(self.pool.prep_exec("update rpg_systems set name=:name where rpg_system_id=:id;",
             params!{
                 "name" => rpgsystem.name.clone(),
                 "id" => rpgsystem.id,
@@ -78,7 +78,7 @@ impl Database {
     }
 
     pub fn get_titles(&self) -> Result<Vec<dmos::Title>, Error> {
-        Ok(self.pool.prep_exec("select id, name, system, language, publisher, year, coverimage from titles;",())
+        Ok(self.pool.prep_exec("select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
@@ -97,7 +97,7 @@ impl Database {
 
     pub fn insert_title(&self, name: String, system: dmos::RpgSystemId, language: String, publisher: String, year: dmos::Year, coverimage: Option<String>) -> Result<dmos::Title, Error>{
         check_varchar_length!(name, language, publisher);
-        Ok(self.pool.prep_exec("insert into titles (name, system, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
+        Ok(self.pool.prep_exec("insert into titles (name, rpg_system_by_id, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
             params!{
                 "name" => name.clone(),
                 "system" => system,
@@ -120,7 +120,7 @@ impl Database {
 
     pub fn update_title(&self, title: &dmos::Title) -> Result<(), Error> {
         check_varchar_length!(title.name, title.language, title.publisher);
-        Ok(self.pool.prep_exec("update titles set name=:name, system=:system, language=:language, publisher=:publisher, year=:year, coverimage=:coverimage where id=:id;",
+        Ok(self.pool.prep_exec("update titles set name=:name, rpg_system_by_id=:system, language=:language, publisher=:publisher, year=:year, coverimage=:coverimage where title_id=:id;",
             params!{
                 "name" => title.name.clone(),
                 "system" => title.system,
@@ -133,7 +133,7 @@ impl Database {
     }
 
     pub fn get_books(&self) -> Result<Vec<dmos::Book>, Error> {
-        Ok(self.pool.prep_exec("select id, title, owner_member, owner_guild, owner_type, quality from books;",())
+        Ok(self.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality from books;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, title, owner_member, owner_guild, owner_type, quality) = mysql::from_row(row);
@@ -145,7 +145,7 @@ impl Database {
 
     pub fn insert_book(&self, title: dmos::TitleId, owner: dmos::EntityId, owner_type: dmos::EntityType, quality: String) -> Result<dmos::Book, Error>{
         check_varchar_length!(quality);
-        Ok(self.pool.prep_exec("insert into books (title, owner_member, owner_guild, quality) values (:title, :owner_member, :owner_guild, :quality)",
+        Ok(self.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
             params!{
                 "title" => title,
                 "owner_member" => match owner_type {
@@ -164,7 +164,7 @@ impl Database {
 
     pub fn update_book(&self, book: &dmos::Book) -> Result<(), Error> {
         check_varchar_length!(book.quality);
-        Ok(self.pool.prep_exec("update books set title=:title, owner_member=:owner_member, owner_guild=:owner_guild, quality=:quality where id=:id;",
+        Ok(self.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality where book_id=:id;",
             params!{
                 "title" => book.title,
                 "owner_member" => match book.owner_type {
@@ -194,7 +194,7 @@ impl Database {
     }
 
     pub fn get_members(&self) -> Result<Vec<dmos::Member>, Error> {
-        Ok(self.pool.prep_exec("select id, external_id from members;",())
+        Ok(self.pool.prep_exec("select member_id, external_id from members;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, external_id) = mysql::from_row(row);
@@ -208,7 +208,7 @@ impl Database {
 
     pub fn update_member(&self, member: &dmos::Member) ->  Result<(), Error> {
         check_varchar_length!(member.external_id);
-        Ok(self.pool.prep_exec("update members set external_id=:external_id where id=:id",
+        Ok(self.pool.prep_exec("update members set external_id=:external_id where member_id=:id",
             params!{
                 "external_id" => member.external_id.clone(),
                 "id" => member.id,
@@ -217,7 +217,7 @@ impl Database {
 
     pub fn insert_guild(&self, name: String, address: String, contact: dmos::MemberId) -> Result<dmos::Guild, Error> {
         check_varchar_length!(name, address);
-        Ok(self.pool.prep_exec("insert into guilds (name, address, contact) values (:name, :address, :contact)",
+        Ok(self.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
             params!{
                 "name" => name.clone(),
                 "address" => address.clone(),
@@ -233,7 +233,7 @@ impl Database {
     }
 
     pub fn get_guilds(&self) -> Result<Vec<dmos::Guild>, Error> {
-        Ok(self.pool.prep_exec("select id, name, address, contact from guilds;",())
+        Ok(self.pool.prep_exec("select guild_id, name, address, contact_by_member_id from guilds;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, name, address, contact) = mysql::from_row(row);
@@ -249,7 +249,7 @@ impl Database {
 
     pub fn update_guild(&self, guild: &dmos::Guild) ->  Result<(), Error> {
         check_varchar_length!(guild.name, guild.address);
-        Ok(self.pool.prep_exec("update guilds set name=:name, address=:address, contact=:contact where id=:id",
+        Ok(self.pool.prep_exec("update guilds set name=:name, address=:address, contact_by_member_id=:contact where guild_id=:id",
             params!{
                 "name" => guild.name.clone(),
                 "address" => guild.address.clone(),
@@ -259,7 +259,7 @@ impl Database {
     }
 
     pub fn get_rentals(&self) -> Result<Vec<dmos::Rental>, Error> {
-        Ok(self.pool.prep_exec("select id, from_date, to_date, book, rentee_member, rentee_guild, rentee_type from rentals;",())
+        Ok(self.pool.prep_exec("select rental_id, from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id, rentee_type from rentals;",())
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, from, to, book, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row);
@@ -273,7 +273,7 @@ impl Database {
 
     pub fn insert_rental(&self, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
         check_date!(from, to);
-        Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book, rentee_member, rentee_guild) values (:from, :to, :book, :rentee_member, :rentee_guild)",
+        Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id) values (:from, :to, :book, :rentee_member, :rentee_guild)",
             params!{
                 "from" => from,
                 "to" => to,
@@ -293,7 +293,7 @@ impl Database {
 
     pub fn update_rental(&self, rental: &dmos::Rental) -> Result<(), Error> {
         check_date!(rental.from, rental.to);
-        Ok(self.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book=:book, rentee_member=:rentee_member, rentee_guild=:rentee_guild where id=:id;",
+        Ok(self.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book_by_id=:book, rentee_member_by_id=:rentee_member, rentee_guild_by_id=:rentee_guild where rental_id=:id;",
             params!{
                 //"from" => rental.from.format(SQL_DATEFORMAT).to_string(),
                 //"to" => rental.to.format(SQL_DATEFORMAT).to_string(),
@@ -368,6 +368,14 @@ mod tests {
     fn connect() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        //teardown(dbname);
+    }
+
+    #[test]
+    fn db_init() {
+        let dbname = setup();
+        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+
         teardown(dbname);
     }
 

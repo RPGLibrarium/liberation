@@ -14,7 +14,7 @@ create table if not exists guilds (
   name                        varchar(255) not null unique,
   address                     text not null,
   contact_by_member_id        int not null,
-  foreign key (contact_by_member_id) references members (id)
+  foreign key (contact_by_member_id) references members (member_id)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 -- "Book-related" tables
@@ -25,14 +25,14 @@ create table if not exists rpg_systems (
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists titles (
-  title_id        int auto_increment primary key,
-  name            varchar(255) not null unique,
-  system_by_id    int not null,
-  language        varchar(255) not null,
-  publisher       varchar(255) not null,
-  year            smallint not null,
-  coverimage      text null,
-  foreign key (system_by_id) references rpg_systems (id)
+  title_id          int auto_increment primary key,
+  name              varchar(255) not null unique,
+  rpg_system_by_id  int not null,
+  language          varchar(255) not null,
+  publisher         varchar(255) not null,
+  year              smallint not null,
+  coverimage        text null,
+  foreign key (rpg_system_by_id) references rpg_systems (rpg_system_id)
 ) character set utf8mb4 collate utf8mb4_general_ci;
 
 create table if not exists books (
@@ -41,7 +41,7 @@ create table if not exists books (
   owner_member_by_id    int null,
   owner_guild_by_id     int null,
   owner_type      enum('guild', 'member')
-      as (if(owner_guild is not null, 'guild', 'member')) STORED,
+      as (if(owner_guild_by_id is not null, 'guild', 'member')) STORED,
   quality         text not null,
   foreign key (title_by_id) references titles (title_id),
   foreign key (owner_member_by_id) references members (member_id),
@@ -57,7 +57,7 @@ create table if not exists rentals (
   rentee_member_by_id    int null,
   rentee_guild_by_id   int null,
   rentee_type      enum('guild', 'member')
-      as (if(rentee_guild is not null, 'guild', 'member')) STORED,
+      as (if(rentee_guild_by_id is not null, 'guild', 'member')) STORED,
   foreign key (book_by_id) references books (book_id),
   foreign key (rentee_member_by_id) references members (member_id),
   foreign key (rentee_guild_by_id) references guilds (guild_id),
