@@ -29,19 +29,23 @@ GET /v1/members/{memberid}/inventory
 #### 200: Ok
 ```json
 {
+  "member": {
+    "type": "member",
+    "id": 12315412,
+    "name": "Peter Traurig"
+  },
   "inventory": {
-    "memberid": "22341",
     "ownedbooks": [
       {
-        "id": "123432",
+        "id": 123432,
         "quality": "Bad",
-        "avaliable": true,
+        "available": true,
         "rental": {
           "from": "1997-07-16",
           "to": "1997-07-25",
           "rentee": {
             "type": "member",
-            "id": "12931",
+            "id": 12931,
             "name": "Eva Musterapfel"
           }
         }
@@ -49,22 +53,21 @@ GET /v1/members/{memberid}/inventory
     ],
     "rentals": [
       {
-        "id": "123432",
+        "id": 123432,
         "owner": {
           "type": "member",
-          "id": "12931",
+          "id": 12931,
           "name": "Eva Musterapfel"
         },
         "quality": "Bad",
-        "avaliable": true,
+        "available": true,
         "rental": {
           "from": "1997-07-16",
           "to": "1997-07-25",
         }
       }
     ],
-  },
-  "editable": true,
+  }
 }
 ```
 

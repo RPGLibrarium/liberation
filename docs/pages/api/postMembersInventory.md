@@ -1,7 +1,7 @@
 ---
-title: Add to Member's Inventory
+title: (**Not existent**) Add to Member's Inventory
 layout: page
-nav_link: Add to Member's Inventory
+nav_link: (Not existent) Add to Member's Inventory
 nav_order: 344
 nav_level: 3
 lang: en
@@ -21,7 +21,7 @@ POST /v1/members/{memberid}/inventory
 ```json
 {
   "book": {
-    "title": "567548",
+    "title": 567548,
     "quality": "good"
   }
 }

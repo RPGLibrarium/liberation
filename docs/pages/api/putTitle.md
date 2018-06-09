@@ -22,12 +22,10 @@ PUT /v1/titles/{titleid}
   "title":
   {
     "name": "Wege der Helden",
-    "system": {
-      "id": "3042975",
-    },
+    "system": 3042975,
     "language": "DE",
     "publisher": "Ulisses",
-    "year": "2007",
+    "year": 2007,
     "coverimage": "https://example.com/wege-der-helden.jpg",
   }
 }

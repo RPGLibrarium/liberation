@@ -29,22 +29,18 @@ GET /v1/rpgsystem/{systemid}
 ```json
 {
   "rpgsystem": {
-    "id": "123829",
+    "id": 123829,
     "name": "Wege der Helden",
     "titles": [
       {
-        "id": "123829",
+        "id": 123829,
         "name": "Wege der Helden",
-        "system": {
-          "id": "3042975",
-          "name": "DSA 4.1"
-        },
         "language": "DE",
         "publisher": "Ulisses",
-        "year": "2007",
+        "year": 2007,
         "coverimage": "https://example.com/wege-der-helden.jpg",
         "stock": 5,
-        "avaliable": 5,
+        "available": 5,
       }
     ]
   }

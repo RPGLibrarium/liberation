@@ -30,7 +30,7 @@ GET /v1/members/{memberid}
 ```json
 {
   "member": {
-    "id": "123143",
+    "id": 123143,
     "name": "Eva Musterapfel",
     "email": "eva.musterapfel@example.com",
     "roles": [

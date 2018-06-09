@@ -22,7 +22,7 @@ POST /v1/guilds
   "guild": {
     "name": "Librarium Kapu2",
     "address": "Schusterstraße 23, 12345 Entenhausen",
-    "contact": "237345643245"
+    "contact": 237345643245
   }
 }
 ```

@@ -28,16 +28,15 @@ GET /v1/guilds/{guildid}
 ```json
 {
   "guild": {
-    "id": "123143",
+    "id": 123143,
     "name": "Librarium Kapu2",
     "address": "Schusterstraße 23, 12345 Entenhausen",
     "contact": {
-      "id": "123143",
+      "id": 123143,
       "name": "Eva Musterapfel",
       "email": "eva.musterapfel@example.com"
     }
-  },
-  "editable": true,
+  }
 }
 ```
 

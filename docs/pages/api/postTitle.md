@@ -20,10 +20,10 @@ POST /v1/titles
 {
   "title": {
       "name": "Wege der Helden",
-      "system": "84323456",
+      "system": 84323456,
       "language": "DE",
       "publisher": "Ulisses",
-      "year": "2007",
+      "year": 2007,
       "coverimage": "https://example.com/wege-der-helden.jpg",
     }
 }

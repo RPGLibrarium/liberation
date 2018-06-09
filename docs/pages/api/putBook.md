@@ -21,12 +21,10 @@ PUT /v1/books/{bookid}
 ```json
 {
   "book": {
-    "title": {
-      "id": "134234",
-    },
+    "title": 134234,
     "owner": {
       "type": "member",
-      "id": "12931",
+      "id": 12931,
     },
     "quality": "Bad",
   }

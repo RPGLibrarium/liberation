@@ -24,7 +24,7 @@ PUT /v1/guilds/{guildid}
     "name": "Librarium Kapu2",
     "address": "Schusterstraße 23, 12345 Entenhausen",
     "contact": {
-      "id": "123143",
+      "id": 123143,
     }
   }
 }

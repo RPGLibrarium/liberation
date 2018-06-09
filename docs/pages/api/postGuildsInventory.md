@@ -1,7 +1,7 @@
 ---
-title: Add to Guilds's Inventory
+title: (**Not existent**) Add to Guilds's Inventory
 layout: page
-nav_link: Add to Guilds's Inventory
+nav_link: (Not existent) Add to Guilds's Inventory
 nav_order: 355
 nav_level: 3
 lang: en
@@ -21,7 +21,7 @@ POST /v1/guilds/{guildid}/inventory
 ```json
 {
   "book": {
-    "title": "567548",
+    "title": 567548,
     "quality": "good"
   }
 }

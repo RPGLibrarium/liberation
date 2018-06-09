@@ -30,40 +30,39 @@ GET /v1/books/
 {
   "books": [
     {
-      "id": "123432",
+      "id": 123432,
       "title": {
-        "id": "123829",
+        "id": 123829,
         "name": "Wege der Helden",
         "system": {
-          "id": "3042975",
+          "id": 3042975,
           "name": "DSA 4.1"
         },
         "language": "DE",
         "publisher": "Ulisses",
-        "year": "2007",
+        "year": 2007,
         "coverimage": "https://example.com/wege-der-helden.jpg",
         "stock": 5,
-        "avaliable": 5,
+        "available": 5,
       },
       "owner": {
         "type": "member",
-        "id": "12931",
+        "id": 12931,
         "name": "Eva Musterapfel"
       },
       "quality": "Bad",
-      "avaliable": true,
+      "available": true,
       "rental": {
         "from": "1997-07-16",
         "to": "1997-07-25",
         "rentee": {
           "type": "member",
-          "id": "12931",
+          "id": 12931,
           "name": "Eva Musterapfel"
         }
       }
     }
-  ],
-  "editable": true
+  ]
 }
 ```
 

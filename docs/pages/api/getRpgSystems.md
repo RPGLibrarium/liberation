@@ -29,11 +29,10 @@ GET /v1/rpgsystems
 {
   "rpgsystems": [
     {
-      "id": "123829",
+      "id": 123829,
       "name": "DSA 4.1",
     }
-  ],
-  "editable": true
+  ]
 }
 ```
 
