@@ -1,5 +1,7 @@
-use actix_web::{server, App, HttpRequest, Responder, http};
+use actix_web::{server, App, HttpRequest, Responder, Result, http, Json};
 use database::Database;
+use dtos;
+use dmos;
 
 #[derive(Clone)]
 pub struct AppState{
@@ -39,8 +41,8 @@ pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
     .boxed()
 }
 
-fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET RpgSystem"
+fn get_rpg_systems(_req: HttpRequest<AppState>) -> Result<Json<dtos::GetRpgSystems>> {
+    return Ok(Json(dtos::GetRpgSystems{rpgsystems: vec![dmos::RpgSystem{name: String::from("DSA6.7"), id: 12351}]}));
 }
 
 fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {

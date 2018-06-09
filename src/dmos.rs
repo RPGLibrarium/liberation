@@ -1,4 +1,6 @@
 use chrono::prelude::*;
+use serde::{Serialize, Serializer, Deserialize, Deserializer, de};
+use serde_formats;
 
 pub type Id = u64;
 pub type RpgSystemId = Id;
@@ -19,15 +21,15 @@ pub enum EntityType {
 }
 
 impl EntityType {
-    pub fn from_str(s: &str) -> Result<EntityType, ()>{
+    pub fn from_str(s: &str) -> Result<EntityType, String>{
         match s {
             "member" => Ok(EntityType::Member),
             "guild" => Ok(EntityType::Guild),
-            _ => Err(()),
+            _ => Err(String::from("Expected 'member' or 'guild'")),
         }
     }
 
-    pub fn to_string(self) -> String{
+    pub fn to_string(&self) -> String{
         match self{
             EntityType::Member => String::from("member"),
             EntityType::Guild => String::from("guild"),
@@ -35,13 +37,32 @@ impl EntityType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl Serialize for EntityType {
+    fn serialize<S> (
+        &self,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for EntityType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where D: Deserializer<'de>{
+        let s = String::deserialize(deserializer)?;
+        return EntityType::from_str(s.as_str()).map_err(de::Error::custom);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct RpgSystem {
     pub id: RpgSystemId,
     pub name: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Title {
     pub id: TitleId,
     pub name: String,
@@ -52,7 +73,7 @@ pub struct Title {
     pub coverimage: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Book {
     pub id: BookId,
     pub title: TitleId,
@@ -61,13 +82,13 @@ pub struct Book {
     pub quality: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Member {
     pub id: MemberId,
     pub external_id: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Guild {
     pub id: GuildId,
     pub name: String,
@@ -75,14 +96,22 @@ pub struct Guild {
     pub contact: MemberId,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Rental {
     pub id: RentalId,
+    #[serde(with = "serde_formats::naive_date")]
     pub from: Date,
+    #[serde(with = "serde_formats::naive_date")]
     pub to: Date,
     pub book: BookId,
     pub rentee_type: EntityType,
     pub rentee: EntityId,
+}
+
+#[deprecated(since="0.0.0", note="this is a stub for later oauth roles")]
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub struct Role {
+    pub identifier: String,
 }
 
 impl Book {

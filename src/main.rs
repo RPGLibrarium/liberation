@@ -1,13 +1,17 @@
 #[macro_use] extern crate mysql;
-//#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
 extern crate rand;
 extern crate chrono;
 extern crate actix_web;
 
 mod dmos;
+mod dtos;
 mod database;
 mod error;
 mod api;
+mod serde_formats;
 
 use actix_web::{server, App, HttpRequest};
 
