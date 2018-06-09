@@ -29,6 +29,19 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
     "PUT RpgSystem"
 }
 
+fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET titles"
+}
+fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET titles/<id>"
+}
+fn create_title(_req: HttpRequest<AppState>) -> impl Responder {
+    "POST titles"
+}
+fn update_title(_req: HttpRequest<AppState>) -> impl Responder {
+    "PUT titles/<id>"
+}
+
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
     "GET Books"
 }
@@ -43,6 +56,22 @@ fn post_book(_req: HttpRequest<AppState>) -> impl Responder {
 
 fn put_Book(_req: HttpRequest<AppState>) -> impl Responder {
     "PUT Book"
+}
+
+fn get_members(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET members"
+}
+
+fn get_member(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET members/<id>"
+}
+
+fn get_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET members/<id>/inventory"
+}
+
+fn add_to_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
+    "POST members/<id>/inventory"
 }
 
 fn get_guilds(_req: HttpRequest<AppState>) -> impl Responder {
@@ -67,30 +96,4 @@ fn put_guild(_req: HttpRequest<AppState>) -> impl Responder {
 
 fn post_guild_inventory(_req: HttpRequest<AppState>) -> impl Responder {
     "POST Guild Inventory"
-}
-
-fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET titles"
-}
-fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET titles/<id>"
-}
-fn create_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST titles"
-}
-fn update_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT titles/<id>"
-}
-
-fn get_members(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET members"
-}
-fn get_member(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET members/<id>"
-}
-fn get_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET members/<id>/inventory"
-}
-fn add_to_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST members/<id>/inventory"
 }
