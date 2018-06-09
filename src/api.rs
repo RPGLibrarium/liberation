@@ -9,7 +9,33 @@ pub struct AppState{
 pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
     App::with_state(state)
     .prefix("/v1")
-    .resource("/titles", |r| r.method(http::Method::GET).f(get_titles))
+    .route("/rpgsystems", http::Method::GET, get_rpg_systems)
+    .route("/rpgsystem/{systemid}", http::Method::GET, get_rpg_system)
+    .route("/rpgsystems", http::Method::POST, post_rpg_system)
+    .route("/rpgsystem/{systemid}", http::Method::PUT, put_rpg_system)
+
+    .route("/titles", http::Method::GET, get_titles)
+    .route("/titles/{titleid}", http::Method::GET, get_title)
+    .route("/titles", http::Method::POST, post_title)
+    .route("/titles/{titleid}", http::Method::PUT, put_title)
+
+    .route("/books", http::Method::GET, get_books)
+    .route("/books/{bookid}", http::Method::GET, get_book)
+    .route("/books", http::Method::POST, post_book)
+    .route("/books/{bookid}", http::Method::PUT, put_book)
+
+    .route("/members", http::Method::GET, get_members)
+    .route("/members/{memberid}", http::Method::GET, get_member)
+    .route("/members/{memberid}/inventory", http::Method::GET, get_member_inventory)
+    .route("/members/{memberid}/inventory", http::Method::POST, post_member_inventory)
+
+    .route("/guilds", http::Method::GET, get_guilds)
+    .route("/guilds/{guildid}", http::Method::GET, get_guild)
+    .route("/guilds", http::Method::POST, post_guild)
+    .route("/guilds/{guildid}", http::Method::PUT, put_guild)
+    .route("/guilds/{guildid}/inventory", http::Method::GET, get_guild_inventory)
+    .route("/guilds/{guildid}/inventory", http::Method::POST, post_guild_inventory)
+
     .boxed()
 }
 
@@ -35,10 +61,10 @@ fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
 fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
     "GET titles/<id>"
 }
-fn create_title(_req: HttpRequest<AppState>) -> impl Responder {
+fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
     "POST titles"
 }
-fn update_title(_req: HttpRequest<AppState>) -> impl Responder {
+fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
     "PUT titles/<id>"
 }
 
@@ -54,7 +80,7 @@ fn post_book(_req: HttpRequest<AppState>) -> impl Responder {
     "POST Book"
 }
 
-fn put_Book(_req: HttpRequest<AppState>) -> impl Responder {
+fn put_book(_req: HttpRequest<AppState>) -> impl Responder {
     "PUT Book"
 }
 
@@ -70,7 +96,7 @@ fn get_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
     "GET members/<id>/inventory"
 }
 
-fn add_to_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
+fn post_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
     "POST members/<id>/inventory"
 }
 
