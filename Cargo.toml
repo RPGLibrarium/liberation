@@ -9,7 +9,9 @@ serde = "^1.0"
 serde_derive = "^1.0"
 serde_json = "^1.0"
 chrono = "~0.4"
-actix-web = "~0.6.10"
+actix-web = "~0.6.14"
+failure = "*"
+futures = "*"
 
 [dependencies.mysql]
 version = "*"

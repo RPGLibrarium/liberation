@@ -1,7 +1,6 @@
 use mysql;
 use dmos;
-use error::DatabaseError as Error;
-use error::FieldError;
+use error::Error;
 use chrono::prelude::*;
 
 pub static INIT_DB_STRUCTURE: &str = include_str!("../res/init-db-structure.sql");
@@ -18,14 +17,14 @@ pub struct Database {
 macro_rules! check_varchar_length {
     ($( $x:expr ),+) => {
         $(if $x.chars().count() > MAX_VARCHAR_LENGTH {
-            return Err(Error::from(FieldError::DataTooLong(String::from(stringify!($x)))))
+            return Err(Error::DataTooLong(String::from(stringify!($x))))
         };)*
     }
 }
 macro_rules! check_date {
     ($( $x:expr ),+) => {
         $(if 1000 > $x.year() || $x.year() > 9999 {
-            return Err(Error::from(FieldError::IllegalValueForType(String::from(stringify!($x)))))
+            return Err(Error::IllegalValueForType(String::from(stringify!($x))))
         };)*
     }
 }
@@ -331,8 +330,7 @@ mod tests {
     use database::Database;
     use mysql;
     use dmos;
-    use error::FieldError;
-    use error::DatabaseError;
+    use error::Error;
     use rand::{Rng, thread_rng};
     use chrono::prelude::*;
     use std::env;
@@ -410,7 +408,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
         }
     }
@@ -453,7 +451,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
         }
     }
@@ -474,7 +472,7 @@ mod tests {
             .and_then(|system| db.insert_title(String::from(TOO_LONG_STRING), system.id, String::from("de"), String::from("??"), 1248, None));
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -487,7 +485,7 @@ mod tests {
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from(TOO_LONG_STRING), String::from("??"), 1248, None));
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -500,7 +498,7 @@ mod tests {
             .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from("de"), String::from(TOO_LONG_STRING), 1248, None));
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -535,7 +533,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -552,7 +550,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -569,7 +567,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -606,7 +604,7 @@ mod tests {
     ██████   ██████   ██████  ██   ██ ███████
     */
 
-    fn insert_book_default(db: &Database) -> Result<dmos::Book, DatabaseError> {
+    fn insert_book_default(db: &Database) -> Result<dmos::Book, Error> {
         return db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system|
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
@@ -662,7 +660,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
         }
     }
@@ -683,7 +681,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -707,7 +705,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -735,7 +733,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -789,7 +787,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -805,7 +803,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -821,7 +819,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -837,7 +835,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
         }
     }
@@ -870,7 +868,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"external_id\")"),
         }
     }
@@ -913,7 +911,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"member.external_id\")"),
         }
     }
@@ -960,7 +958,7 @@ mod tests {
         );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
         }
     }
@@ -1014,7 +1012,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.name\")"),
         }
     }
@@ -1036,7 +1034,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::DataTooLong(_))) => (),
+            Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.address\")"),
         }
     }
@@ -1049,7 +1047,7 @@ mod tests {
         let result = db.insert_guild(_s("RPG Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), 12345);
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -1071,7 +1069,7 @@ mod tests {
         teardown(dbname);
 
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -1121,7 +1119,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -1136,7 +1134,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -1154,7 +1152,7 @@ mod tests {
             );
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
         }
     }
@@ -1214,7 +1212,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::IllegalValueForType(_))) => (),
+            Err(Error::IllegalValueForType(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }
@@ -1232,7 +1230,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::IllegalValueForType(_))) => (),
+            Err(Error::IllegalValueForType(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }
@@ -1250,7 +1248,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }
@@ -1268,7 +1266,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }
@@ -1289,7 +1287,7 @@ mod tests {
             });
         teardown(dbname);
         match result {
-            Err(DatabaseError::FieldError(FieldError::ConstraintError(_))) => (),
+            Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
         }
     }

@@ -1,7 +1,9 @@
-use actix_web::{server, App, HttpRequest, Responder, Result, http, Json};
+use actix_web::{server, App, HttpRequest, HttpMessage, HttpResponse, Responder, Result, http, Json, AsyncResponder};
 use database::Database;
+use futures::future::Future;
 use dtos;
 use dmos;
+use error;
 
 #[derive(Clone)]
 pub struct AppState{
@@ -41,16 +43,27 @@ pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
     .boxed()
 }
 
-fn get_rpg_systems(_req: HttpRequest<AppState>) -> Result<Json<dtos::GetRpgSystems>> {
-    return Ok(Json(dtos::GetRpgSystems{rpgsystems: vec![dmos::RpgSystem{name: String::from("DSA6.7"), id: 12351}]}));
+fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
+    _req.state().db.get_rpg_systems()
+        .and_then(|systems| {
+             Ok(Json(dtos::GetRpgSystems{rpgsystems: systems}))
+        })
 }
 
 fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+
     "GET RpgSystem by Id"
 }
 
-fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST RpgSystem"
+fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+    let localdb = _req.state().db.clone();
+    _req.json()
+        .from_err()
+        .and_then( move |obj : dtos::PutPostRpgSystem| {
+            localdb.insert_rpg_system(obj.rpgsystem.name)
+        }).and_then(|new_system|
+            Ok(HttpResponse::Created().header("Location", format!("v1/rpgsystems/{}", new_system.id)).finish())
+        ).responder()
 }
 
 fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {

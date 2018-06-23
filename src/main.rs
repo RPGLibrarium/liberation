@@ -5,6 +5,8 @@ extern crate serde_json;
 extern crate rand;
 extern crate chrono;
 extern crate actix_web;
+extern crate failure;
+extern crate futures;
 
 mod dmos;
 mod dtos;
@@ -12,6 +14,7 @@ mod database;
 mod error;
 mod api;
 mod serde_formats;
+mod auth;
 
 use actix_web::{server, App, HttpRequest};
 
