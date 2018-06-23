@@ -33,7 +33,9 @@ macro_rules! check_date {
 impl Database {
 
     pub fn new(url:String) -> Result<Database, Error> {
-        let pool = mysql::Pool::new(url)?;
+        let mut opts = mysql::OptsBuilder::from_opts(url);
+        opts.prefer_socket(false);
+        let pool = mysql::Pool::new(opts)?;
 
         let mut conn = pool.get_conn()?;
         conn.query(INIT_DB_STRUCTURE)?;

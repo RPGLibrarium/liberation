@@ -15,23 +15,23 @@ Latest docs hosted on [Github.io](https://rpglibrarium.github.io/Liberation/)
 ### Test:
 The tests need a MySQL/MariaDB Database runing. You can use the docker containers provided:
 ```
-> docker-compose -f docker-compose.mariadb.yml up -d
+docker-compose up -d
 ```
 Set connection settings as environmental variables:
 ```
-# export SQL_SERVER=172.18.0.3
-> export SQL_SERVER=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' liberation_test-db_1)
-> export SQL_USER=root
-> export SQL_PASSWORD=thereIsNoPassword!
+# export SQL_SERVER=127.0.0.1:33062
+export SQL_SERVER=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' liberation_test-db_1)
+export SQL_USER=root
+export SQL_PASSWORD=thereIsNoPassword!
 ```
 Run Tests with cargo:
 ```
-> cargo test
+cargo test
 ```
 
 ### Build:
 Use cargo
 ```
-> cd Liberation
-> cargo build
+cd Liberation
+cargo build
 ```
