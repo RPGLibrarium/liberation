@@ -70,6 +70,24 @@ impl Database {
         })?)
     }
 
+    pub fn get_rpg_system_by_id(&self, rpgsystemid : &dmos::RpgSystemId) -> Result<Option<dmos::RpgSystem>, Error> {
+        let results = self.pool.prep_exec("select rpg_system_id, name from rpg_systems where rpg_system_id=:rpgsystemid;",
+            params!{
+                "rpgsystemid" => rpgsystemid,Result
+            }
+        ).map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name) = mysql::from_row(row);
+                dmos::RpgSystem {
+                    id: id,
+                    name: name
+                }
+            }).collect::<Vec<dmos::RpgSystem>>()
+        })?;
+        return Ok(results.pop());
+    }
+
+
     pub fn update_rpg_system(&self, rpgsystem: &dmos::RpgSystem) ->  Result<(), Error> {
         check_varchar_length!(rpgsystem.name);
         Ok(self.pool.prep_exec("update rpg_systems set name=:name where rpg_system_id=:id;",
