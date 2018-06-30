@@ -1,73 +1,111 @@
-use actix_web::{server, App, HttpRequest, HttpMessage, HttpResponse, Responder, Result, http, Json, AsyncResponder};
+use actix_web::error as actix_error;
+use actix_web::{
+    http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
+    Responder, ResponseError, Result,
+};
 use database::Database;
-use futures::future::Future;
-use dtos;
 use dmos;
+use dtos;
 use error;
+use futures::future::Future;
 
 #[derive(Clone)]
-pub struct AppState{
-    pub db: Database
+pub struct AppState {
+    pub db: Database,
 }
 
 pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
     App::with_state(state)
-    .prefix("/v1")
-    .route("/rpgsystems", http::Method::GET, get_rpg_systems)
-    .route("/rpgsystem/{systemid}", http::Method::GET, get_rpg_system)
-    .route("/rpgsystems", http::Method::POST, post_rpg_system)
-    .route("/rpgsystem/{systemid}", http::Method::PUT, put_rpg_system)
-
-    .route("/titles", http::Method::GET, get_titles)
-    .route("/titles/{titleid}", http::Method::GET, get_title)
-    .route("/titles", http::Method::POST, post_title)
-    .route("/titles/{titleid}", http::Method::PUT, put_title)
-
-    .route("/books", http::Method::GET, get_books)
-    .route("/books/{bookid}", http::Method::GET, get_book)
-    .route("/books", http::Method::POST, post_book)
-    .route("/books/{bookid}", http::Method::PUT, put_book)
-
-    .route("/members", http::Method::GET, get_members)
-    .route("/members/{memberid}", http::Method::GET, get_member)
-    .route("/members/{memberid}/inventory", http::Method::GET, get_member_inventory)
-    .route("/members/{memberid}/inventory", http::Method::POST, post_member_inventory)
-
-    .route("/guilds", http::Method::GET, get_guilds)
-    .route("/guilds/{guildid}", http::Method::GET, get_guild)
-    .route("/guilds", http::Method::POST, post_guild)
-    .route("/guilds/{guildid}", http::Method::PUT, put_guild)
-    .route("/guilds/{guildid}/inventory", http::Method::GET, get_guild_inventory)
-    .route("/guilds/{guildid}/inventory", http::Method::POST, post_guild_inventory)
-
-    .boxed()
+        .prefix("/v1")
+        .route("/rpgsystems", http::Method::GET, get_rpg_systems)
+        //.route("/rpgsystem/{systemid}", http::Method::GET, get_rpg_system)
+        .route("/rpgsystems", http::Method::POST, post_rpg_system)
+        .route("/rpgsystem/{systemid}", http::Method::PUT, put_rpg_system)
+        .route("/titles", http::Method::GET, get_titles)
+        .route("/titles/{titleid}", http::Method::GET, get_title)
+        .route("/titles", http::Method::POST, post_title)
+        .route("/titles/{titleid}", http::Method::PUT, put_title)
+        .route("/books", http::Method::GET, get_books)
+        .route("/books/{bookid}", http::Method::GET, get_book)
+        .route("/books", http::Method::POST, post_book)
+        .route("/books/{bookid}", http::Method::PUT, put_book)
+        .route("/members", http::Method::GET, get_members)
+        .route("/members/{memberid}", http::Method::GET, get_member)
+        .route(
+            "/members/{memberid}/inventory",
+            http::Method::GET,
+            get_member_inventory,
+        )
+        .route(
+            "/members/{memberid}/inventory",
+            http::Method::POST,
+            post_member_inventory,
+        )
+        .route("/guilds", http::Method::GET, get_guilds)
+        .route("/guilds/{guildid}", http::Method::GET, get_guild)
+        .route("/guilds", http::Method::POST, post_guild)
+        .route("/guilds/{guildid}", http::Method::PUT, put_guild)
+        .route(
+            "/guilds/{guildid}/inventory",
+            http::Method::GET,
+            get_guild_inventory,
+        )
+        .route(
+            "/guilds/{guildid}/inventory",
+            http::Method::POST,
+            post_guild_inventory,
+        )
+        .boxed()
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    _req.state().db.get_rpg_systems()
-        .and_then(|systems| {
-             Ok(Json(dtos::GetRpgSystems{rpgsystems: systems}))
-        })
+    _req.state().db.get_rpg_systems().and_then(|systems| {
+        Ok(Json(dtos::GetRpgSystems {
+            rpgsystems: systems,
+        }))
+    })
 }
 
-fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+// fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
+//     let id: dmos::RpgSystemId = _req.match_info().query("systemid")?;
+//     _req.state().db.get_rpg_system().and_then(|systems| {
+//         Ok(Json(dtos::GetRpgSystems {
+//             rpgsystems: systems,
+//         }))
+//     })
+// }
 
-    "GET RpgSystem by Id"
-}
-
-fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
-        .and_then( move |obj : dtos::PutPostRpgSystem| {
-            localdb.insert_rpg_system(obj.rpgsystem.name)
-        }).and_then(|new_system|
-            Ok(HttpResponse::Created().header("Location", format!("v1/rpgsystems/{}", new_system.id)).finish())
-        ).responder()
+        .and_then(move |obj: dtos::PutPostRpgSystem| {
+            localdb
+                .insert_rpg_system(obj.rpgsystem.name)
+                .map_err(Error::from)
+        })
+        .and_then(|new_system| {
+            Ok(HttpResponse::Created()
+                .header("Location", format!("v1/rpgsystems/{}", new_system.id))
+                .finish())
+        })
+        .map_err(Error::from)
+        .responder()
 }
 
-fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT RpgSystem"
+fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let localdb = _req.state().db.clone();
+    let id: Result<dmos::RpgSystemId> = _req.match_info()
+        .query("systemid")
+        .map_err(actix_error::ErrorBadRequest);
+    _req.json()
+        .from_err()
+        .and_then(|obj: dtos::PutPostRpgSystem| Ok(dmos::RpgSystem::new(id?, obj.rpgsystem)))
+        .and_then(move |system: dmos::RpgSystem| {
+            localdb.update_rpg_system(&system).map_err(Error::from)
+        })
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder()
 }
 
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {

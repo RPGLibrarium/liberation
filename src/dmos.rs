@@ -1,5 +1,6 @@
 use chrono::prelude::*;
-use serde::{Serialize, Serializer, Deserialize, Deserializer, de};
+use dtos;
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_formats;
 
 pub type Id = u64;
@@ -21,7 +22,7 @@ pub enum EntityType {
 }
 
 impl EntityType {
-    pub fn from_str(s: &str) -> Result<EntityType, String>{
+    pub fn from_str(s: &str) -> Result<EntityType, String> {
         match s {
             "member" => Ok(EntityType::Member),
             "guild" => Ok(EntityType::Guild),
@@ -29,8 +30,8 @@ impl EntityType {
         }
     }
 
-    pub fn to_string(&self) -> String{
-        match self{
+    pub fn to_string(&self) -> String {
+        match self {
             EntityType::Member => String::from("member"),
             EntityType::Guild => String::from("guild"),
         }
@@ -38,11 +39,9 @@ impl EntityType {
 }
 
 impl Serialize for EntityType {
-    fn serialize<S> (
-        &self,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where S: Serializer,
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
     {
         serializer.serialize_str(self.to_string().as_str())
     }
@@ -50,7 +49,9 @@ impl Serialize for EntityType {
 
 impl<'de> Deserialize<'de> for EntityType {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: Deserializer<'de>{
+    where
+        D: Deserializer<'de>,
+    {
         let s = String::deserialize(deserializer)?;
         return EntityType::from_str(s.as_str()).map_err(de::Error::custom);
     }
@@ -108,43 +109,66 @@ pub struct Rental {
     pub rentee: EntityId,
 }
 
-#[deprecated(since="0.0.0", note="this is a stub for later oauth roles")]
+#[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Role {
     pub identifier: String,
 }
 
 impl Book {
-    pub fn new(id: BookId, title: TitleId, owner: EntityId, owner_type: EntityType, quality: String) -> Book {
+    pub fn new(
+        id: BookId,
+        title: TitleId,
+        owner: EntityId,
+        owner_type: EntityType,
+        quality: String,
+    ) -> Book {
         return Book {
             id: id,
             title: title,
             owner_type: owner_type,
             owner: owner,
             quality: quality,
-        }
+        };
     }
 
-    pub fn from_db(id: BookId, title: TitleId, owner_member: Option<MemberId>, owner_guild: Option<GuildId>, owner_type: String, quality: String) -> Result<Book, String> {
+    pub fn from_db(
+        id: BookId,
+        title: TitleId,
+        owner_member: Option<MemberId>,
+        owner_guild: Option<GuildId>,
+        owner_type: String,
+        quality: String,
+    ) -> Result<Book, String> {
         let owner_type = match EntityType::from_str(owner_type.as_str()) {
             Ok(x) => x,
             Err(_) => return Err(String::from("Bad owner_type")),
         };
 
-        let owner: EntityId = match match owner_type {
-            EntityType::Member => owner_member,
-            EntityType::Guild => owner_guild,
-        } {
-            Some(x) => x,
-            None => return Err(String::from("Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.")),
-        };
+        let owner: EntityId =
+            match match owner_type {
+                EntityType::Member => owner_member,
+                EntityType::Guild => owner_guild,
+            } {
+                Some(x) => x,
+                None => return Err(String::from(
+                    "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
+                )),
+            };
 
-        Ok(Book::new(id, title,  owner, owner_type, quality))
+        Ok(Book::new(id, title, owner, owner_type, quality))
     }
 }
 
 impl Rental {
-    pub fn new(id: RentalId, from: Date, to: Date, book: BookId, rentee: EntityId, rentee_type: EntityType) -> Rental {
+    pub fn new(
+        id: RentalId,
+        from: Date,
+        to: Date,
+        book: BookId,
+        rentee: EntityId,
+        rentee_type: EntityType,
+    ) -> Rental {
         return Rental {
             id: id,
             from: from,
@@ -152,10 +176,18 @@ impl Rental {
             book: book,
             rentee: rentee,
             rentee_type: rentee_type,
-        }
+        };
     }
 
-    pub fn from_db(id: RentalId, from: Date, to: Date, book: BookId, rentee_member: Option<MemberId>, rentee_guild: Option<GuildId>, rentee_type: String) -> Result<Rental, String> {
+    pub fn from_db(
+        id: RentalId,
+        from: Date,
+        to: Date,
+        book: BookId,
+        rentee_member: Option<MemberId>,
+        rentee_guild: Option<GuildId>,
+        rentee_type: String,
+    ) -> Result<Rental, String> {
         let rentee_type = match EntityType::from_str(rentee_type.as_str()) {
             Ok(x) => x,
             Err(_) => return Err(String::from("Bad rentee_type")),
@@ -166,17 +198,28 @@ impl Rental {
             EntityType::Guild => rentee_guild,
         } {
             Some(x) => x,
-            None => return Err(String::from("Field 'rentee_member' or 'rentee_guild' is not set according to 'rentee_type'.")),
+            None => return Err(String::from(
+                "Field 'rentee_member' or 'rentee_guild' is not set according to 'rentee_type'.",
+            )),
         };
 
         Ok(Rental::new(id, from, to, book, rentee, rentee_type))
     }
 }
 
+impl RpgSystem {
+    pub fn new(id: RpgSystemId, partial: dtos::PartialRpgSystem) -> RpgSystem {
+        return RpgSystem {
+            id: id,
+            name: partial.name,
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works(){
-        assert_eq!(2+2,4);
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }
