@@ -1,7 +1,7 @@
-use mysql;
+use chrono::prelude::*;
 use dmos;
 use error::Error;
-use chrono::prelude::*;
+use mysql;
 
 pub static INIT_DB_STRUCTURE: &str = include_str!("../res/init-db-structure.sql");
 
@@ -9,7 +9,7 @@ const MAX_VARCHAR_LENGTH: usize = 255;
 
 #[derive(Clone)]
 pub struct Database {
-    pool: mysql::Pool
+    pool: mysql::Pool,
 }
 
 //static SQL_DATEFORMAT: &str = "%Y-%m-%d";
@@ -30,8 +30,7 @@ macro_rules! check_date {
 }
 
 impl Database {
-
-    pub fn new(url:String) -> Result<Database, Error> {
+    pub fn new(url: String) -> Result<Database, Error> {
         let mut opts = mysql::OptsBuilder::from_opts(url);
         opts.prefer_socket(false);
         let pool = mysql::Pool::new(opts)?;
@@ -39,62 +38,73 @@ impl Database {
         let mut conn = pool.get_conn()?;
         conn.query(INIT_DB_STRUCTURE)?;
 
-        return Ok(Database{
-            pool: pool,
-        })
+        return Ok(Database { pool: pool });
     }
 
     pub fn insert_rpg_system(&self, name: String) -> Result<dmos::RpgSystem, Error> {
         check_varchar_length!(name);
-        Ok(self.pool.prep_exec("insert into rpg_systems (name) values (:name)",
-            params!{
-                "name" => name.clone(),
-            }).map(|result| {
-                dmos::RpgSystem {
-                    id: result.last_insert_id(),
-                    name: name,
-                }
+        Ok(self.pool
+            .prep_exec(
+                "insert into rpg_systems (name) values (:name)",
+                params!{
+                    "name" => name.clone(),
+                },
+            )
+            .map(|result| dmos::RpgSystem {
+                id: result.last_insert_id(),
+                name: name,
             })?)
-        }
-
-    pub fn get_rpg_systems(&self) -> Result<Vec<dmos::RpgSystem>, Error> {
-        Ok(self.pool.prep_exec("select rpg_system_id, name from rpg_systems;",())
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name) = mysql::from_row(row);
-                dmos::RpgSystem {
-                    id: id,
-                    name: name,
-                }
-            }).collect()
-        })?)
     }
 
-    pub fn get_rpg_system_by_id(&self, rpgsystemid : &dmos::RpgSystemId) -> Result<Option<dmos::RpgSystem>, Error> {
-        let results = self.pool.prep_exec("select rpg_system_id, name from rpg_systems where rpg_system_id=:rpgsystemid;",
-            params!{
-                "rpgsystemid" => rpgsystemid,Result
-            }
-        ).map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name) = mysql::from_row(row);
-                dmos::RpgSystem {
-                    id: id,
-                    name: name
-                }
-            }).collect::<Vec<dmos::RpgSystem>>()
-        })?;
+    pub fn get_rpg_systems(&self) -> Result<Vec<dmos::RpgSystem>, Error> {
+        Ok(self.pool
+            .prep_exec("select rpg_system_id, name from rpg_systems;", ())
+            .map(|result| {
+                result
+                    .map(|x| x.unwrap())
+                    .map(|row| {
+                        let (id, name) = mysql::from_row(row);
+                        dmos::RpgSystem { id: id, name: name }
+                    })
+                    .collect()
+            })?)
+    }
+
+    //TODO: Test
+    pub fn get_rpg_system_by_id(
+        &self,
+        rpgsystemid: &dmos::RpgSystemId,
+    ) -> Result<Option<dmos::RpgSystem>, Error> {
+        let results = self.pool
+            .prep_exec(
+                "select rpg_system_id, name from rpg_systems where rpg_system_id=:rpgsystemid;",
+                params!{
+                    "rpgsystemid" => rpgsystemid,Result
+                },
+            )
+            .map(|result| {
+                result
+                    .map(|x| x.unwrap())
+                    .map(|row| {
+                        let (id, name) = mysql::from_row(row);
+                        dmos::RpgSystem { id: id, name: name }
+                    })
+                    .collect::<Vec<dmos::RpgSystem>>()
+            })?;
         return Ok(results.pop());
     }
 
-
-    pub fn update_rpg_system(&self, rpgsystem: &dmos::RpgSystem) ->  Result<(), Error> {
+    pub fn update_rpg_system(&self, rpgsystem: &dmos::RpgSystem) -> Result<(), Error> {
         check_varchar_length!(rpgsystem.name);
-        Ok(self.pool.prep_exec("update rpg_systems set name=:name where rpg_system_id=:id;",
-            params!{
-                "name" => rpgsystem.name.clone(),
-                "id" => rpgsystem.id,
-            }).and(Ok(()))?)
+        Ok(self.pool
+            .prep_exec(
+                "update rpg_systems set name=:name where rpg_system_id=:id;",
+                params!{
+                    "name" => rpgsystem.name.clone(),
+                    "id" => rpgsystem.id,
+                },
+            )
+            .and(Ok(()))?)
     }
 
     pub fn get_titles(&self) -> Result<Vec<dmos::Title>, Error> {
@@ -115,7 +125,15 @@ impl Database {
         })?)
     }
 
-    pub fn insert_title(&self, name: String, system: dmos::RpgSystemId, language: String, publisher: String, year: dmos::Year, coverimage: Option<String>) -> Result<dmos::Title, Error>{
+    pub fn insert_title(
+        &self,
+        name: String,
+        system: dmos::RpgSystemId,
+        language: String,
+        publisher: String,
+        year: dmos::Year,
+        coverimage: Option<String>,
+    ) -> Result<dmos::Title, Error> {
         check_varchar_length!(name, language, publisher);
         Ok(self.pool.prep_exec("insert into titles (name, rpg_system_by_id, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
             params!{
@@ -163,7 +181,13 @@ impl Database {
         })?)
     }
 
-    pub fn insert_book(&self, title: dmos::TitleId, owner: dmos::EntityId, owner_type: dmos::EntityType, quality: String) -> Result<dmos::Book, Error>{
+    pub fn insert_book(
+        &self,
+        title: dmos::TitleId,
+        owner: dmos::EntityId,
+        owner_type: dmos::EntityType,
+        quality: String,
+    ) -> Result<dmos::Book, Error> {
         check_varchar_length!(quality);
         Ok(self.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
             params!{
@@ -202,40 +226,55 @@ impl Database {
 
     pub fn insert_member(&self, external_id: String) -> Result<dmos::Member, Error> {
         check_varchar_length!(external_id);
-        Ok(self.pool.prep_exec("insert into members (external_id) values (:external_id)",
-            params!{
-                "external_id" => external_id.clone(),
-            }).map(|result| {
-                dmos::Member {
-                    id: result.last_insert_id(),
-                    external_id: external_id,
-                }
+        Ok(self.pool
+            .prep_exec(
+                "insert into members (external_id) values (:external_id)",
+                params!{
+                    "external_id" => external_id.clone(),
+                },
+            )
+            .map(|result| dmos::Member {
+                id: result.last_insert_id(),
+                external_id: external_id,
             })?)
     }
 
     pub fn get_members(&self) -> Result<Vec<dmos::Member>, Error> {
-        Ok(self.pool.prep_exec("select member_id, external_id from members;",())
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, external_id) = mysql::from_row(row);
-                dmos::Member {
-                    id: id,
-                    external_id: external_id,
-                }
-            }).collect()
-        })?)
+        Ok(self.pool
+            .prep_exec("select member_id, external_id from members;", ())
+            .map(|result| {
+                result
+                    .map(|x| x.unwrap())
+                    .map(|row| {
+                        let (id, external_id) = mysql::from_row(row);
+                        dmos::Member {
+                            id: id,
+                            external_id: external_id,
+                        }
+                    })
+                    .collect()
+            })?)
     }
 
-    pub fn update_member(&self, member: &dmos::Member) ->  Result<(), Error> {
+    pub fn update_member(&self, member: &dmos::Member) -> Result<(), Error> {
         check_varchar_length!(member.external_id);
-        Ok(self.pool.prep_exec("update members set external_id=:external_id where member_id=:id",
-            params!{
-                "external_id" => member.external_id.clone(),
-                "id" => member.id,
-            }).and(Ok(()))?)
+        Ok(self.pool
+            .prep_exec(
+                "update members set external_id=:external_id where member_id=:id",
+                params!{
+                    "external_id" => member.external_id.clone(),
+                    "id" => member.id,
+                },
+            )
+            .and(Ok(()))?)
     }
 
-    pub fn insert_guild(&self, name: String, address: String, contact: dmos::MemberId) -> Result<dmos::Guild, Error> {
+    pub fn insert_guild(
+        &self,
+        name: String,
+        address: String,
+        contact: dmos::MemberId,
+    ) -> Result<dmos::Guild, Error> {
         check_varchar_length!(name, address);
         Ok(self.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
             params!{
@@ -253,21 +292,28 @@ impl Database {
     }
 
     pub fn get_guilds(&self) -> Result<Vec<dmos::Guild>, Error> {
-        Ok(self.pool.prep_exec("select guild_id, name, address, contact_by_member_id from guilds;",())
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name, address, contact) = mysql::from_row(row);
-                dmos::Guild {
-                    id: id,
-                    name: name,
-                    address: address,
-                    contact: contact,
-                }
-            }).collect()
-        })?)
+        Ok(self.pool
+            .prep_exec(
+                "select guild_id, name, address, contact_by_member_id from guilds;",
+                (),
+            )
+            .map(|result| {
+                result
+                    .map(|x| x.unwrap())
+                    .map(|row| {
+                        let (id, name, address, contact) = mysql::from_row(row);
+                        dmos::Guild {
+                            id: id,
+                            name: name,
+                            address: address,
+                            contact: contact,
+                        }
+                    })
+                    .collect()
+            })?)
     }
 
-    pub fn update_guild(&self, guild: &dmos::Guild) ->  Result<(), Error> {
+    pub fn update_guild(&self, guild: &dmos::Guild) -> Result<(), Error> {
         check_varchar_length!(guild.name, guild.address);
         Ok(self.pool.prep_exec("update guilds set name=:name, address=:address, contact_by_member_id=:contact where guild_id=:id",
             params!{
@@ -291,7 +337,14 @@ impl Database {
         })?)
     }
 
-    pub fn insert_rental(&self, from: dmos::Date, to: dmos::Date, book: dmos::BookId, rentee: dmos::EntityId, rentee_type: dmos::EntityType) -> Result<dmos::Rental, Error>{
+    pub fn insert_rental(
+        &self,
+        from: dmos::Date,
+        to: dmos::Date,
+        book: dmos::BookId,
+        rentee: dmos::EntityId,
+        rentee_type: dmos::EntityType,
+    ) -> Result<dmos::Rental, Error> {
         check_date!(from, to);
         Ok(self.pool.prep_exec("insert into rentals (from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id) values (:from, :to, :book, :rentee_member, :rentee_guild)",
             params!{
@@ -344,17 +397,20 @@ mod tests {
        ██    ███████ ███████    ██    ███████
     */
 
-
+    use chrono::prelude::*;
     use database::Database;
-    use mysql;
     use dmos;
     use error::Error;
-    use rand::{Rng, thread_rng};
-    use chrono::prelude::*;
+    use mysql;
+    use rand::{thread_rng, Rng};
     use std::env;
 
-    fn _s(s: &str) -> String { String::from(s) }
-    fn _d(y: i32, m: u32, d: u32) -> NaiveDate { NaiveDate::from_ymd(y, m, d) }
+    fn _s(s: &str) -> String {
+        String::from(s)
+    }
+    fn _d(y: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd(y, m, d)
+    }
     fn _serv() -> String {
         let server = env::var("SQL_SERVER").expect("SQL_SERVER not set in env");
         let username = env::var("SQL_USER").expect("SQL_SERVER not set in env");
@@ -362,7 +418,7 @@ mod tests {
             Ok(password) => format!(":{}", password),
             Err(_) => _s(""),
         };
-        _s(&format!("mysql://{}{}@{}",username, password, server))
+        _s(&format!("mysql://{}{}@{}", username, password, server))
     }
     const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
 
@@ -436,22 +492,26 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_rpg_system(_s("SR5👿"))
-            .and_then(|mut system| {
-                system.name = _s("SR5");
-                db.update_rpg_system(&system)
-                .and_then(|_| {
-                    db.get_rpg_systems()
-                    .and_then(|mut systems| Ok(systems.pop().map_or(false, |fetched_system| system == fetched_system)))
+        let result = db.insert_rpg_system(_s("SR5👿")).and_then(|mut system| {
+            system.name = _s("SR5");
+            db.update_rpg_system(&system).and_then(|_| {
+                db.get_rpg_systems().and_then(|mut systems| {
+                    Ok(systems
+                        .pop()
+                        .map_or(false, |fetched_system| system == fetched_system))
                 })
-            });
+            })
+        });
 
         teardown(dbname);
 
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated rpgsystem to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -461,16 +521,18 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_rpg_system(String::from("SR5👿"))
-        .and_then(|mut rpgsystem| {
-            rpgsystem.name = String::from(TOO_LONG_STRING);
-            return db.update_rpg_system(&rpgsystem);
-        });
+            .and_then(|mut rpgsystem| {
+                rpgsystem.name = String::from(TOO_LONG_STRING);
+                return db.update_rpg_system(&rpgsystem);
+            });
 
         teardown(dbname);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"),
+            _ => panic!(
+                "Expected DatabaseError::FieldError(FieldError::DataTooLong(\"rpgsystem.name\")"
+            ),
         }
     }
 
@@ -483,11 +545,20 @@ mod tests {
     */
 
     #[test]
-    fn insert_title_name_too_long(){
+    fn insert_title_name_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(String::from(TOO_LONG_STRING), system.id, String::from("de"), String::from("??"), 1248, None));
+            .and_then(|system| {
+                db.insert_title(
+                    String::from(TOO_LONG_STRING),
+                    system.id,
+                    String::from("de"),
+                    String::from("??"),
+                    1248,
+                    None,
+                )
+            });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -496,11 +567,20 @@ mod tests {
     }
 
     #[test]
-    fn insert_title_language_too_long(){
+    fn insert_title_language_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from(TOO_LONG_STRING), String::from("??"), 1248, None));
+            .and_then(|system| {
+                db.insert_title(
+                    String::from("Kobolde"),
+                    system.id,
+                    String::from(TOO_LONG_STRING),
+                    String::from("??"),
+                    1248,
+                    None,
+                )
+            });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -509,11 +589,20 @@ mod tests {
     }
 
     #[test]
-    fn insert_title_publisher_too_long(){
+    fn insert_title_publisher_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(String::from("Kobolde"), system.id, String::from("de"), String::from(TOO_LONG_STRING), 1248, None));
+            .and_then(|system| {
+                db.insert_title(
+                    String::from("Kobolde"),
+                    system.id,
+                    String::from("de"),
+                    String::from(TOO_LONG_STRING),
+                    1248,
+                    None,
+                )
+            });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -522,32 +611,42 @@ mod tests {
     }
 
     #[test]
-    fn insert_title_correct(){
+    fn insert_title_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None))
+            .and_then(|system| {
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
+            })
             .and_then(|title| {
-                db.get_titles()
-                    .and_then(|mut titles| Ok(titles.pop().map_or(false, |fetched_title| title == fetched_title)))
+                db.get_titles().and_then(|mut titles| {
+                    Ok(titles
+                        .pop()
+                        .map_or(false, |fetched_title| title == fetched_title))
+                })
             });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted title was not in DB :("),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
     #[test]
-    fn update_title_name_too_long(){
+    fn update_title_name_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
+            .and_then(|system| {
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None)
+            })
             .and_then(|mut title| {
                 title.name = _s(TOO_LONG_STRING);
-                return db.update_title(&title)
+                return db.update_title(&title);
             });
         teardown(dbname);
         match result {
@@ -557,14 +656,16 @@ mod tests {
     }
 
     #[test]
-    fn update_title_language_too_long(){
+    fn update_title_language_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
+            .and_then(|system| {
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None)
+            })
             .and_then(|mut title| {
                 title.language = _s(TOO_LONG_STRING);
-                return db.update_title(&title)
+                return db.update_title(&title);
             });
         teardown(dbname);
         match result {
@@ -574,14 +675,16 @@ mod tests {
     }
 
     #[test]
-    fn update_title_publisher_too_long(){
+    fn update_title_publisher_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None))
+            .and_then(|system| {
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2022, None)
+            })
             .and_then(|mut title| {
                 title.publisher = _s(TOO_LONG_STRING);
-                return db.update_title(&title)
+                return db.update_title(&title);
             });
         teardown(dbname);
         match result {
@@ -591,26 +694,33 @@ mod tests {
     }
 
     #[test]
-    fn update_title_correct(){
+    fn update_title_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(String::from("Kobolde"))
-            .and_then(|system| db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None))
+            .and_then(|system| {
+                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None)
+            })
             .and_then(|mut title| {
                 title.name = _s("new name");
                 title.year = 1999;
                 title.publisher = _s("new publisher");
-                db.update_title(&title)
-                    .and_then(|_| {
-                        db.get_titles()
-                            .and_then(|mut titles| Ok(titles.pop().map_or(false, |fetched_title| title == fetched_title)))
+                db.update_title(&title).and_then(|_| {
+                    db.get_titles().and_then(|mut titles| {
+                        Ok(titles
+                            .pop()
+                            .map_or(false, |fetched_title| title == fetched_title))
                     })
+                })
             });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated title to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -624,79 +734,99 @@ mod tests {
 
     fn insert_book_default(db: &Database) -> Result<dmos::Book, Error> {
         return db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
+            .and_then(|system| {
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-            )
-            .and_then(|title|
+            })
+            .and_then(|title| {
                 db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
                     .and_then(|member| Ok((title, member)))
-            )
-            .and_then(|(title, member)|
-                db.insert_book(title.id, member.id, dmos::EntityType::Member, _s("vähri guhd!"))
-            )
+            })
+            .and_then(|(title, member)| {
+                db.insert_book(
+                    title.id,
+                    member.id,
+                    dmos::EntityType::Member,
+                    _s("vähri guhd!"),
+                )
+            });
     }
 
     #[test]
-    fn insert_book_correct(){
+    fn insert_book_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );
+            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
+            .and_then(|(orig_book, mut books)| {
+                Ok(books
+                    .pop()
+                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted book is not in DB :("),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
     #[test]
-    fn insert_book_quality_too_long(){
+    fn insert_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
+            .and_then(|system| {
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-            )
-            .and_then(|title|
+            })
+            .and_then(|title| {
                 db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
                     .and_then(|member| Ok((title, member)))
-            )
-            .and_then(|(title, member)|
-                db.insert_book(title.id, member.id, dmos::EntityType::Member, _s(TOO_LONG_STRING))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );
+            })
+            .and_then(|(title, member)| {
+                db.insert_book(
+                    title.id,
+                    member.id,
+                    dmos::EntityType::Member,
+                    _s(TOO_LONG_STRING),
+                )
+            })
+            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
+            .and_then(|(orig_book, mut books)| {
+                Ok(books
+                    .pop()
+                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"),
+            _ => panic!(
+                "Expected DatabaseError::FieldError(FieldError::DataTooLong(\"book.quality\")"
+            ),
         }
     }
 
     #[test]
-    fn insert_book_invalid_title(){
+    fn insert_book_invalid_title() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-            .and_then(|member|
-                db.insert_book(01248163264, member.id, dmos::EntityType::Member, _s("quite good"))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );
+            .and_then(|member| {
+                db.insert_book(
+                    01248163264,
+                    member.id,
+                    dmos::EntityType::Member,
+                    _s("quite good"),
+                )
+            })
+            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
+            .and_then(|(orig_book, mut books)| {
+                Ok(books
+                    .pop()
+                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -705,22 +835,27 @@ mod tests {
     }
 
     #[test]
-    fn insert_book_invalid_owner_id(){
+    fn insert_book_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
+            .and_then(|system| {
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-            )
-            .and_then(|title|
-                db.insert_book(title.id, 012481632, dmos::EntityType::Member, _s("quite good"))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );
+            })
+            .and_then(|title| {
+                db.insert_book(
+                    title.id,
+                    012481632,
+                    dmos::EntityType::Member,
+                    _s("quite good"),
+                )
+            })
+            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
+            .and_then(|(orig_book, mut books)| {
+                Ok(books
+                    .pop()
+                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -729,26 +864,31 @@ mod tests {
     }
 
     #[test]
-    fn insert_book_wrong_owner_type(){
+    fn insert_book_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system|
+            .and_then(|system| {
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-            )
-            .and_then(|title|
+            })
+            .and_then(|title| {
                 db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
                     .and_then(|member| Ok((title, member)))
-            )
-            .and_then(|(title, member)|
-                db.insert_book(title.id, member.id, dmos::EntityType::Guild, _s("quite good"))
-            )
-            .and_then(|orig_book|
-                db.get_books().and_then(|books| Ok((orig_book, books)))
-            )
-            .and_then(|(orig_book, mut books)|
-                Ok(books.pop().map_or(false, |fetched_book| orig_book == fetched_book))
-            );
+            })
+            .and_then(|(title, member)| {
+                db.insert_book(
+                    title.id,
+                    member.id,
+                    dmos::EntityType::Guild,
+                    _s("quite good"),
+                )
+            })
+            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
+            .and_then(|(orig_book, mut books)| {
+                Ok(books
+                    .pop()
+                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -761,36 +901,49 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_rpg_system(_s("Cthulhu"))
-            .and_then(|system|
-                db.insert_title(_s("Cthulhu 666th Edition"), system.id, _s("en"), _s("Pegasus"), 2066, None)
-            )
-            .and_then(|title|
+            .and_then(|system| {
+                db.insert_title(
+                    _s("Cthulhu 666th Edition"),
+                    system.id,
+                    _s("en"),
+                    _s("Pegasus"),
+                    2066,
+                    None,
+                )
+            })
+            .and_then(|title| {
                 db.insert_member(_s("annother-uuuuuiiii-iiiiddd-123443214"))
                     .and_then(|member| Ok((title, member)))
-            ).and_then(|(title, member)|
+            })
+            .and_then(|(title, member)| {
                 db.insert_guild(_s("Ravenclaw"), _s("Sesame Street 123"), member.id)
                     .and_then(|guild| Ok((title, guild)))
-            ).and_then(|(title, guild)|
-                insert_book_default(&db)
-                    .and_then(|orig_book| Ok((orig_book, title, guild)))
-            )
+            })
+            .and_then(|(title, guild)| {
+                insert_book_default(&db).and_then(|orig_book| Ok((orig_book, title, guild)))
+            })
             .and_then(|(mut orig_book, title, guild)| {
                 orig_book.title = title.id;
                 orig_book.owner = guild.id;
                 orig_book.owner_type = dmos::EntityType::Guild;
                 orig_book.quality = _s("bad");
-                db.update_book(&orig_book)
-                    .and_then(|_| Ok(orig_book))
+                db.update_book(&orig_book).and_then(|_| Ok(orig_book))
             })
             .and_then(|book| {
-                db.get_books()
-                    .and_then(|mut books| Ok(books.pop().map_or(false, |fetched_book| book == fetched_book)))
+                db.get_books().and_then(|mut books| {
+                    Ok(books
+                        .pop()
+                        .map_or(false, |fetched_book| book == fetched_book))
+                })
             });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated book to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -798,11 +951,10 @@ mod tests {
     fn update_book_invalid_title() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|mut orig_book| {
-                orig_book.title = 0123481642;
-                db.update_book(&orig_book)
-            });
+        let result = insert_book_default(&db).and_then(|mut orig_book| {
+            orig_book.title = 0123481642;
+            db.update_book(&orig_book)
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -814,11 +966,10 @@ mod tests {
     fn update_book_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|mut orig_book| {
-                orig_book.owner = 0123481642;
-                db.update_book(&orig_book)
-            });
+        let result = insert_book_default(&db).and_then(|mut orig_book| {
+            orig_book.owner = 0123481642;
+            db.update_book(&orig_book)
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -830,11 +981,10 @@ mod tests {
     fn update_book_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|mut orig_book| {
-                orig_book.owner_type = dmos::EntityType::Guild;
-                db.update_book(&orig_book)
-            });
+        let result = insert_book_default(&db).and_then(|mut orig_book| {
+            orig_book.owner_type = dmos::EntityType::Guild;
+            db.update_book(&orig_book)
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -846,11 +996,10 @@ mod tests {
     fn update_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|mut orig_book| {
-                orig_book.quality = _s(TOO_LONG_STRING);
-                db.update_book(&orig_book)
-            });
+        let result = insert_book_default(&db).and_then(|mut orig_book| {
+            orig_book.quality = _s(TOO_LONG_STRING);
+            db.update_book(&orig_book)
+        });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -887,7 +1036,9 @@ mod tests {
 
         match result {
             Err(Error::DataTooLong(_)) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"external_id\")"),
+            _ => panic!(
+                "Expected DatabaseError::FieldError(FieldError::DataTooLong(\"external_id\")"
+            ),
         }
     }
 
@@ -896,22 +1047,26 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("somememberId"))
-            .and_then(|mut member| {
-                member.external_id = _s("someotherId");
-                db.update_member(&member)
-                .and_then(|_| {
-                    db.get_members()
-                    .and_then(|mut members| Ok(members.pop().map_or(false, |fetched_member| member == fetched_member)))
+        let result = db.insert_member(_s("somememberId")).and_then(|mut member| {
+            member.external_id = _s("someotherId");
+            db.update_member(&member).and_then(|_| {
+                db.get_members().and_then(|mut members| {
+                    Ok(members
+                        .pop()
+                        .map_or(false, |fetched_member| member == fetched_member))
                 })
-            });
+            })
+        });
 
         teardown(dbname);
 
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated member to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -921,10 +1076,10 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(String::from("somememberId"))
-        .and_then(|mut member| {
-            member.external_id = String::from(TOO_LONG_STRING);
-            return db.update_member(&member);
-        });
+            .and_then(|mut member| {
+                member.external_id = String::from(TOO_LONG_STRING);
+                return db.update_member(&member);
+            });
 
         teardown(dbname);
 
@@ -948,20 +1103,27 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id"))
-        .and_then(|member| {
-            db.insert_guild(_s("LibrariumAachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        })
-        .and_then(|orig_guild| {
-            db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds)))
-        })
-        .and_then(|(orig_guild, mut guilds)| {
-            Ok(guilds.pop().map_or(false, |fetched_guild| orig_guild == fetched_guild))
-        });
+            .and_then(|member| {
+                db.insert_guild(
+                    _s("LibrariumAachen"),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member.id,
+                )
+            })
+            .and_then(|orig_guild| db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds))))
+            .and_then(|(orig_guild, mut guilds)| {
+                Ok(guilds
+                    .pop()
+                    .map_or(false, |fetched_guild| orig_guild == fetched_guild))
+            });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted Guild is not in DB :("),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -970,10 +1132,13 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id"))
-        .and_then(|member|
-            db.insert_guild(_s(TOO_LONG_STRING), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        );
+        let result = db.insert_member(_s("external_id")).and_then(|member| {
+            db.insert_guild(
+                _s(TOO_LONG_STRING),
+                _s("Postfach 1231238581412 1238414812 Aachen"),
+                member.id,
+            )
+        });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -987,29 +1152,38 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
-        .and_then(|member|
-            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        )
-        .and_then(|guild|
-            db.insert_member(_s("other_id")).and_then(|other_member| Ok((guild, other_member))))
-        .and_then(|(mut guild, other_member)| {
-            guild.name = _s("RPG Librarium Aaachen");
-            guild.address = _s("postsfadfeddfasdfasdff");
-            guild.contact = other_member.id;
-            db.update_guild(&guild).and_then(|_| Ok(guild))
-        })
-        .and_then(|orig_guild|
-            db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds)))
-        )
-        .and_then(|(orig_guild, mut guilds)|
-            Ok(guilds.pop().map_or(false, |fetched_guild| orig_guild == fetched_guild))
-        );
+            .and_then(|member| {
+                db.insert_guild(
+                    _s("Librarium Aachen"),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member.id,
+                )
+            })
+            .and_then(|guild| {
+                db.insert_member(_s("other_id"))
+                    .and_then(|other_member| Ok((guild, other_member)))
+            })
+            .and_then(|(mut guild, other_member)| {
+                guild.name = _s("RPG Librarium Aaachen");
+                guild.address = _s("postsfadfeddfasdfasdff");
+                guild.contact = other_member.id;
+                db.update_guild(&guild).and_then(|_| Ok(guild))
+            })
+            .and_then(|orig_guild| db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds))))
+            .and_then(|(orig_guild, mut guilds)| {
+                Ok(guilds
+                    .pop()
+                    .map_or(false, |fetched_guild| orig_guild == fetched_guild))
+            });
         teardown(dbname);
 
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated guild to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -1019,19 +1193,25 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
-        .and_then(|member|
-            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        )
-        .and_then(|mut guild| {
-            guild.name = _s(TOO_LONG_STRING);
-            db.update_guild(&guild)
-        });
+            .and_then(|member| {
+                db.insert_guild(
+                    _s("Librarium Aachen"),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member.id,
+                )
+            })
+            .and_then(|mut guild| {
+                guild.name = _s(TOO_LONG_STRING);
+                db.update_guild(&guild)
+            });
 
         teardown(dbname);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.name\")"),
+            _ => {
+                panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.name\")")
+            }
         }
     }
 
@@ -1041,28 +1221,38 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
-        .and_then(|member|
-            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        )
-        .and_then(|mut guild| {
-            guild.address = _s(TOO_LONG_STRING);
-            db.update_guild(&guild)
-        });
+            .and_then(|member| {
+                db.insert_guild(
+                    _s("Librarium Aachen"),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member.id,
+                )
+            })
+            .and_then(|mut guild| {
+                guild.address = _s(TOO_LONG_STRING);
+                db.update_guild(&guild)
+            });
 
         teardown(dbname);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
-            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.address\")"),
+            _ => panic!(
+                "Expected DatabaseError::FieldError(FieldError::DataTooLong(\"guild.address\")"
+            ),
         }
     }
 
     #[test]
-    fn insert_guild_invalid_cotact(){
+    fn insert_guild_invalid_cotact() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_guild(_s("RPG Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), 12345);
+        let result = db.insert_guild(
+            _s("RPG Librarium Aachen"),
+            _s("Postfach 1231238581412 1238414812 Aachen"),
+            12345,
+        );
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -1076,13 +1266,17 @@ mod tests {
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
         let result = db.insert_member(_s("external_id1"))
-        .and_then(|member|
-            db.insert_guild(_s("Librarium Aachen"), _s("Postfach 1231238581412 1238414812 Aachen"), member.id)
-        )
-        .and_then(|mut guild| {
-            guild.contact = 12345;
-            db.update_guild(&guild)
-        });
+            .and_then(|member| {
+                db.insert_guild(
+                    _s("Librarium Aachen"),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member.id,
+                )
+            })
+            .and_then(|mut guild| {
+                guild.contact = 12345;
+                db.update_guild(&guild)
+            });
 
         teardown(dbname);
 
@@ -1101,7 +1295,7 @@ mod tests {
     */
 
     #[test]
-    fn insert_rental_correct(){
+    fn insert_rental_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = db.insert_member(_s("some-external-id"))
@@ -1123,7 +1317,10 @@ mod tests {
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted rental is not in DB :("),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -1131,10 +1328,15 @@ mod tests {
     fn insert_rental_invalid_book() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2014,8,16), _d(3264,12,08), 012481632, book.owner, book.owner_type)
-            );
+        let result = insert_book_default(&db).and_then(|book| {
+            db.insert_rental(
+                _d(2014, 8, 16),
+                _d(3264, 12, 08),
+                012481632,
+                book.owner,
+                book.owner_type,
+            )
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -1146,10 +1348,15 @@ mod tests {
     fn insert_rental_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, 012481632, book.owner_type)
-            );
+        let result = insert_book_default(&db).and_then(|book| {
+            db.insert_rental(
+                _d(2014, 8, 16),
+                _d(3264, 12, 08),
+                book.id,
+                012481632,
+                book.owner_type,
+            )
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -1161,13 +1368,18 @@ mod tests {
     fn insert_rental_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2014,8,16), _d(3264,12,08), book.id, book.owner, match book.owner_type {
+        let result = insert_book_default(&db).and_then(|book| {
+            db.insert_rental(
+                _d(2014, 8, 16),
+                _d(3264, 12, 08),
+                book.id,
+                book.owner,
+                match book.owner_type {
                     dmos::EntityType::Member => dmos::EntityType::Guild,
                     dmos::EntityType::Guild => dmos::EntityType::Member,
-                })
-            );
+                },
+            )
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -1180,40 +1392,73 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|orig_rental|
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|orig_rental| {
                 db.insert_member(_s("rincewind"))
                     .and_then(|member| Ok((orig_rental, member)))
-            ).and_then(|(orig_rental, member)|
-                db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
-                    .and_then(|guild| Ok((orig_rental, guild)))
-            ).and_then(|(orig_rental, guild)|
+            })
+            .and_then(|(orig_rental, member)| {
+                db.insert_guild(
+                    _s("Yordle Academy of Science and Progress"),
+                    _s("Piltover"),
+                    member.id,
+                ).and_then(|guild| Ok((orig_rental, guild)))
+            })
+            .and_then(|(orig_rental, guild)| {
                 db.insert_rpg_system(_s("Discworld"))
                     .and_then(|system| Ok((orig_rental, guild, system)))
-            ).and_then(|(orig_rental, guild, system)|
-                db.insert_title(_s("Unseen University Adventures"), system.id, _s("en"), _s("Twoflower Publishing"), 2048, None)
-                    .and_then(|title| Ok((orig_rental, guild, title)))
-            ).and_then(|(orig_rental, guild, title)|
-                db.insert_book(title.id, guild.id, dmos::EntityType::Guild, _s("impressive"))
-                    .and_then(|book| Ok((orig_rental, book)))
-            ).and_then(|(mut orig_rental, book)| {
-                orig_rental.from = _d(2090,10,11);
-                orig_rental.to = _d(2112,1,3);
+            })
+            .and_then(|(orig_rental, guild, system)| {
+                db.insert_title(
+                    _s("Unseen University Adventures"),
+                    system.id,
+                    _s("en"),
+                    _s("Twoflower Publishing"),
+                    2048,
+                    None,
+                ).and_then(|title| Ok((orig_rental, guild, title)))
+            })
+            .and_then(|(orig_rental, guild, title)| {
+                db.insert_book(
+                    title.id,
+                    guild.id,
+                    dmos::EntityType::Guild,
+                    _s("impressive"),
+                ).and_then(|book| Ok((orig_rental, book)))
+            })
+            .and_then(|(mut orig_rental, book)| {
+                orig_rental.from = _d(2090, 10, 11);
+                orig_rental.to = _d(2112, 1, 3);
                 orig_rental.book = book.id;
                 orig_rental.rentee = book.owner;
                 orig_rental.rentee_type = book.owner_type;
                 db.update_rental(&orig_rental).and_then(|_| Ok(orig_rental))
-            }).and_then(|orig_rental|
-                db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
-            ).and_then(|(orig_rental, mut rentals)|
-                Ok(rentals.pop().map_or(false, |fetched_rental| orig_rental == fetched_rental))
-            );
+            })
+            .and_then(|orig_rental| {
+                db.get_rentals()
+                    .and_then(|rentals| Ok((orig_rental, rentals)))
+            })
+            .and_then(|(orig_rental, mut rentals)| {
+                Ok(rentals
+                    .pop()
+                    .map_or(false, |fetched_rental| orig_rental == fetched_rental))
+            });
         teardown(dbname);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated guild to be corretly stored in DB"),
-            _ => { result.unwrap(); () },
+            _ => {
+                result.unwrap();
+                ()
+            }
         }
     }
 
@@ -1222,10 +1467,17 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|mut orig_rental| {
-                orig_rental.from = _d(-99,10,11);
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|mut orig_rental| {
+                orig_rental.from = _d(-99, 10, 11);
                 db.update_rental(&orig_rental)
             });
         teardown(dbname);
@@ -1240,10 +1492,17 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|mut orig_rental| {
-                orig_rental.to = _d(-99,11,12);
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|mut orig_rental| {
+                orig_rental.to = _d(-99, 11, 12);
                 db.update_rental(&orig_rental)
             });
         teardown(dbname);
@@ -1258,9 +1517,16 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|mut orig_rental| {
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|mut orig_rental| {
                 orig_rental.book = 012481632;
                 db.update_rental(&orig_rental)
             });
@@ -1276,9 +1542,16 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|mut orig_rental| {
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|mut orig_rental| {
                 orig_rental.rentee = 012481632;
                 db.update_rental(&orig_rental)
             });
@@ -1294,9 +1567,16 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book|
-                db.insert_rental(_d(2012,3,4), _d(2056,7,8), book.id, book.owner, book.owner_type)
-            ).and_then(|mut orig_rental| {
+            .and_then(|book| {
+                db.insert_rental(
+                    _d(2012, 3, 4),
+                    _d(2056, 7, 8),
+                    book.id,
+                    book.owner,
+                    book.owner_type,
+                )
+            })
+            .and_then(|mut orig_rental| {
                 orig_rental.rentee_type = match orig_rental.rentee_type {
                     dmos::EntityType::Member => dmos::EntityType::Guild,
                     dmos::EntityType::Guild => dmos::EntityType::Member,
