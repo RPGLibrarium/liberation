@@ -1,6 +1,5 @@
-use dmos;
+use database as db;
 use serde_formats;
-use serde_derive;
 
 type ItemCount = u32;
 
@@ -10,115 +9,115 @@ type ItemCount = u32;
 // ############### Response/Outer DTOS #########################
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetRpgSystems{
-    pub rpgsystems: Vec<dmos::RpgSystem>,
+#[serde(rename_all = "lowercase")]
+pub struct GetRpgSystems {
+    pub rpgsystems: Vec<db::RpgSystem>,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetRpgSystem{
+#[serde(rename_all = "lowercase")]
+pub struct GetRpgSystem {
     pub rpgsystems: Vec<RpgSystemWithTitles>,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all="lowercase")]
-pub struct PutPostRpgSystem{
-    pub rpgsystem: PartialRpgSystem
+#[serde(rename_all = "lowercase")]
+pub struct PutPostRpgSystem {
+    pub rpgsystem: PartialRpgSystem,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetTitles{
+#[serde(rename_all = "lowercase")]
+pub struct GetTitles {
     pub titles: Vec<TitleWithSystem>,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetTitle{
+#[serde(rename_all = "lowercase")]
+pub struct GetTitle {
     pub title: TitleWithSystemWithBooks,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all="lowercase")]
-pub struct PutPostTitle{
-    pub title: PartialTitle
+#[serde(rename_all = "lowercase")]
+pub struct PutPostTitle {
+    pub title: PartialTitle,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetBooks{
+#[serde(rename_all = "lowercase")]
+pub struct GetBooks {
     pub books: Vec<BookWithTitleWithOwnerWithRental>,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetBook{
+#[serde(rename_all = "lowercase")]
+pub struct GetBook {
     pub book: BookWithTitleWithOwnerWithRental,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all="lowercase")]
-pub struct PutPostBook{
+#[serde(rename_all = "lowercase")]
+pub struct PutPostBook {
     pub book: PartialBook,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetMembers{
+#[serde(rename_all = "lowercase")]
+pub struct GetMembers {
     pub members: Vec<MemberWithRoles>,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetMember{
+#[serde(rename_all = "lowercase")]
+pub struct GetMember {
     pub member: MemberWithRoles,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetMemberInventory{
+#[serde(rename_all = "lowercase")]
+pub struct GetMemberInventory {
     pub member: Entity,
     pub inventory: Inventory,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all="lowercase")]
-pub struct PutMemberInvetory{
+#[serde(rename_all = "lowercase")]
+pub struct PutMemberInvetory {
     pub book: PartialBook,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetGuilds{
+#[serde(rename_all = "lowercase")]
+pub struct GetGuilds {
     pub guilds: Vec<GuildWithContact>,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetGuild{
+#[serde(rename_all = "lowercase")]
+pub struct GetGuild {
     pub guild: GuildWithContact,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all="lowercase")]
-pub struct GetGuildInventory{
+#[serde(rename_all = "lowercase")]
+pub struct GetGuildInventory {
     pub guild: Entity,
     pub inventory: Inventory,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all="lowercase")]
-pub struct PutPostGuild{
+#[serde(rename_all = "lowercase")]
+pub struct PutPostGuild {
     pub guild: PartialGuild,
 }
 
 // ############### Inner DTOS ############################
 #[derive(Serialize)]
-pub struct RpgSystemWithTitles{
-    pub id: dmos::RpgSystemId,
+pub struct RpgSystemWithTitles {
+    pub id: db::RpgSystemId,
     pub name: String,
-    pub titles: Vec<dmos::Title>
+    pub titles: Vec<db::Title>,
 }
 
 #[derive(Deserialize)]
@@ -127,35 +126,35 @@ pub struct PartialRpgSystem {
 }
 
 #[derive(Serialize)]
-pub struct TitleWithSystem{
-    pub id: dmos::TitleId,
+pub struct TitleWithSystem {
+    pub id: db::TitleId,
     pub name: String,
-    pub system: dmos::RpgSystem,
+    pub system: db::RpgSystem,
     pub language: String,
     pub publisher: String,
-    pub year: dmos::Year,
+    pub year: db::Year,
     pub coverimage: Option<String>,
     pub stock: ItemCount,
     pub available: ItemCount,
 }
 
 #[derive(Serialize)]
-pub struct TitleWithSystemWithBooks{
-    pub id: dmos::TitleId,
+pub struct TitleWithSystemWithBooks {
+    pub id: db::TitleId,
     pub name: String,
-    pub system: dmos::RpgSystem,
+    pub system: db::RpgSystem,
     pub language: String,
     pub publisher: String,
-    pub year: dmos::Year,
+    pub year: db::Year,
     pub coverimage: Option<String>,
     pub stock: ItemCount,
     pub available: ItemCount,
-    pub books: Vec<BookWithOwnerWithRental>
+    pub books: Vec<BookWithOwnerWithRental>,
 }
 
 #[derive(Serialize)]
 pub struct BookWithOwnerWithRental {
-    pub id: dmos::BookId,
+    pub id: db::BookId,
     pub owner: Entity,
     pub quality: String,
     pub available: bool,
@@ -164,41 +163,41 @@ pub struct BookWithOwnerWithRental {
 
 #[derive(Serialize)]
 pub struct Entity {
-    #[serde(rename="type")]
-    pub entity_type: dmos::EntityType,
-    pub id: dmos::Id,
+    #[serde(rename = "type")]
+    pub entity_type: db::EntityType,
+    pub id: db::Id,
     pub name: String,
 }
 
 #[derive(Deserialize)]
 pub struct UnresolvedEntity {
-    #[serde(rename="type")]
-    pub entity_type: dmos::EntityType,
-    pub id: dmos::Id,
+    #[serde(rename = "type")]
+    pub entity_type: db::EntityType,
+    pub id: db::Id,
 }
 
 #[derive(Serialize)]
 pub struct Rental {
     #[serde(with = "serde_formats::naive_date")]
-    pub from: dmos::Date,
+    pub from: db::Date,
     #[serde(with = "serde_formats::naive_date")]
-    pub to: dmos::Date,
+    pub to: db::Date,
     pub rentee: Entity,
 }
 
 #[derive(Deserialize)]
 pub struct PartialTitle {
     pub name: String,
-    pub system: dmos::TitleId,
+    pub system: db::TitleId,
     pub language: String,
     pub publisher: String,
-    pub year: dmos::Year,
+    pub year: db::Year,
     pub coverimage: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct BookWithTitleWithOwnerWithRental {
-    pub id: dmos::BookId,
+    pub id: db::BookId,
     pub title: TitleWithSystem,
     pub owner: Entity,
     pub quality: String,
@@ -208,7 +207,7 @@ pub struct BookWithTitleWithOwnerWithRental {
 
 #[derive(Deserialize)]
 pub struct PartialBook {
-    pub title: dmos::TitleId,
+    pub title: db::TitleId,
     pub owner: UnresolvedEntity,
     pub quality: String,
 }
@@ -221,30 +220,30 @@ pub struct Inventory {
 
 #[derive(Serialize)]
 pub struct MemberWithRoles {
-    pub id: dmos::MemberId,
+    pub id: db::MemberId,
     pub name: String,
     pub email: String,
-    pub roles: Vec<dmos::Role>
+    pub roles: Vec<db::Role>,
 }
 
 #[derive(Serialize)]
 pub struct Member {
-    pub id: dmos::MemberId,
+    pub id: db::MemberId,
     pub name: String,
     pub email: String,
 }
 
 #[derive(Serialize)]
 pub struct GuildWithContact {
-    pub id: dmos::GuildId,
+    pub id: db::GuildId,
     pub name: String,
     pub address: String,
-    pub contact: Member
+    pub contact: Member,
 }
 
 #[derive(Deserialize)]
 pub struct PartialGuild {
     pub name: String,
     pub address: String,
-    pub contact: dmos::MemberId
+    pub contact: db::MemberId,
 }

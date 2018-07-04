@@ -1,4 +1,4 @@
-use actix_web::{error, http, HttpResponse, ResponseError};
+use actix_web::{error, HttpResponse, ResponseError};
 use failure::Fail;
 use mysql::Error as MySqlError;
 use std::fmt;

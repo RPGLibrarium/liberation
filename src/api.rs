@@ -4,7 +4,6 @@ use actix_web::{
     Responder, ResponseError, Result,
 };
 use database::Database;
-use dmos;
 use dtos;
 use error;
 use futures::future::Future;
