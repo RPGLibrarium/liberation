@@ -5,7 +5,7 @@ pub type TitleId = Id;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Title {
-    pub id: TitleId,
+    pub id: Option<TitleId>,
     pub name: String,
     pub system: RpgSystemId,
     pub language: String,
@@ -45,6 +45,7 @@ pub fn get_titles_by_rpg_system(
 pub fn count_books_by_title() {}
 
 impl DMO for Title {
+    type Id = TitleId;
     fn get_all(db: &Database) -> Result<Vec<Title>, Error> {
         Ok(db.pool.prep_exec("select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles;",())
     .map(|result| {
@@ -64,7 +65,7 @@ impl DMO for Title {
     }
 
     //TODO: Test
-    fn get(&db: &Database, title_id: TitleId) -> Result<Option<Title>, Error> {
+    fn get(db: &Database, title_id: TitleId) -> Result<Option<Title>, Error> {
         let mut results = db.pool
         .prep_exec(
             "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles where title_id=:title_id;",
@@ -91,38 +92,25 @@ impl DMO for Title {
 
     //TODO Test
 
-    fn insert(
-        &db: &Database,
-        name: String,
-        system: RpgSystemId,
-        language: String,
-        publisher: String,
-        year: Year,
-        coverimage: Option<String>,
-    ) -> Result<Title, Error> {
-        check_varchar_length!(name, language, publisher);
+    fn insert(db: &Database, inp: &Title) -> Result<Title, Error> {
+        check_varchar_length!(inp.name, inp.language, inp.publisher);
         Ok(db.pool.prep_exec("insert into titles (name, rpg_system_by_id, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
         params!{
-            "name" => name.clone(),
-            "system" => system,
-            "language" => language.clone(),
-            "publisher" => publisher.clone(),
-            "year" => year,
-            "coverimage" => coverimage.clone(),
+            "name" => inp.name.clone(),
+            "system" => inp.system,
+            "language" => inp.language.clone(),
+            "publisher" => inp.publisher.clone(),
+            "year" => inp.year,
+            "coverimage" => inp.coverimage.clone(),
         }).map(|result| {
             Title {
-                id: result.last_insert_id(),
-                name: name,
-                system: system,
-                language: language,
-                publisher: publisher,
-                year: year,
-                coverimage: coverimage,
+                id: Some(result.last_insert_id()),
+                ..*inp
             }
         })?)
     }
 
-    fn update(&db: &Database, title: &Title) -> Result<(), Error> {
+    fn update(db: &Database, title: &Title) -> Result<(), Error> {
         check_varchar_length!(title.name, title.language, title.publisher);
         Ok(db.pool.prep_exec("update titles set name=:name, rpg_system_by_id=:system, language=:language, publisher=:publisher, year=:year, coverimage=:coverimage where title_id=:id;",
         params!{
@@ -134,6 +122,22 @@ impl DMO for Title {
             "coverimage" => title.coverimage.clone(),
             "id" => title.id,
         }).and(Ok(()))?)
+    }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from titles where title_id=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
     }
 }
 

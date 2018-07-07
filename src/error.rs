@@ -10,6 +10,7 @@ pub enum Error {
     ConstraintError(Option<Field>),
     DataTooLong(Field),
     IllegalValueForType(Field),
+    IllegalState(),
     JsonPayloadError(error::JsonPayloadError),
     // ActixError(error::Error),
 }

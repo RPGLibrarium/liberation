@@ -8,32 +8,24 @@ pub struct RpgSystem {
     pub name: String,
 }
 
-impl RpgSystem {
-    pub fn new(id: RpgSystemId, partial: dtos::PartialRpgSystem) -> RpgSystem {
-        return RpgSystem {
-            id: id,
-            name: partial.name,
-        };
-    }
-}
-
 impl DMO for RpgSystem {
+    type Id = RpgSystemId;
     fn insert(db: &Database, inp: &RpgSystem) -> Result<RpgSystem, Error> {
         check_varchar_length!(inp.name);
         Ok(db.pool
             .prep_exec(
                 "insert into rpg_systems (name) values (:name)",
                 params!{
-                    "name" => name.clone(),
+                    "name" => inp.name.clone(),
                 },
             )
             .map(|result| RpgSystem {
                 id: result.last_insert_id(),
-                name: name,
+                ..*inp
             })?)
     }
 
-    fn get_all(&db: &Database) -> Result<Vec<RpgSystem>, Error> {
+    fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {
         Ok(db.pool
             .prep_exec("select rpg_system_id, name from rpg_systems;", ())
             .map(|result| {
@@ -48,7 +40,7 @@ impl DMO for RpgSystem {
     }
 
     //TODO: Test
-    fn get(&db: &Database, rpg_system_id: &RpgSystemId) -> Result<Option<RpgSystem>, Error> {
+    fn get(db: &Database, rpg_system_id: Id) -> Result<Option<RpgSystem>, Error> {
         let mut results = db.pool
             .prep_exec(
                 "select rpg_system_id, name from rpg_systems where rpg_system_id=:rpg_system_id;",
@@ -68,7 +60,7 @@ impl DMO for RpgSystem {
         return Ok(results.pop());
     }
 
-    fn update(&db: &Database, rpgsystem: &RpgSystem) -> Result<(), Error> {
+    fn update(db: &Database, rpgsystem: &RpgSystem) -> Result<(), Error> {
         check_varchar_length!(rpgsystem.name);
         Ok(db.pool
             .prep_exec(
@@ -78,7 +70,23 @@ impl DMO for RpgSystem {
                     "id" => rpgsystem.id,
                 },
             )
-            .and(Ok(()))?)
+            .map(|_| ())?)
+    }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from rpg_systems where rpg_system_id=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
     }
 }
 

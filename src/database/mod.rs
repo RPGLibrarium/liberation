@@ -72,10 +72,10 @@ impl Database {
 trait DMO<T = Self> {
     type Id;
     fn get_all(&Database) -> Result<Vec<T>, Error>;
-    fn get(&Database, Self::Id) -> Result<T, Error>;
+    fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
     fn insert(&Database, &T) -> Result<T, Error>;
     fn update(&Database, &T) -> Result<(), Error>;
-    fn delete(&Database, Self::Id) -> Result<(), Error>;
+    fn delete(&Database, Self::Id) -> Result<bool, Error>;
 }
 
 #[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
