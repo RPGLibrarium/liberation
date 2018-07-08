@@ -92,20 +92,23 @@ impl DMO for RpgSystem {
 
 #[cfg(test)]
 mod tests {
-    /*
-    ███████ ██    ██ ███████ ████████ ███████ ███    ███ ███████
-    ██       ██  ██  ██         ██    ██      ████  ████ ██
-    ███████   ████   ███████    ██    █████   ██ ████ ██ ███████
-         ██    ██         ██    ██    ██      ██  ██  ██      ██
-    ███████    ██    ███████    ██    ███████ ██      ██ ███████
-    */
+    use database::test_util::*;
+    use database::RpgSystem;
+    use database::{Database, Error, DMO};
 
     #[test]
     fn insert_rpg_system_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let system_in = db.insert_rpg_system(String::from("SR5👿")).unwrap();
+        let system_iin = RpgSystem::insert(
+            &db,
+            RpgSystem {
+                id: None,
+                name: _s("SR5👿"),
+            },
+        );
+        let system_in = db.insert_rpg_system().unwrap();
         let system_out = db.get_rpg_systems().unwrap().pop().unwrap();
         assert_eq!(system_in, system_out);
         teardown(dbname);

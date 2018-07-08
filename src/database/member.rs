@@ -9,22 +9,46 @@ pub struct Member {
 }
 
 impl DMO for Member {
-    fn insert(&self, external_id: String) -> Result<Member, Error> {
-        check_varchar_length!(external_id);
-        Ok(self.pool
+    type Id = MemberId;
+    fn insert(db: &Database, inp: &Member) -> Result<Member, Error> {
+        check_varchar_length!(inp.external_id);
+        Ok(db.pool
             .prep_exec(
                 "insert into members (external_id) values (:external_id)",
                 params!{
-                    "external_id" => external_id.clone(),
+                    "external_id" => inp.external_id.clone(),
                 },
             )
             .map(|result| Member {
                 id: result.last_insert_id(),
-                external_id: external_id,
+                ..*inp
             })?)
     }
 
-    fn get(&db: &Database) -> Result<Vec<Member>, Error> {
+    fn get(db: &Database, member_id: MemberId) -> Result<Option<Member>, Error> {
+        let mut results = db.pool
+            .prep_exec(
+                "select member_id, external_id from members where member_id=:member_id;",
+                params!{
+                    "member_id" => member_id,
+                },
+            )
+            .map(|result| {
+                result
+                    .map(|x| x.unwrap())
+                    .map(|row| {
+                        let (id, external_id) = mysql::from_row(row);
+                        Member {
+                            id: id,
+                            external_id: external_id,
+                        }
+                    })
+                    .collect::<Vec<Member>>()
+            })?;
+        return Ok(results.pop());
+    }
+
+    fn get_all(db: &Database) -> Result<Vec<Member>, Error> {
         Ok(db.pool
             .prep_exec("select member_id, external_id from members;", ())
             .map(|result| {
@@ -41,7 +65,7 @@ impl DMO for Member {
             })?)
     }
 
-    fn update(&db: &Database, member: &Member) -> Result<(), Error> {
+    fn update(db: &Database, member: &Member) -> Result<(), Error> {
         check_varchar_length!(member.external_id);
         Ok(db.pool
             .prep_exec(
@@ -53,17 +77,28 @@ impl DMO for Member {
             )
             .and(Ok(()))?)
     }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from members where member_id=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
+    }
 }
 #[cfg(test)]
 mod tests {
-    /*
-    ███    ███ ███████ ███    ███ ██████  ███████ ██████  ███████
-    ████  ████ ██      ████  ████ ██   ██ ██      ██   ██ ██
-    ██ ████ ██ █████   ██ ████ ██ ██████  █████   ██████  ███████
-    ██  ██  ██ ██      ██  ██  ██ ██   ██ ██      ██   ██      ██
-    ██      ██ ███████ ██      ██ ██████  ███████ ██   ██ ███████
-    */
-
+    use database::test_util::*;
+    use database::Member;
+    use database::{Database, Error, DMO};
     #[test]
     fn insert_member_correct() {
         let dbname = setup();

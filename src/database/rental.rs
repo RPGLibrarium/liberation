@@ -63,6 +63,27 @@ impl Rental {
 }
 
 impl DMO for Rental {
+    type Id = RentalId;
+
+    fn get(db: &Database, rental_id: RentalId) -> Result<Option<Rental>, Error> {
+        let mut results = db.pool
+        .prep_exec(
+            "select rental_id, from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id, rentee_type from rentals where rental_id=:rental_id;",
+            params!{
+                "rental_id" => rental_id,
+            },
+        )
+    .map(|result| {
+        result.map(|x| x.unwrap()).map(|row| {
+            let (id, from, to, book, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row);
+            let from: NaiveDate = from;
+            let to: NaiveDate = to;
+            Rental::from_db(id, from, to, book, rentee_member, rentee_guild, rentee_type).unwrap()
+        }).collect::<Vec<Rental>>()
+    })?;
+        return Ok(results.pop());
+    }
+
     fn get_all(&db: &Database) -> Result<Vec<Rental>, Error> {
         Ok(db.pool.prep_exec("select rental_id, from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id, rentee_type from rentals;",())
     .map(|result| {
@@ -76,30 +97,26 @@ impl DMO for Rental {
     })?)
     }
 
-    fn insert(
-        &db: &Database,
-        from: Date,
-        to: Date,
-        book: BookId,
-        rentee: EntityId,
-        rentee_type: EntityType,
-    ) -> Result<Rental, Error> {
-        check_date!(from, to);
+    fn insert(db: &Database, inp: &Rental) -> Result<Rental, Error> {
+        check_date!(inp.from, inp.to);
         Ok(db.pool.prep_exec("insert into rentals (from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id) values (:from, :to, :book, :rentee_member, :rentee_guild)",
         params!{
-            "from" => from,
-            "to" => to,
-            "book" => book,
-            "rentee_member" => match rentee_type {
-                EntityType::Member => Some(rentee),
+            "from" => inp.from,
+            "to" => inp.to,
+            "book" => inp.book,
+            "rentee_member" => match inp.rentee_type {
+                EntityType::Member => Some(inp.rentee),
                 EntityType::Guild => None,
             },
-            "rentee_guild" => match rentee_type {
+            "rentee_guild" => match inp.rentee_type {
                 EntityType::Member => None,
-                EntityType::Guild => Some(rentee),
+                EntityType::Guild => Some(inp.rentee),
             },
         }).map(|result| {
-            Rental::new(result.last_insert_id(), from, to, book, rentee, rentee_type)
+            Rental {
+                id: result.last_insert_id(),
+                ..*inp
+            }
         })?)
     }
 
@@ -123,16 +140,28 @@ impl DMO for Rental {
             "id" => rental.id,
         }).and(Ok(()))?)
     }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from rentals where rental_id=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
+    }
 }
 #[cfg(test)]
 mod tests {
-    /*
-    ██████  ███████ ███    ██ ████████  █████  ██      ███████
-    ██   ██ ██      ████   ██    ██    ██   ██ ██      ██
-    ██████  █████   ██ ██  ██    ██    ███████ ██      ███████
-    ██   ██ ██      ██  ██ ██    ██    ██   ██ ██           ██
-    ██   ██ ███████ ██   ████    ██    ██   ██ ███████ ███████
-    */
+    use database::test_util::*;
+    use database::Rental;
+    use database::{Database, Error, DMO};
 
     #[test]
     fn insert_rental_correct() {

@@ -85,31 +85,19 @@ pub struct Role {
 }
 
 #[cfg(test)]
-mod tests {
-
-    /*
-    ████████ ███████ ███████ ████████ ███████
-       ██    ██      ██         ██    ██
-       ██    █████   ███████    ██    ███████
-       ██    ██           ██    ██         ██
-       ██    ███████ ███████    ██    ███████
-    */
-
+mod test_util {
     use chrono::prelude::*;
-    use database::Database;
-    use dmos;
-    use error::Error;
     use mysql;
     use rand::{thread_rng, Rng};
     use std::env;
 
-    fn _s(s: &str) -> String {
+    pub fn _s(s: &str) -> String {
         String::from(s)
     }
-    fn _d(y: i32, m: u32, d: u32) -> NaiveDate {
+    pub fn _d(y: i32, m: u32, d: u32) -> NaiveDate {
         NaiveDate::from_ymd(y, m, d)
     }
-    fn _serv() -> String {
+    pub fn _serv() -> String {
         let server = env::var("SQL_SERVER").expect("SQL_SERVER not set in env");
         let username = env::var("SQL_USER").expect("SQL_SERVER not set in env");
         let password = match env::var("SQL_PASSWORD") {
@@ -118,9 +106,9 @@ mod tests {
         };
         _s(&format!("mysql://{}{}@{}", username, password, server))
     }
-    const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
+    pub const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
 
-    fn setup() -> String {
+    pub fn setup() -> String {
         let setup_pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
 
@@ -130,12 +118,25 @@ mod tests {
         return dbname;
     }
 
-    fn teardown(dbname: String) {
+    pub fn teardown(dbname: String) {
         let pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
         let mut conn = pool.get_conn().unwrap();
 
         conn.query(format!("drop database {}", dbname)).unwrap();
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use database::test_util::*;
+    use database::Database;
+    /*
+    ████████ ███████ ███████ ████████ ███████
+       ██    ██      ██         ██    ██
+       ██    █████   ███████    ██    ███████
+       ██    ██           ██    ██         ██
+       ██    ███████ ███████    ██    ███████
+    */
 
     #[test]
     fn connect() {

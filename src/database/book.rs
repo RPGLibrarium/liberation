@@ -57,6 +57,8 @@ impl Book {
 }
 
 impl DMO for Book {
+    type Id = BookId;
+
     fn get_all(db: &Database) -> Result<Vec<Book>, Error> {
         Ok(db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality from books;",())
     .map(|result| {
@@ -69,7 +71,7 @@ impl DMO for Book {
     }
 
     //TODO: Test
-    fn get(&db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
+    fn get(db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
         let mut results = db.pool
         .prep_exec(
             "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality from books where book_id=:book_id;",
@@ -87,28 +89,25 @@ impl DMO for Book {
         return Ok(results.pop());
     }
 
-    fn insert(
-        &db: &Database,
-        title: TitleId,
-        owner: EntityId,
-        owner_type: EntityType,
-        quality: String,
-    ) -> Result<Book, Error> {
-        check_varchar_length!(quality);
+    fn insert(db: &Database, inp: &Book) -> Result<Book, Error> {
+        check_varchar_length!(inp.quality);
         Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
         params!{
-            "title" => title,
-            "owner_member" => match owner_type {
-                EntityType::Member => Some(owner),
+            "title" => inp.title,
+            "owner_member" => match inp.owner_type {
+                EntityType::Member => Some(inp.owner),
                 EntityType::Guild => None,
             },
-            "owner_guild" => match owner_type {
+            "owner_guild" => match inp.owner_type {
                 EntityType::Member => None,
-                EntityType::Guild => Some(owner),
+                EntityType::Guild => Some(inp.owner),
             },
-            "quality" => quality.clone(),
+            "quality" => inp.quality.clone(),
         }).map(|result| {
-            Book::new(result.last_insert_id(), title, owner, owner_type, quality)
+            Book {
+                id: result.last_insert_id(),
+                ..*inp
+            }
         })?)
     }
 
@@ -129,17 +128,28 @@ impl DMO for Book {
             "id" => book.id,
         }).and(Ok(()))?)
     }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from books where book_id=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
+    }
 }
 #[cfg(test)]
 mod tests {
-    /*
-    ██████   ██████   ██████  ██   ██ ███████
-    ██   ██ ██    ██ ██    ██ ██  ██  ██
-    ██████  ██    ██ ██    ██ █████   ███████
-    ██   ██ ██    ██ ██    ██ ██  ██       ██
-    ██████   ██████   ██████  ██   ██ ███████
-    */
-
+    use database::test_util::*;
+    use database::Book;
+    use database::{Database, Error, DMO};
     fn insert_book_default(db: &Database) -> Result<Book, Error> {
         return db.insert_rpg_system(_s("Kobolde"))
             .and_then(|system| {

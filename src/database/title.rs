@@ -143,6 +143,9 @@ impl DMO for Title {
 
 #[cfg(test)]
 mod tests {
+    use database::test_util::*;
+    use database::{Database, Error, DMO};
+
     #[test]
     fn insert_title_name_too_long() {
         let dbname = setup();

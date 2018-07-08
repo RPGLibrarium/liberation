@@ -11,26 +11,43 @@ pub struct Guild {
 }
 
 impl DMO for Guild {
-    fn insert(
-        &db: &Database,
-        name: String,
-        address: String,
-        contact: MemberId,
-    ) -> Result<Guild, Error> {
-        check_varchar_length!(name, address);
+    type Id = GuildId;
+
+    fn insert(db: &Database, inp: &Guild) -> Result<Guild, Error> {
+        check_varchar_length!(inp.name, inp.address);
         Ok(db.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
         params!{
-            "name" => name.clone(),
-            "address" => address.clone(),
-            "contact" => contact,
+            "name" => inp.name.clone(),
+            "address" => inp.address.clone(),
+            "contact" => inp.contact,
         }).map(|result| {
             Guild {
                 id: result.last_insert_id(),
-                name: name,
-                address: address,
-                contact: contact,
+                ..*inp
             }
         })?)
+    }
+
+    fn get(db: &Database, guild_id: GuildId) -> Result<Option<Guild>, Error> {
+        let mut results = db.pool
+        .prep_exec(
+            "select guild_id, name, address, contact_by_member_id from guilds where guild_id=:guild_id;",
+            params!{
+                "guild_id" => guild_id,
+            },
+        )
+    .map(|result| {
+        result.map(|x| x.unwrap()).map(|row| {
+            let (id, name, address, contact) = mysql::from_row(row);
+            Guild {
+                id: id,
+                name: name,
+                address: address,
+                contact: contact
+            }
+        }).collect::<Vec<Guild>>()
+    })?;
+        return Ok(results.pop());
     }
 
     fn get_all(&db: &Database) -> Result<Vec<Guild>, Error> {
@@ -65,16 +82,28 @@ impl DMO for Guild {
             "id" => guild.id,
         }).and(Ok(()))?)
     }
+
+    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
+        Ok(db.pool
+            .prep_exec(
+                "delete from guilds where GuildId=:id",
+                params!{
+                    "id" => id,
+                },
+            )
+            .map_err(|err| Error::DatabaseError(err))
+            .and_then(|result| match result.affected_rows() {
+                1 => Ok(true),
+                0 => Ok(false),
+                _ => Err(Error::IllegalState()),
+            })?)
+    }
 }
 #[cfg(test)]
 mod tests {
-    /*
-     ██████  ██    ██ ██ ██      ██████  ███████
-    ██       ██    ██ ██ ██      ██   ██ ██
-    ██   ███ ██    ██ ██ ██      ██   ██ ███████
-    ██    ██ ██    ██ ██ ██      ██   ██      ██
-     ██████   ██████  ██ ███████ ██████  ███████
-    */
+    use database::test_util::*;
+    use database::Guild;
+    use database::{Database, Error, DMO};
 
     #[test]
     fn insert_guild_correct() {
