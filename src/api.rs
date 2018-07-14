@@ -3,8 +3,8 @@ use actix_web::{
     http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
     Responder, ResponseError, Result,
 };
-use database::Database;
-use dtos;
+use database::*;
+use dto;
 use error;
 use futures::future::Future;
 
@@ -58,13 +58,19 @@ pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    _req.state().db.get_rpg_systems().and_then(|systems| {
-        Ok(Json(dtos::GetRpgSystems {
-            rpgsystems: systems,
-        }))
-    })
+    "GET rpg_systems"
 }
+// fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
+//     _req.state().db.get_rpg_systems().and_then(|systems| {
+//         Ok(Json(dto::GetRpgSystems {
+//             rpgsystems: systems,
+//         }))
+//     })
+// }
 
+fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET rpg_system"
+}
 // fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     let id: dmos::RpgSystemId = _req.match_info().query("systemid")?;
 //     _req.state().db.get_rpg_system().and_then(|systems| {
@@ -74,38 +80,42 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
 //     })
 // }
 
-fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let localdb = _req.state().db.clone();
-    _req.json()
-        .from_err()
-        .and_then(move |obj: dtos::PutPostRpgSystem| {
-            localdb
-                .insert_rpg_system(obj.rpgsystem.name)
-                .map_err(Error::from)
-        })
-        .and_then(|new_system| {
-            Ok(HttpResponse::Created()
-                .header("Location", format!("v1/rpgsystems/{}", new_system.id))
-                .finish())
-        })
-        .map_err(Error::from)
-        .responder()
+fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    "POST rpg_system"
 }
+// fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+//     let localdb = _req.state().db.clone();
+//     _req.json()
+//         .from_err()
+//         .and_then(move |obj: dto::PutPostRpgSystem| {
+//             localdb
+//                 .insert_rpg_system(obj.rpgsystem.name)
+//                 .map_err(Error::from)
+//         })
+//         .and_then(|new_system| {
+//             Ok(HttpResponse::Created()
+//                 .header("Location", format!("v1/rpgsystems/{}", new_system.id))
+//                 .finish())
+//         })
+//         .map_err(Error::from)
+//         .responder()
+// }
 
-fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let localdb = _req.state().db.clone();
-    let id: Result<dmos::RpgSystemId> = _req.match_info()
-        .query("systemid")
-        .map_err(actix_error::ErrorBadRequest);
-    _req.json()
-        .from_err()
-        .and_then(|obj: dtos::PutPostRpgSystem| Ok(dmos::RpgSystem::new(id?, obj.rpgsystem)))
-        .and_then(move |system: dmos::RpgSystem| {
-            localdb.update_rpg_system(&system).map_err(Error::from)
-        })
-        .and_then(|()| Ok(HttpResponse::Ok().finish()))
-        .responder()
+fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    "PUT rpg_system"
 }
+// fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+//     let localdb = _req.state().db.clone();
+//     let id: Result<RpgSystemId> = _req.match_info()
+//         .query("systemid")
+//         .map_err(actix_error::ErrorBadRequest);
+//     _req.json()
+//         .from_err()
+//         .and_then(|obj: dto::PutPostRpgSystem| Ok(RpgSystem::new(id?, obj.rpgsystem)))
+//         .and_then(move |system: RpgSystem| localdb.update_rpg_system(&system).map_err(Error::from))
+//         .and_then(|()| Ok(HttpResponse::Ok().finish()))
+//         .responder()
+// }
 
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
     "GET titles"

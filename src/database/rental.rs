@@ -5,7 +5,7 @@ pub type RentalId = Id;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Rental {
-    pub id: RentalId,
+    pub id: Option<RentalId>,
     #[serde(with = "serde_formats::naive_date")]
     pub from: Date,
     #[serde(with = "serde_formats::naive_date")]
@@ -17,7 +17,7 @@ pub struct Rental {
 
 impl Rental {
     pub fn new(
-        id: RentalId,
+        id: Option<RentalId>,
         from: Date,
         to: Date,
         book: BookId,
@@ -58,7 +58,7 @@ impl Rental {
             )),
         };
 
-        Ok(Rental::new(id, from, to, book, rentee, rentee_type))
+        Ok(Rental::new(Some(id), from, to, book, rentee, rentee_type))
     }
 }
 
@@ -84,7 +84,7 @@ impl DMO for Rental {
         return Ok(results.pop());
     }
 
-    fn get_all(&db: &Database) -> Result<Vec<Rental>, Error> {
+    fn get_all(db: &Database) -> Result<Vec<Rental>, Error> {
         Ok(db.pool.prep_exec("select rental_id, from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id, rentee_type from rentals;",())
     .map(|result| {
         result.map(|x| x.unwrap()).map(|row| {
@@ -97,7 +97,7 @@ impl DMO for Rental {
     })?)
     }
 
-    fn insert(db: &Database, inp: &Rental) -> Result<Rental, Error> {
+    fn insert(db: &Database, inp: &mut Rental) -> Result<RentalId, Error> {
         check_date!(inp.from, inp.to);
         Ok(db.pool.prep_exec("insert into rentals (from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id) values (:from, :to, :book, :rentee_member, :rentee_guild)",
         params!{
@@ -113,14 +113,12 @@ impl DMO for Rental {
                 EntityType::Guild => Some(inp.rentee),
             },
         }).map(|result| {
-            Rental {
-                id: result.last_insert_id(),
-                ..*inp
-            }
+            inp.id = Some(result.last_insert_id());
+            result.last_insert_id()
         })?)
     }
 
-    fn update(&db: &Database, rental: &Rental) -> Result<(), Error> {
+    fn update(db: &Database, rental: &Rental) -> Result<(), Error> {
         check_date!(rental.from, rental.to);
         Ok(db.pool.prep_exec("update rentals set from_date=:from, to_date=:to, book_by_id=:book, rentee_member_by_id=:rentee_member, rentee_guild_by_id=:rentee_guild where rental_id=:id;",
         params!{
@@ -160,27 +158,28 @@ impl DMO for Rental {
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
-    use database::Rental;
-    use database::{Database, Error, DMO};
+    use database::*;
 
     #[test]
     fn insert_rental_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_member(_s("some-external-id"))
+        let mut member_in = Member::new(None, _s("some-external-id"));
+        let result = db.insert(&mut member_in)
             // .and_then(|member|
             //     db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
             //         .and_then(|guild| Ok((member, guild)))
             // )
-            .and_then(|member|
+            .and_then(|member_id|
                 insert_book_default(&db)
-                    .and_then(|book| Ok((book, member)))
-            ).and_then(|(book, member)|
-                db.insert_rental(_d(2018, 2, 4), _d(2018, 4, 16), book.id, member.id, EntityType::Member)
-            ).and_then(|orig_rental|
-                db.get_rentals().and_then(|rentals| Ok((orig_rental, rentals)))
-            ).and_then(|(orig_rental, mut rentals)|
-                Ok(rentals.pop().map_or(false, |fetched_rental| orig_rental == fetched_rental))
+                    .and_then(|(book_id, _)| Ok((book_id, member_id)))
+            ).and_then(|(book_id, member_id)| {
+                let mut rental_in = Rental::new(None, _d(2018, 2, 4), _d(2018, 4, 16), book_id, member_id, EntityType::Member);
+                db.insert(&mut rental_in).and_then(|id| Ok((id, rental_in)))
+            }).and_then(|(id, rental_in)|
+                db.get::<Rental>(id).and_then(|rental_out| Ok((rental_in, rental_out)))
+            ).and_then(|(rental_in, rental_out)|
+                Ok(rental_out.map_or(false, |rec_rental| rental_in == rec_rental))
             );
         teardown(dbname);
         match result {
@@ -197,14 +196,15 @@ mod tests {
     fn insert_rental_invalid_book() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|book| {
-            db.insert_rental(
+        let result = insert_book_default(&db).and_then(|(book_id, book)| {
+            db.insert(&mut Rental::new(
+                None,
                 _d(2014, 8, 16),
                 _d(3264, 12, 08),
-                012481632,
+                1235415123,
                 book.owner,
                 book.owner_type,
-            )
+            ))
         });
         teardown(dbname);
         match result {
@@ -217,14 +217,15 @@ mod tests {
     fn insert_rental_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|book| {
-            db.insert_rental(
+        let result = insert_book_default(&db).and_then(|(book_id, book)| {
+            db.insert(&mut Rental::new(
+                None,
                 _d(2014, 8, 16),
                 _d(3264, 12, 08),
-                book.id,
-                012481632,
+                book_id,
+                12342433,
                 book.owner_type,
-            )
+            ))
         });
         teardown(dbname);
         match result {
@@ -237,17 +238,18 @@ mod tests {
     fn insert_rental_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|book| {
-            db.insert_rental(
+        let result = insert_book_default(&db).and_then(|(book_id, book)| {
+            db.insert(&mut Rental::new(
+                None,
                 _d(2014, 8, 16),
                 _d(3264, 12, 08),
-                book.id,
+                012481632,
                 book.owner,
                 match book.owner_type {
                     EntityType::Member => EntityType::Guild,
                     EntityType::Guild => EntityType::Member,
                 },
-            )
+            ))
         });
         teardown(dbname);
         match result {
@@ -261,60 +263,69 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut orig_rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut orig_rental)
+                    .and_then(|rental_id| Ok((rental_id, orig_rental)))
             })
-            .and_then(|orig_rental| {
-                db.insert_member(_s("rincewind"))
-                    .and_then(|member| Ok((orig_rental, member)))
+            .and_then(|(rental_id, orig_rental)| {
+                db.insert(&mut Member::new(None, _s("rincewind")))
+                    .and_then(|member_id| Ok((rental_id, orig_rental, member_id)))
             })
-            .and_then(|(orig_rental, member)| {
-                db.insert_guild(
+            .and_then(|(rental_id, orig_rental, member_id)| {
+                db.insert(&mut Guild::new(
+                    None,
                     _s("Yordle Academy of Science and Progress"),
                     _s("Piltover"),
-                    member.id,
-                ).and_then(|guild| Ok((orig_rental, guild)))
+                    member_id,
+                )).and_then(|guild_id| Ok((rental_id, orig_rental, guild_id)))
             })
-            .and_then(|(orig_rental, guild)| {
-                db.insert_rpg_system(_s("Discworld"))
-                    .and_then(|system| Ok((orig_rental, guild, system)))
+            .and_then(|(rental_id, orig_rental, guild_id)| {
+                db.insert(&mut RpgSystem::new(None, _s("Discworld")))
+                    .and_then(|system_id| Ok((rental_id, orig_rental, guild_id, system_id)))
             })
-            .and_then(|(orig_rental, guild, system)| {
-                db.insert_title(
+            .and_then(|(rental_id, orig_rental, guild_id, system_id)| {
+                db.insert(&mut Title::new(
+                    None,
                     _s("Unseen University Adventures"),
-                    system.id,
+                    system_id,
                     _s("en"),
                     _s("Twoflower Publishing"),
                     2048,
                     None,
-                ).and_then(|title| Ok((orig_rental, guild, title)))
+                )).and_then(|title_id| Ok((rental_id, orig_rental, guild_id, title_id)))
             })
-            .and_then(|(orig_rental, guild, title)| {
-                db.insert_book(title.id, guild.id, EntityType::Guild, _s("impressive"))
-                    .and_then(|book| Ok((orig_rental, book)))
+            .and_then(|(rental_id, orig_rental, guild_id, title_id)| {
+                db.insert(&mut Book::new(
+                    None,
+                    title_id,
+                    guild_id,
+                    EntityType::Guild,
+                    _s("impressive"),
+                )).and_then(|book_id| Ok((rental_id, orig_rental, book_id, guild_id)))
             })
-            .and_then(|(mut orig_rental, book)| {
+            .and_then(|(rental_id, mut orig_rental, book_id, guild_id)| {
                 orig_rental.from = _d(2090, 10, 11);
                 orig_rental.to = _d(2112, 1, 3);
-                orig_rental.book = book.id;
-                orig_rental.rentee = book.owner;
-                orig_rental.rentee_type = book.owner_type;
-                db.update_rental(&orig_rental).and_then(|_| Ok(orig_rental))
+                orig_rental.book = book_id;
+                orig_rental.rentee = guild_id;
+                orig_rental.rentee_type = EntityType::Guild;
+                db.update(&orig_rental)
+                    .and_then(|_| Ok((rental_id, orig_rental)))
             })
-            .and_then(|orig_rental| {
-                db.get_rentals()
-                    .and_then(|rentals| Ok((orig_rental, rentals)))
+            .and_then(|(rental_id, orig_rental)| {
+                db.get(rental_id)
+                    .and_then(|rec_rental| Ok((orig_rental, rec_rental)))
             })
-            .and_then(|(orig_rental, mut rentals)| {
-                Ok(rentals
-                    .pop()
-                    .map_or(false, |fetched_rental| orig_rental == fetched_rental))
+            .and_then(|(orig_rental, rec_rental)| {
+                Ok(rec_rental.map_or(false, |fetched_rental| orig_rental == fetched_rental))
             });
         teardown(dbname);
         match result {
@@ -332,18 +343,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut rental).and_then(|_| Ok(rental))
             })
             .and_then(|mut orig_rental| {
                 orig_rental.from = _d(-99, 10, 11);
-                db.update_rental(&orig_rental)
+                db.update(&orig_rental)
             });
         teardown(dbname);
         match result {
@@ -357,18 +370,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut rental).and_then(|_| Ok(rental))
             })
             .and_then(|mut orig_rental| {
                 orig_rental.to = _d(-99, 11, 12);
-                db.update_rental(&orig_rental)
+                db.update(&orig_rental)
             });
         teardown(dbname);
         match result {
@@ -382,18 +397,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut rental).and_then(|_| Ok(rental))
             })
             .and_then(|mut orig_rental| {
                 orig_rental.book = 012481632;
-                db.update_rental(&orig_rental)
+                db.update(&orig_rental)
             });
         teardown(dbname);
         match result {
@@ -407,18 +424,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut rental).and_then(|_| Ok(rental))
             })
             .and_then(|mut orig_rental| {
                 orig_rental.rentee = 012481632;
-                db.update_rental(&orig_rental)
+                db.update(&orig_rental)
             });
         teardown(dbname);
         match result {
@@ -432,21 +451,23 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|book| {
-                db.insert_rental(
+            .and_then(|(book_id, book)| {
+                let mut rental = Rental::new(
+                    None,
                     _d(2012, 3, 4),
                     _d(2056, 7, 8),
-                    book.id,
+                    book_id,
                     book.owner,
                     book.owner_type,
-                )
+                );
+                db.insert(&mut rental).and_then(|_| Ok(rental))
             })
             .and_then(|mut orig_rental| {
                 orig_rental.rentee_type = match orig_rental.rentee_type {
                     EntityType::Member => EntityType::Guild,
                     EntityType::Guild => EntityType::Member,
                 };
-                db.update_rental(&orig_rental)
+                db.update(&orig_rental)
             });
         teardown(dbname);
         match result {

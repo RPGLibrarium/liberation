@@ -106,17 +106,17 @@ impl DMO for Member {
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
-    use database::Member;
-    use database::{Database, Error, DMO};
+    use database::*;
     #[test]
     fn insert_member_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let mut member_in = Member::new(None, String::from("someexternalId"));
+        let member_out = db.insert(&mut member_in)
+            .and_then(|member_id| db.get(member_id));
 
-        let member_in = db.insert_member(String::from("someexternalId")).unwrap();
-        let member_out = db.get_members().unwrap().pop().unwrap();
-        assert_eq!(member_in, member_out);
         teardown(dbname);
+        assert_eq!(member_in, member_out.unwrap().unwrap());
     }
 
     #[test]
@@ -124,7 +124,7 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(String::from(TOO_LONG_STRING));
+        let result = db.insert(&mut Member::new(None, String::from(TOO_LONG_STRING)));
         teardown(dbname);
 
         match result {
@@ -140,13 +140,13 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("somememberId")).and_then(|mut member| {
-            member.external_id = _s("someotherId");
-            db.update_member(&member).and_then(|_| {
-                db.get_members().and_then(|mut members| {
-                    Ok(members
-                        .pop()
-                        .map_or(false, |fetched_member| member == fetched_member))
+        let mut member_in = Member::new(None, _s("somememberId"));
+
+        let result = db.insert(&mut member_in).and_then(|member_id| {
+            member_in.external_id = _s("someotherId");
+            db.update(&member_in).and_then(|_| {
+                db.get(member_id).and_then(|rec_member| {
+                    Ok(rec_member.map_or(false, |fetched_member| member_in == fetched_member))
                 })
             })
         });
@@ -167,12 +167,12 @@ mod tests {
     fn update_member_external_id_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let mut member_in = Member::new(None, _s("somememberId"));
 
-        let result = db.insert_member(String::from("somememberId"))
-            .and_then(|mut member| {
-                member.external_id = String::from(TOO_LONG_STRING);
-                return db.update_member(&member);
-            });
+        let result = db.insert(&mut member_in).and_then(|member_id| {
+            member_in.external_id = String::from(TOO_LONG_STRING);
+            return db.update(&member_in);
+        });
 
         teardown(dbname);
 

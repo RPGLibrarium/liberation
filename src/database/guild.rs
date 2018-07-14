@@ -59,7 +59,7 @@ impl DMO for Guild {
         return Ok(results.pop());
     }
 
-    fn get_all(&db: &Database) -> Result<Vec<Guild>, Error> {
+    fn get_all(db: &Database) -> Result<Vec<Guild>, Error> {
         Ok(db.pool
             .prep_exec(
                 "select guild_id, name, address, contact_by_member_id from guilds;",
@@ -81,7 +81,7 @@ impl DMO for Guild {
             })?)
     }
 
-    fn update(&db: &Database, guild: &Guild) -> Result<(), Error> {
+    fn update(db: &Database, guild: &Guild) -> Result<(), Error> {
         check_varchar_length!(guild.name, guild.address);
         Ok(db.pool.prep_exec("update guilds set name=:name, address=:address, contact_by_member_id=:contact where guild_id=:id",
         params!{
@@ -111,27 +111,28 @@ impl DMO for Guild {
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
-    use database::Guild;
-    use database::{Database, Error, DMO};
+    use database::*;
 
     #[test]
     fn insert_guild_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id"))
-            .and_then(|member| {
-                db.insert_guild(
+        let result = db.insert(&mut Member::new(None, _s("external_id")))
+            .and_then(|member_id| {
+                let mut orig_guild = Guild::new(
+                    None,
                     _s("LibrariumAachen"),
                     _s("Postfach 1231238581412 1238414812 Aachen"),
-                    member.id,
-                )
+                    member_id,
+                );
+                db.insert(&mut orig_guild)
+                    .and_then(|guild_id| Ok((guild_id, orig_guild)))
             })
-            .and_then(|orig_guild| db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds))))
-            .and_then(|(orig_guild, mut guilds)| {
-                Ok(guilds
-                    .pop()
-                    .map_or(false, |fetched_guild| orig_guild == fetched_guild))
+            .and_then(|(guild_id, orig_guild)| {
+                db.get(guild_id).and_then(|rec_guild| {
+                    Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
+                })
             });
         teardown(dbname);
         match result {
@@ -149,13 +150,15 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id")).and_then(|member| {
-            db.insert_guild(
-                _s(TOO_LONG_STRING),
-                _s("Postfach 1231238581412 1238414812 Aachen"),
-                member.id,
-            )
-        });
+        let result = db.insert(&mut Member::new(None, _s("external_id")))
+            .and_then(|member_id| {
+                db.insert(&mut Guild::new(
+                    None,
+                    _s(TOO_LONG_STRING),
+                    _s("Postfach 1231238581412 1238414812 Aachen"),
+                    member_id,
+                ))
+            });
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -168,29 +171,32 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id1"))
-            .and_then(|member| {
-                db.insert_guild(
+        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+            .and_then(|member_id| {
+                let mut orig_guild = Guild::new(
+                    None,
                     _s("Librarium Aachen"),
                     _s("Postfach 1231238581412 1238414812 Aachen"),
-                    member.id,
-                )
+                    member_id,
+                );
+                db.insert(&mut orig_guild)
+                    .and_then(|guild_id| Ok((guild_id, orig_guild)))
             })
-            .and_then(|guild| {
-                db.insert_member(_s("other_id"))
-                    .and_then(|other_member| Ok((guild, other_member)))
+            .and_then(|(guild_id, orig_guild)| {
+                db.insert(&mut Member::new(None, _s("other_id")))
+                    .and_then(|other_member_id| Ok((guild_id, orig_guild, other_member_id)))
             })
-            .and_then(|(mut guild, other_member)| {
-                guild.name = _s("RPG Librarium Aaachen");
-                guild.address = _s("postsfadfeddfasdfasdff");
-                guild.contact = other_member.id;
-                db.update_guild(&guild).and_then(|_| Ok(guild))
+            .and_then(|(guild_id, mut orig_guild, other_member_id)| {
+                orig_guild.name = _s("RPG Librarium Aaachen");
+                orig_guild.address = _s("postsfadfeddfasdfasdff");
+                orig_guild.contact = other_member_id;
+                db.update(&orig_guild)
+                    .and_then(|_| Ok((guild_id, orig_guild)))
             })
-            .and_then(|orig_guild| db.get_guilds().and_then(|guilds| Ok((orig_guild, guilds))))
-            .and_then(|(orig_guild, mut guilds)| {
-                Ok(guilds
-                    .pop()
-                    .map_or(false, |fetched_guild| orig_guild == fetched_guild))
+            .and_then(|(guild_id, orig_guild)| {
+                db.get(guild_id).and_then(|rec_guild| {
+                    Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
+                })
             });
         teardown(dbname);
 
@@ -209,17 +215,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id1"))
-            .and_then(|member| {
-                db.insert_guild(
+        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+            .and_then(|member_id| {
+                let mut orig_guild = Guild::new(
+                    None,
                     _s("Librarium Aachen"),
                     _s("Postfach 1231238581412 1238414812 Aachen"),
-                    member.id,
-                )
+                    member_id,
+                );
+                db.insert(&mut orig_guild)
+                    .and_then(|guild_id| Ok(orig_guild))
             })
-            .and_then(|mut guild| {
-                guild.name = _s(TOO_LONG_STRING);
-                db.update_guild(&guild)
+            .and_then(|mut orig_guild| {
+                orig_guild.name = _s(TOO_LONG_STRING);
+                db.update(&orig_guild)
             });
 
         teardown(dbname);
@@ -237,17 +246,19 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id1"))
-            .and_then(|member| {
-                db.insert_guild(
+        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+            .and_then(|member_id| {
+                let mut orig_guild = Guild::new(
+                    None,
                     _s("Librarium Aachen"),
                     _s("Postfach 1231238581412 1238414812 Aachen"),
-                    member.id,
-                )
+                    member_id,
+                );
+                db.insert(&mut orig_guild).and_then(|_| Ok(orig_guild))
             })
-            .and_then(|mut guild| {
-                guild.address = _s(TOO_LONG_STRING);
-                db.update_guild(&guild)
+            .and_then(|mut orig_guild| {
+                orig_guild.address = _s(TOO_LONG_STRING);
+                db.update(&orig_guild)
             });
 
         teardown(dbname);
@@ -261,15 +272,16 @@ mod tests {
     }
 
     #[test]
-    fn insert_guild_invalid_cotact() {
+    fn insert_guild_invalid_contact() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_guild(
+        let result = db.insert(&mut Guild::new(
+            None,
             _s("RPG Librarium Aachen"),
             _s("Postfach 1231238581412 1238414812 Aachen"),
             12345,
-        );
+        ));
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -282,17 +294,20 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_member(_s("external_id1"))
-            .and_then(|member| {
-                db.insert_guild(
+        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+            .and_then(|member_id| {
+                let mut orig_guild = Guild::new(
+                    None,
                     _s("Librarium Aachen"),
                     _s("Postfach 1231238581412 1238414812 Aachen"),
-                    member.id,
-                )
+                    member_id,
+                );
+                db.insert(&mut orig_guild)
+                    .and_then(|guild_id| Ok(orig_guild))
             })
-            .and_then(|mut guild| {
-                guild.contact = 12345;
-                db.update_guild(&guild)
+            .and_then(|mut orig_guild| {
+                orig_guild.contact = 12345;
+                db.update(&orig_guild)
             });
 
         teardown(dbname);

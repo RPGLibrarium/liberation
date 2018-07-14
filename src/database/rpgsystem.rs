@@ -100,18 +100,18 @@ impl DMO for RpgSystem {
 mod tests {
     use database::test_util::*;
     use database::RpgSystem;
-    use database::{Database, Error, DMO};
+    use database::{Database, Error};
 
     #[test]
     fn insert_rpg_system_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
+            .and_then(|id| db.get::<RpgSystem>(id));
 
-        let system_in = db.insert(&RpgSystem::new(None, _s("SR5👿")));
-
-        let system_out = db.get::<RpgSystem>(system_in.id.unwrap());
         teardown(dbname);
-        assert_eq!(system_in.unwrap(), system_out.unwrap().unwrap());
+        assert_eq!(system_in, system_out.unwrap().unwrap());
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert(&RpgSystem::new(None, String::from(TOO_LONG_STRING)));
+        let result = db.insert(&mut RpgSystem::new(None, String::from(TOO_LONG_STRING)));
         teardown(dbname);
 
         match result {
@@ -133,19 +133,15 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert(&RpgSystem::new(None, _s("SR5👿")))
-            .and_then(|mut system| {})
-            .and_then(|mut system| {
-                system.name = _s("SR5");
-                db.update(&system).and_then(|_| {
-                    db.get::<RpgSystem>(system.id.unwrap())
-                        .and_then(|mut recovered| {
-                            Ok(recovered
-                                .unwrap()
-                                .map_or(false, |fetched_system| system == fetched_system))
-                        })
+        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let result = db.insert(&mut system_in).and_then(|id| {
+            system_in.name = _s("SR5");
+            db.update(&system_in).and_then(|_| {
+                db.get::<RpgSystem>(id).and_then(|recovered| {
+                    Ok(recovered.map_or(false, |fetched_system| system_in == fetched_system))
                 })
-            });
+            })
+        });
 
         teardown(dbname);
 
@@ -164,11 +160,11 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let result = db.insert_rpg_system(String::from("SR5👿"))
-            .and_then(|mut rpgsystem| {
-                rpgsystem.name = String::from(TOO_LONG_STRING);
-                return db.update_rpg_system(&rpgsystem);
-            });
+        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let result = db.insert(&mut system_in).and_then(|_| {
+            system_in.name = String::from(TOO_LONG_STRING);
+            db.update(&system_in)
+        });
 
         teardown(dbname);
 

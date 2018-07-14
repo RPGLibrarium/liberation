@@ -14,7 +14,8 @@ mod api;
 mod auth;
 #[macro_use]
 mod database;
-mod dtos;
+mod business;
+mod dto;
 mod error;
 mod serde_formats;
 

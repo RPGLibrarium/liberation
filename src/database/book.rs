@@ -109,7 +109,7 @@ impl DMO for Book {
         })?)
     }
 
-    fn update(&db: &Database, book: &Book) -> Result<(), Error> {
+    fn update(db: &Database, book: &Book) -> Result<(), Error> {
         check_varchar_length!(book.quality);
         Ok(db.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality where book_id=:id;",
         params!{
@@ -146,32 +146,20 @@ impl DMO for Book {
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
-    use database::Book;
-    use database::{Database, Error, DMO};
-    fn insert_book_default(db: &Database) -> Result<Book, Error> {
-        return db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system| {
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
-            })
-            .and_then(|title| {
-                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((title, member)))
-            })
-            .and_then(|(title, member)| {
-                db.insert_book(title.id, member.id, EntityType::Member, _s("vähri guhd!"))
-            });
-    }
+
+    use database::*;
 
     #[test]
     fn insert_book_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
         let result = insert_book_default(&db)
-            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
-            .and_then(|(orig_book, mut books)| {
-                Ok(books
-                    .pop()
-                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            .and_then(|(book_id, orig_book)| {
+                db.get(book_id)
+                    .and_then(|rec_book| Ok((orig_book, rec_book)))
+            })
+            .and_then(|(orig_book, rec_book)| {
+                Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
             });
         teardown(dbname);
         match result {
@@ -188,23 +176,34 @@ mod tests {
     fn insert_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system| {
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+            .and_then(|system_id| {
+                db.insert(&mut Title::new(
+                    None,
+                    _s("Kobolde"),
+                    system_id,
+                    _s("de"),
+                    _s("??"),
+                    2031,
+                    None,
+                ))
             })
-            .and_then(|title| {
-                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((title, member)))
+            .and_then(|title_id| {
+                db.insert(&mut Member::new(
+                    None,
+                    _s("uiii-a-uuid-or-sth-similar-2481632"),
+                )).and_then(|member_id| Ok((title_id, member_id)))
             })
-            .and_then(|(title, member)| {
-                db.insert_book(title.id, member.id, EntityType::Member, _s(TOO_LONG_STRING))
-            })
-            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
-            .and_then(|(orig_book, mut books)| {
-                Ok(books
-                    .pop()
-                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            .and_then(|(title_id, member_id)| {
+                db.insert(&mut Book::new(
+                    None,
+                    title_id,
+                    member_id,
+                    EntityType::Member,
+                    _s(TOO_LONG_STRING),
+                ))
             });
+
         teardown(dbname);
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -218,16 +217,18 @@ mod tests {
     fn insert_book_invalid_title() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-            .and_then(|member| {
-                db.insert_book(01248163264, member.id, EntityType::Member, _s("quite good"))
-            })
-            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
-            .and_then(|(orig_book, mut books)| {
-                Ok(books
-                    .pop()
-                    .map_or(false, |fetched_book| orig_book == fetched_book))
-            });
+        let result = db.insert(&mut Member::new(
+            None,
+            _s("uiii-a-uuid-or-sth-similar-2481632"),
+        )).and_then(|member_id| {
+            db.insert(&mut Book::new(
+                None,
+                01248163264,
+                member_id,
+                EntityType::Member,
+                _s("quite good"),
+            ))
+        });
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -239,19 +240,28 @@ mod tests {
     fn insert_book_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system| {
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+            .and_then(|system_id| {
+                db.insert(&mut Title::new(
+                    None,
+                    _s("Kobolde"),
+                    system_id,
+                    _s("de"),
+                    _s("??"),
+                    2031,
+                    None,
+                ))
             })
-            .and_then(|title| {
-                db.insert_book(title.id, 012481632, EntityType::Member, _s("quite good"))
-            })
-            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
-            .and_then(|(orig_book, mut books)| {
-                Ok(books
-                    .pop()
-                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            .and_then(|title_id| {
+                db.insert(&mut Book::new(
+                    None,
+                    title_id,
+                    012481632,
+                    EntityType::Member,
+                    _s("quite good"),
+                ))
             });
+
         teardown(dbname);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -263,22 +273,26 @@ mod tests {
     fn insert_book_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(_s("Kobolde"))
-            .and_then(|system| {
-                db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2031, None)
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+            .and_then(|system_id| {
+                db.insert(&mut Title::new(
+                    None,
+                    _s("Kobolde"),
+                    system_id,
+                    _s("de"),
+                    _s("??"),
+                    2031,
+                    None,
+                ))
             })
-            .and_then(|title| {
-                db.insert_member(_s("uiii-a-uuid-or-sth-similar-2481632"))
-                    .and_then(|member| Ok((title, member)))
-            })
-            .and_then(|(title, member)| {
-                db.insert_book(title.id, member.id, EntityType::Guild, _s("quite good"))
-            })
-            .and_then(|orig_book| db.get_books().and_then(|books| Ok((orig_book, books))))
-            .and_then(|(orig_book, mut books)| {
-                Ok(books
-                    .pop()
-                    .map_or(false, |fetched_book| orig_book == fetched_book))
+            .and_then(|title_id| {
+                db.insert(&mut Book::new(
+                    None,
+                    title_id,
+                    012481632,
+                    EntityType::Guild,
+                    _s("quite good"),
+                ))
             });
         teardown(dbname);
         match result {
@@ -291,40 +305,46 @@ mod tests {
     fn update_book_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(_s("Cthulhu"))
-            .and_then(|system| {
-                db.insert_title(
+        let result = db.insert(&mut RpgSystem::new(None, _s("Cthulhu")))
+            .and_then(|system_id| {
+                db.insert(&mut Title::new(
+                    None,
                     _s("Cthulhu 666th Edition"),
-                    system.id,
+                    system_id,
                     _s("en"),
                     _s("Pegasus"),
                     2066,
                     None,
-                )
+                ))
             })
-            .and_then(|title| {
-                db.insert_member(_s("annother-uuuuuiiii-iiiiddd-123443214"))
-                    .and_then(|member| Ok((title, member)))
+            .and_then(|title_id| {
+                db.insert(&mut Member::new(
+                    None,
+                    _s("annother-uuuuuiiii-iiiiddd-123443214"),
+                )).and_then(|member_id| Ok((title_id, member_id)))
             })
-            .and_then(|(title, member)| {
-                db.insert_guild(_s("Ravenclaw"), _s("Sesame Street 123"), member.id)
-                    .and_then(|guild| Ok((title, guild)))
+            .and_then(|(title_id, member_id)| {
+                db.insert(&mut Guild::new(
+                    None,
+                    _s("Ravenclaw"),
+                    _s("Sesame Street 123"),
+                    member_id,
+                )).and_then(|guild_id| Ok((title_id, guild_id)))
             })
-            .and_then(|(title, guild)| {
-                insert_book_default(&db).and_then(|orig_book| Ok((orig_book, title, guild)))
+            .and_then(|(title_id, guild_id)| {
+                insert_book_default(&db)
+                    .and_then(|(book_id, orig_book)| Ok((orig_book, book_id, title_id, guild_id)))
             })
-            .and_then(|(mut orig_book, title, guild)| {
-                orig_book.title = title.id;
-                orig_book.owner = guild.id;
+            .and_then(|(mut orig_book, book_id, title_id, guild_id)| {
+                orig_book.title = title_id;
+                orig_book.owner = guild_id;
                 orig_book.owner_type = EntityType::Guild;
                 orig_book.quality = _s("bad");
-                db.update_book(&orig_book).and_then(|_| Ok(orig_book))
+                db.update(&orig_book).and_then(|_| Ok((orig_book, book_id)))
             })
-            .and_then(|book| {
-                db.get_books().and_then(|mut books| {
-                    Ok(books
-                        .pop()
-                        .map_or(false, |fetched_book| book == fetched_book))
+            .and_then(|(orig_book, book_id)| {
+                db.get(book_id).and_then(|rec_book| {
+                    Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
                 })
             });
         teardown(dbname);
@@ -342,9 +362,9 @@ mod tests {
     fn update_book_invalid_title() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|mut orig_book| {
+        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.title = 0123481642;
-            db.update_book(&orig_book)
+            db.update(&orig_book)
         });
         teardown(dbname);
         match result {
@@ -357,9 +377,9 @@ mod tests {
     fn update_book_invalid_owner_id() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|mut orig_book| {
+        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.owner = 0123481642;
-            db.update_book(&orig_book)
+            db.update(&orig_book)
         });
         teardown(dbname);
         match result {
@@ -372,9 +392,9 @@ mod tests {
     fn update_book_wrong_owner_type() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|mut orig_book| {
+        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.owner_type = EntityType::Guild;
-            db.update_book(&orig_book)
+            db.update(&orig_book)
         });
         teardown(dbname);
         match result {
@@ -387,9 +407,9 @@ mod tests {
     fn update_book_quality_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = insert_book_default(&db).and_then(|mut orig_book| {
+        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.quality = _s(TOO_LONG_STRING);
-            db.update_book(&orig_book)
+            db.update(&orig_book)
         });
         teardown(dbname);
         match result {

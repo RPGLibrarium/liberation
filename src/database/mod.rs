@@ -75,7 +75,7 @@ impl Database {
         T::get(self, id)
     }
 
-    pub fn insert<T: DMO>(&self, inp: &T) -> Result<T, Error> {
+    pub fn insert<T: DMO>(&self, inp: &mut T) -> Result<Id, Error> {
         T::insert(self, inp)
     }
 
@@ -105,6 +105,7 @@ pub struct Role {
 
 #[cfg(test)]
 mod test_util {
+    use super::*;
     use chrono::prelude::*;
     use mysql;
     use rand::{thread_rng, Rng};
@@ -142,6 +143,37 @@ mod test_util {
         let mut conn = pool.get_conn().unwrap();
 
         conn.query(format!("drop database {}", dbname)).unwrap();
+    }
+
+    pub fn insert_book_default(db: &Database) -> Result<(BookId, Book), Error> {
+        return db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+            .and_then(|system_id| {
+                db.insert(&mut Title::new(
+                    None,
+                    _s("Kobolde"),
+                    system_id,
+                    _s("de"),
+                    _s("??"),
+                    2031,
+                    None,
+                ))
+            })
+            .and_then(|title_id| {
+                db.insert(&mut Member::new(
+                    None,
+                    _s("uiii-a-uuid-or-sth-similar-2481632"),
+                )).and_then(|member_id| Ok((title_id, member_id)))
+            })
+            .and_then(|(title_id, member_id)| {
+                let mut book = Book::new(
+                    None,
+                    title_id,
+                    member_id,
+                    EntityType::Member,
+                    _s("vähri guhd!"),
+                );
+                db.insert(&mut book).and_then(|id| Ok((id, book)))
+            });
     }
 }
 
