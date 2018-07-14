@@ -24,7 +24,7 @@ impl Guild {
 impl DMO for Guild {
     type Id = GuildId;
 
-    fn insert(db: &Database, inp: &Guild) -> Result<Guild, Error> {
+    fn insert(db: &Database, inp: &mut Guild) -> Result<GuildId, Error> {
         check_varchar_length!(inp.name, inp.address);
         Ok(db.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
         params!{
@@ -32,10 +32,8 @@ impl DMO for Guild {
             "address" => inp.address.clone(),
             "contact" => inp.contact,
         }).map(|result| {
-            Guild {
-                id: result.last_insert_id(),
-                ..*inp
-            }
+            inp.id = Some(result.last_insert_id());
+            result.last_insert_id()
         })?)
     }
 

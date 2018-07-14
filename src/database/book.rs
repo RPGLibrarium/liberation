@@ -4,7 +4,7 @@ pub type BookId = Id;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Book {
-    pub id: BookId,
+    pub id: Option<BookId>,
     pub title: TitleId,
     pub owner_type: EntityType,
     pub owner: EntityId,
@@ -13,7 +13,7 @@ pub struct Book {
 
 impl Book {
     pub fn new(
-        id: BookId,
+        id: Option<BookId>,
         title: TitleId,
         owner: EntityId,
         owner_type: EntityType,
@@ -52,7 +52,7 @@ impl Book {
                 )),
             };
 
-        Ok(Book::new(id, title, owner, owner_type, quality))
+        Ok(Book::new(Some(id), title, owner, owner_type, quality))
     }
 }
 
@@ -89,7 +89,7 @@ impl DMO for Book {
         return Ok(results.pop());
     }
 
-    fn insert(db: &Database, inp: &Book) -> Result<Book, Error> {
+    fn insert(db: &Database, inp: &mut Book) -> Result<BookId, Error> {
         check_varchar_length!(inp.quality);
         Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
         params!{
@@ -104,10 +104,8 @@ impl DMO for Book {
             },
             "quality" => inp.quality.clone(),
         }).map(|result| {
-            Book {
-                id: result.last_insert_id(),
-                ..*inp
-            }
+                inp.id = Some(result.last_insert_id());
+                result.last_insert_id()
         })?)
     }
 
