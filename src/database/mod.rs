@@ -67,6 +67,25 @@ impl Database {
 
         return Ok(Database { pool: pool });
     }
+    pub fn get_all<T: DMO>(&self) -> Result<Vec<T>, Error> {
+        T::get_all(self)
+    }
+
+    pub fn get<T: DMO>(&self, id: T::Id) -> Result<Option<T>, Error> {
+        T::get(self, id)
+    }
+
+    pub fn insert<T: DMO>(&self, inp: &T) -> Result<T, Error> {
+        T::insert(self, inp)
+    }
+
+    pub fn update<T: DMO>(&self, up: &T) -> Result<(), Error> {
+        T::update(self, up)
+    }
+
+    pub fn delete<T: DMO>(&self, id: T::Id) -> Result<bool, Error> {
+        T::delete(self, id)
+    }
 }
 
 trait DMO<T = Self> {

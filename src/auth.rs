@@ -16,3 +16,5 @@
 //         });
 //     }
 // }
+
+pub struct Token {}
