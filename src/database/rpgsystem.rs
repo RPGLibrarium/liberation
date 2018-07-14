@@ -4,8 +4,14 @@ pub type RpgSystemId = Id;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct RpgSystem {
-    pub id: RpgSystemId,
+    pub id: Option<RpgSystemId>,
     pub name: String,
+}
+
+impl RpgSystem {
+    pub fn new(id: Option<RpgSystemId>, name: String) -> RpgSystem {
+        RpgSystem { id: id, name: name }
+    }
 }
 
 impl DMO for RpgSystem {
@@ -20,7 +26,7 @@ impl DMO for RpgSystem {
                 },
             )
             .map(|result| RpgSystem {
-                id: result.last_insert_id(),
+                id: Some(result.last_insert_id()),
                 ..*inp
             })?)
     }
@@ -101,7 +107,7 @@ mod tests {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
 
-        let system_iin = RpgSystem::insert(
+        let system_in = RpgSystem::insert(
             &db,
             RpgSystem {
                 id: None,

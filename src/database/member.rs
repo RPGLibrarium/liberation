@@ -4,8 +4,17 @@ pub type MemberId = EntityId;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Member {
-    pub id: MemberId,
+    pub id: Option<MemberId>,
     pub external_id: String,
+}
+
+impl Member {
+    pub fn new(id: Option<MemberId>, external_id: String) -> Member {
+        Member {
+            id: id,
+            external_id: external_id,
+        }
+    }
 }
 
 impl DMO for Member {

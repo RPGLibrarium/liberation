@@ -14,6 +14,20 @@ pub struct Title {
     pub coverimage: Option<String>,
 }
 
+impl Title {
+    pub fn new(id: Option<TitleId>, name: String, system: RpgSystemId, language: String, publisher: String, year: Year, coverimage: Option<String>) -> Title{
+        Title {
+            id: id,
+            name: name,
+            system: system,
+            language: language,
+            publisher: publisher,
+            year: year,
+            coverimage: coverimage
+        }
+    }
+}
+
 pub fn get_titles_by_rpg_system(
     db: &Database,
     rpg_system_id: RpgSystemId,
@@ -144,7 +158,7 @@ impl DMO for Title {
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
-    use database::{Database, Error, DMO};
+    use database::{Database, Error, DMO, RpgSystem};
 
     #[test]
     fn insert_title_name_too_long() {
@@ -194,9 +208,13 @@ mod tests {
     fn insert_title_publisher_too_long() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(String::from("Kobolde"))
+        let system = RpgSystem{id: None, name: String::from("Kobolde")};
+        let result = db.insert(&system)
             .and_then(|system| {
-                db.insert_title(
+                let title = Title {
+
+                }
+                db.insert(
                     String::from("Kobolde"),
                     system.id,
                     String::from("de"),
@@ -299,7 +317,7 @@ mod tests {
     fn update_title_correct() {
         let dbname = setup();
         let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        let result = db.insert_rpg_system(String::from("Kobolde"))
+        let result = db.insert(RpgSystem{None, String::from("Kobolde")})
             .and_then(|system| {
                 db.insert_title(_s("Kobolde"), system.id, _s("de"), _s("??"), 2142, None)
             })

@@ -4,10 +4,21 @@ pub type GuildId = EntityId;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Guild {
-    pub id: GuildId,
+    pub id: Option<GuildId>,
     pub name: String,
     pub address: String,
     pub contact: MemberId,
+}
+
+impl Guild {
+    pub fn new(id: Option<GuildId>, name: String, address: String, contact: MemberId) -> Guild {
+        Guild {
+            id: id,
+            name: name,
+            address: address,
+            contact: contact,
+        }
+    }
 }
 
 impl DMO for Guild {
