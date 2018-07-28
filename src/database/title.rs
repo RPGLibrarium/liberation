@@ -95,20 +95,20 @@ impl DMO for Title {
                 "title_id" => title_id,
             },
         )
-    .map(|result| {
-        result.map(|x| x.unwrap()).map(|row| {
-            let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
-            Title {
-                id: id,
-                name: name,
-                system: system,
-                language: language,
-                publisher: publisher,
-                year: year,
-                coverimage: coverimage,
-            }
-        }).collect::<Vec<Title>>()
-    })?;
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
+                Title {
+                    id: id,
+                    name: name,
+                    system: system,
+                    language: language,
+                    publisher: publisher,
+                    year: year,
+                    coverimage: coverimage,
+                }
+            }).collect::<Vec<Title>>()
+        })?;
         return Ok(results.pop());
     }
 

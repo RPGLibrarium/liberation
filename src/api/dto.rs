@@ -17,13 +17,25 @@ pub struct GetRpgSystems {
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetRpgSystem {
-    pub rpgsystems: Vec<RpgSystemWithTitles>,
+    pub rpgsystem: RpgSystemWithTitles,
+}
+
+impl GetRpgSystem {
+    pub fn new(rpg_system: db::RpgSystem, titles: Vec<db::Title>) -> GetRpgSystem {
+        return GetRpgSystem {
+            rpgsystem: RpgSystemWithTitles {
+                id: rpg_system.id.expect("RpgSystem must contain an Id"),
+                name: rpg_system.name,
+                titles,
+            },
+        };
+    }
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct PutPostRpgSystem {
-    pub rpgsystem: PartialRpgSystem,
+    pub rpgsystem: db::RpgSystem,
 }
 
 #[derive(Serialize)]
@@ -136,6 +148,27 @@ pub struct TitleWithSystem {
     pub coverimage: Option<String>,
     pub stock: ItemCount,
     pub available: ItemCount,
+}
+
+impl TitleWithSystem {
+    pub fn new(
+        title: db::Title,
+        system: db::RpgSystem,
+        stock: u32,
+        available: u32,
+    ) -> TitleWithSystem {
+        TitleWithSystem {
+            id: title.id.expect("Expected a title id"),
+            name: title.name,
+            system,
+            language: title.language,
+            publisher: title.publisher,
+            year: title.year,
+            coverimage: title.coverimage,
+            stock,
+            available,
+        }
+    }
 }
 
 #[derive(Serialize)]

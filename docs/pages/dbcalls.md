@@ -21,26 +21,8 @@ lang: en
 1. Introduce Businesslogig level, sind De-/Serialization should be seperated from the logik.
 
 2. Get Single, GetAll, Insert, Update for all Tables, use Traits?
-  - [ ] GetSingleRpgSystem
-  - [ ] GetAllRpgSystem
-  - [ ] InsertRpgSystem
-  - [ ] UpdateRpgSystem
-  - [ ] GetSingleTitle
-  - [ ] GetAllTitle
-  - [ ] InsertTitle
-  - [ ] UpdateTitle
-  - [ ] GetSingleBook
-  - [ ] GetAllBook
-  - [ ] InsertBook
-  - [ ] UpdateBook
-  - [ ] GetSingleMember
-  - [ ] GetAllMember
-  - [ ] InsertMember
-  - [ ] UpdateMember
-  - [ ] GetSingleGuild
-  - [ ] GetAllGuilds
-  - [ ] InsertGuild
-  - [ ] UpdateGuild
+  - [x] trait DTO
+
 
 3. Special Usecases as function
   - Titles JOIN RpgSystems

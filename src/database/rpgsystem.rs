@@ -2,7 +2,7 @@ use super::*;
 
 pub type RpgSystemId = Id;
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RpgSystem {
     pub id: Option<RpgSystemId>,
     pub name: String,

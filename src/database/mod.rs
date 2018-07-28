@@ -86,9 +86,72 @@ impl Database {
     pub fn delete<T: DMO>(&self, id: T::Id) -> Result<bool, Error> {
         T::delete(self, id)
     }
+
+    pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<Title>, Error> {
+        let results = self.pool
+        .prep_exec(
+            "select title_id, name, language, publisher, year, coverimage from titles where rpg_system_by_id=:system_id;",
+            params!{
+                "system_id" => system_id,
+            },
+        )
+        .map_err(|err| Error::DatabaseError(err))
+        .map(|result| {
+            result.map(|x| x.unwrap()).map(|row| {
+                let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
+                Title {
+                    id: id,
+                    name: name,
+                    system: system,
+                    language: language,
+                    publisher: publisher,
+                    year: year,
+                    coverimage: coverimage,
+                }
+            }).collect::<Vec<Title>>()
+        });
+        return results;
+    }
+
+    pub fn get_titles_with_details(&self) -> Result<Vec<(Title, RpgSystem, u32, u32)>, Error> {
+        let result = self.pool
+            .prep_exec(
+                "select title_id, name, language, publisher, year, coverimage, system_id, system_name, count(book_id) as stock, exists(select rental.id from rentals where rentals.book_by_id = book.book_id and rentals.to > now()) available \
+                 from titles join rpg_systems on titles.system_by_id = rpg_systems.rpg_system_id \
+                    left outer join books on titles.title_id = books.title_by_id \
+                    group by title_id;
+                    "
+
+
+            , ())
+            .map_err(|err| Error::DatabaseError(err))
+            .map(|result| {
+                result.map(|x| x.unwrap()).map(|row| {
+                    let (id, name, system, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    (
+                        Title {
+                            id: id,
+                            name: name,
+                            system: system,
+                            language: language,
+                            publisher: publisher,
+                            year: year,
+                            coverimage: coverimage,
+                        },
+                        RpgSystem {
+                            id: system_id,
+                            name: system_name
+                        },
+                        stock,
+                        available
+                    )
+                }).collect::<Vec<(Title, RpgSystem, u32, u32)>>()
+            });
+        return result;
+    }
 }
 
-trait DMO<T = Self> {
+pub trait DMO<T = Self> {
     type Id;
     fn get_all(&Database) -> Result<Vec<T>, Error>;
     fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
