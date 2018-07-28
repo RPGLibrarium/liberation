@@ -62,31 +62,36 @@ pub fn get_titles(db: &Database, token: Token) -> Result<GetTitles, Error> {
     })
 }
 
-pub fn get_title(
-    db: &Database,
-    token: Token,
-    system_id: RpgSystemId,
-) -> Result<GetRpgSystem, Error> {
-    let system = db.get::<RpgSystem>(system_id)?.unwrap();
-    let titles = db.get_titles_by_rpg_system(system_id)?;
+pub fn get_title(db: &Database, token: Token, title_id: TitleId) -> Result<GetTitle, Error> {
+    let (title, system, stock, available) = db.get_title_with_details(title_id)?.unwrap();
+    let books = get_books_by_title_id(db, title_id)?;
     //TODO: Error handling
     //Map Errors to API Errors
     //404 Not found
 
-    Ok(GetRpgSystem::new(system, titles))
+    Ok(GetTitle::new(title, system, stock, available, books))
 }
 
-pub fn post_title(db: &Database, system: &mut PutPostRpgSystem) -> Result<RpgSystemId, Error> {
+pub fn post_title(db: &Database, token: Token, title: &mut PutPostTitle) -> Result<TitleId, Error> {
     //TODO: Error handling
-    Ok(db.insert::<RpgSystem>(&mut system.rpgsystem)?)
+    Ok(db.insert::<Title>(&mut title.title)?)
 }
 
-pub fn put_title(db: &Database, system: &mut PutPostRpgSystem) -> Result<(), Error> {
+pub fn put_title(db: &Database, token: Token, title: &PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
-    Ok(db.update::<RpgSystem>(&system.rpgsystem)?)
+    Ok(db.update::<Title>(&title.title)?)
 }
 
-pub fn delete_title(db: &Database, systemid: RpgSystemId) -> Result<bool, Error> {
+pub fn delete_title(db: &Database, titleid: TitleId) -> Result<(), Error> {
     //TODO: Errorhandling
-    Ok(db.delete::<RpgSystem>(systemid)?)
+    db.delete::<Title>(titleid)?;
+    Ok(())
+}
+
+//TODO: Stub
+fn get_books_by_title_id(
+    db: &Database,
+    titleid: TitleId,
+) -> Result<Vec<BookWithOwnerWithRental>, Error> {
+    return Ok(vec![]);
 }

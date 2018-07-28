@@ -65,7 +65,8 @@ impl ResponseError for Error {
             Error::DataTooLong(ref e) => HttpResponse::BadRequest()
                 .header("x-field", e.clone())
                 .body(format!("{}", self)),
-            _ => HttpResponse::InternalServerError().finish(),
+            //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
+            _ => HttpResponse::InternalServerError().body(format!("{}", self)),
         }
     }
 }

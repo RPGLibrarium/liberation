@@ -50,10 +50,35 @@ pub struct GetTitle {
     pub title: TitleWithSystemWithBooks,
 }
 
+impl GetTitle {
+    pub fn new(
+        title: db::Title,
+        system: db::RpgSystem,
+        stock: u32,
+        available: u32,
+        books: Vec<BookWithOwnerWithRental>,
+    ) -> GetTitle {
+        GetTitle {
+            title: TitleWithSystemWithBooks {
+                id: title.id.unwrap(),
+                name: title.name,
+                system: system,
+                language: title.language,
+                publisher: title.publisher,
+                year: title.year,
+                coverimage: title.coverimage,
+                stock,
+                available,
+                books,
+            },
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct PutPostTitle {
-    pub title: PartialTitle,
+    pub title: db::Title,
 }
 
 #[derive(Serialize)]

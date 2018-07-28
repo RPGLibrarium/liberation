@@ -8,7 +8,7 @@ lang: en
 ---
 
 ```
-GET /v1/rpgsystem/{systemid}
+GET /v1/rpgsystems/{systemid}
 ```
 ### Parameters
 

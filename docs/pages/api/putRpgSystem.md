@@ -8,7 +8,7 @@ lang: en
 ---
 
 ```
-PUT /v1/rpgsystem/{systemid}
+PUT /v1/rpgsystems/{systemid}
 ```
 ### Parameters
 

@@ -90,7 +90,7 @@ impl Database {
     pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<Title>, Error> {
         let results = self.pool
         .prep_exec(
-            "select title_id, name, language, publisher, year, coverimage from titles where rpg_system_by_id=:system_id;",
+            "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles where rpg_system_by_id=:system_id;",
             params!{
                 "system_id" => system_id,
             },
@@ -116,30 +116,28 @@ impl Database {
     pub fn get_titles_with_details(&self) -> Result<Vec<(Title, RpgSystem, u32, u32)>, Error> {
         let result = self.pool
             .prep_exec(
-                "select title_id, name, language, publisher, year, coverimage, system_id, system_name, count(book_id) as stock, exists(select rental.id from rentals where rentals.book_by_id = book.book_id and rentals.to > now()) available \
-                 from titles join rpg_systems on titles.system_by_id = rpg_systems.rpg_system_id \
+                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, count(book_id) as stock, exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
+                 from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
                     group by title_id;
-                    "
-
-
-            , ())
+                    ", ()
+            )
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, system, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
                     (
                         Title {
                             id: id,
                             name: name,
-                            system: system,
+                            system: system_id,
                             language: language,
                             publisher: publisher,
                             year: year,
                             coverimage: coverimage,
                         },
                         RpgSystem {
-                            id: system_id,
+                            id: Some(system_id),
                             name: system_name
                         },
                         stock,
@@ -148,6 +146,52 @@ impl Database {
                 }).collect::<Vec<(Title, RpgSystem, u32, u32)>>()
             });
         return result;
+    }
+
+    pub fn get_title_with_details(
+        &self,
+        title_id: TitleId,
+    ) -> Result<Option<(Title, RpgSystem, u32, u32)>, Error> {
+        let mut result = self.pool
+            .prep_exec(
+                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
+                 from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
+                    left outer join books on titles.title_id = books.title_by_id \
+                    where title_id=:titleid \
+                    group by title_id;
+                    ",
+                params!{
+                    "titleid" => title_id,
+                })
+            .map_err(|err| Error::DatabaseError(err))
+            .map(|result| {
+                result.map(|x| x.unwrap()).map(|row| {
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    (
+                        Title {
+                            id: id,
+                            name: name,
+                            system: system_id,
+                            language: language,
+                            publisher: publisher,
+                            year: year,
+                            coverimage: coverimage,
+                        },
+                        RpgSystem {
+                            id: Some(system_id),
+                            name: system_name
+                        },
+                        stock,
+                        available
+                    )
+                }).collect::<Vec<(Title, RpgSystem, u32, u32)>>()
+            })?;
+        return Ok(result.pop());
+    }
+
+    //TODO: Unfinished
+    pub fn get_books_by_title(&self, id: TitleId) -> Result<Vec<Book>, Error> {
+        return Ok(vec![]);
     }
 }
 

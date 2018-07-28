@@ -3,7 +3,7 @@ use super::*;
 use mysql;
 pub type TitleId = Id;
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Title {
     pub id: Option<TitleId>,
     pub name: String,
@@ -35,36 +35,6 @@ impl Title {
         }
     }
 }
-
-pub fn get_titles_by_rpg_system(
-    db: &Database,
-    rpg_system_id: RpgSystemId,
-) -> Result<Vec<Title>, Error> {
-    Ok(db.pool
-            .prep_exec(
-                "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles where rpg_system_by_id=:rpg_system_id;",
-                params!{
-                    "rpg_system_id" => rpg_system_id,
-                },
-            )
-            .map(|result| {
-                result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
-                    Title {
-                        id: id,
-                        name: name,
-                        system: system,
-                        language: language,
-                        publisher: publisher,
-                        year: year,
-                        coverimage: coverimage,
-                    }
-                }).collect()
-            })?
-        )
-}
-
-pub fn count_books_by_title() {}
 
 impl DMO for Title {
     type Id = TitleId;
