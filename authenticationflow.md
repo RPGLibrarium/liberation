@@ -24,3 +24,98 @@ Private Client: Github server, Cronjob
 1. Redirect to authorization URL (Keycloak)
 2. Get Authorization Token for Client (Webapp)
 3. Use Authorization Token to get Access Token by (Keycloak)
+
+## UserDB Access with Service Account access
+- Service Aacount Enabled
+- Generate Client Secret
+- `echo -n "liberation-core:b419cbee-9187-470e-bded-b8649d5cc18e"| base64`
+- `curl -H "Authorization: Basic bGliZXJhdGlvbi1jb3JlOmI0MTljYmVlLTkxODctNDcwZS1iZGVkLWI4NjQ5ZDVjYzE4ZQ==" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -X POST http://localhost:8081/auth/realms/liberation/protocol/openid-connect/token`
+- `curl -H "Authorization: Bearer <Token>" http://localhost:8081/auth/admin/realms/liberation/users?max=20&search=p -v`
+Response:
+```json
+[
+  {
+    "id": "5b53c5bb-da9d-40b1-9309-bf47deaf8f7d",
+    "createdTimestamp": 1532790611876,
+    "username": "dummy",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": false,
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": false,
+      "view": true,
+      "mapRoles": false,
+      "impersonate": false,
+      "manage": false
+    }
+  },
+  {
+    "id": "03c2ab7f-bbc9-4cf1-a477-97d919961995",
+    "createdTimestamp": 1529751875413,
+    "username": "paradyx",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": true,
+    "firstName": "Yoann",
+    "lastName": "Kehler",
+    "email": "liberation@acc.yoann.de",
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": false,
+      "view": true,
+      "mapRoles": false,
+      "impersonate": false,
+      "manage": false
+    }
+  },
+  {
+    "id": "798f70de-24fa-4ef4-bbd5-1bfe3b736bd5",
+    "createdTimestamp": 1529751698619,
+    "username": "richardz",
+    "enabled": true,
+    "totp": false,
+    "emailVerified": true,
+    "firstName": "Richard",
+    "lastName": "Zameitat",
+    "email": "r@richardz.de",
+    "disableableCredentialTypes": [
+      "password"
+    ],
+    "requiredActions": [
+      "CONFIGURE_TOTP",
+      "VERIFY_EMAIL",
+      "UPDATE_PASSWORD",
+      "UPDATE_PROFILE"
+    ],
+    "notBefore": 0,
+    "access": {
+      "manageGroupMembership": false,
+      "view": true,
+      "mapRoles": false,
+      "impersonate": false,
+      "manage": false
+    }
+  }
+]
+```
+- Get all User:
+```
+http://localhost:8081/auth/admin/realms/liberation/users
+```
+- Search User:
+```
+http://localhost:8081/auth/admin/realms/liberation/users?max=20&search=p
+```
+- GetUser:
+```
+http://localhost:8081/auth/admin/realms/liberation/users/03c2ab7f-bbc9-4cf1-a477-97d919961995
+```
