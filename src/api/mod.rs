@@ -3,6 +3,7 @@ mod dto;
 pub use self::dto::*;
 
 use actix_web::error as actix_error;
+use actix_web::server::HttpHandlerTask;
 use actix_web::{
     http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
     Responder, ResponseError, Result,
@@ -19,7 +20,7 @@ pub struct AppState {
     pub db: Database,
 }
 
-pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
+pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {
     App::with_state(state)
         .prefix("/v1")
         .route("/rpgsystems", http::Method::GET, get_rpg_systems)
