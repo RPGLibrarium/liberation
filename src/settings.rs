@@ -54,6 +54,8 @@ impl Settings {
         s.merge(File::with_name("config/test").required(false))
             .unwrap();
 
+        s.set("database.database", "")?;
+
         s.merge(Environment::with_prefix("LIBERATION")).unwrap();
 
         s.try_into()
