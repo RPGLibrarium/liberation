@@ -1,6 +1,0 @@
-db.hostname: <Hostname>
-db.username: <Username>
-db.password: <Password>
-db.databse: <Database>
-
-keycloak.accesstoken: <Accesstoken from Keycloak>

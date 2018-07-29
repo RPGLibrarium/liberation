@@ -1,4 +1,5 @@
 pub use super::error::Error;
+use super::settings;
 use chrono::prelude::*;
 pub static INIT_DB_STRUCTURE: &str = include_str!("../../res/init-db-structure.sql");
 
@@ -57,9 +58,21 @@ pub struct Database {
 //static SQL_DATEFORMAT: &str = "%Y-%m-%d";
 
 impl Database {
-    pub fn new(url: String) -> Result<Database, Error> {
-        let mut opts = mysql::OptsBuilder::from_opts(url);
-        opts.prefer_socket(false);
+    pub fn from_settings(settings: &settings::Database) -> Result<Database, Error> {
+        let mut opts = mysql::OptsBuilder::default();
+        opts.ip_or_hostname(settings.hostname.clone())
+            .user(settings.username.clone())
+            .pass(settings.password.clone())
+            .db_name(Some(settings.database.clone()))
+            .prefer_socket(false);
+
+        match settings.port {
+            Some(port) => {
+                opts.tcp_port(port);
+            }
+            None => {}
+        }
+
         let pool = mysql::Pool::new(opts)?;
 
         let mut conn = pool.get_conn()?;
@@ -67,6 +80,7 @@ impl Database {
 
         return Ok(Database { pool: pool });
     }
+
     pub fn get_all<T: DMO>(&self) -> Result<Vec<T>, Error> {
         T::get_all(self)
     }
@@ -212,6 +226,8 @@ pub struct Role {
 
 #[cfg(test)]
 mod test_util {
+    use super::super::settings::Database as Db;
+    use super::super::settings::Settings;
     use super::*;
     use chrono::prelude::*;
     use mysql;
@@ -224,32 +240,55 @@ mod test_util {
     pub fn _d(y: i32, m: u32, d: u32) -> NaiveDate {
         NaiveDate::from_ymd(y, m, d)
     }
-    pub fn _serv() -> String {
-        let server = env::var("SQL_SERVER").expect("SQL_SERVER not set in env");
-        let username = env::var("SQL_USER").expect("SQL_SERVER not set in env");
-        let password = match env::var("SQL_PASSWORD") {
-            Ok(password) => format!(":{}", password),
-            Err(_) => _s(""),
-        };
-        _s(&format!("mysql://{}{}@{}", username, password, server))
-    }
+
     pub const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
 
-    pub fn setup() -> String {
-        let setup_pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
+    pub fn setup() -> Db {
+        let mut settings = Settings::new_test().unwrap().database;
+
+        let mut opts = mysql::OptsBuilder::default();
+        opts.ip_or_hostname(settings.hostname.clone())
+            .user(settings.username.clone())
+            .pass(settings.password.clone())
+            .prefer_socket(false);
+
+        match settings.port {
+            Some(port) => {
+                opts.tcp_port(port);
+            }
+            None => {}
+        }
+
+        let setup_pool = mysql::Pool::new_manual(1, 2, opts).unwrap();
         let mut conn = setup_pool.get_conn().unwrap();
 
         let mut rng = thread_rng();
-        let dbname: String = String::from(format!("test_{}", rng.gen::<u32>()));
-        conn.query(format!("create database {}", dbname)).unwrap();
-        return dbname;
+        settings.database = String::from(format!("test_{}", rng.gen::<u32>()));
+        conn.query(format!("create database {}", settings.database))
+            .unwrap();
+
+        return settings;
     }
 
-    pub fn teardown(dbname: String) {
-        let pool = mysql::Pool::new_manual(1, 2, _serv()).unwrap();
+    pub fn teardown(settings: Db) {
+        let mut opts = mysql::OptsBuilder::default();
+        opts.ip_or_hostname(settings.hostname.clone())
+            .user(settings.username.clone())
+            .pass(settings.password.clone())
+            .prefer_socket(false);
+
+        match settings.port {
+            Some(port) => {
+                opts.tcp_port(port);
+            }
+            None => {}
+        }
+
+        let pool = mysql::Pool::new_manual(1, 2, opts).unwrap();
         let mut conn = pool.get_conn().unwrap();
 
-        conn.query(format!("drop database {}", dbname)).unwrap();
+        conn.query(format!("drop database {}", settings.database))
+            .unwrap();
     }
 
     pub fn insert_book_default(db: &Database) -> Result<(BookId, Book), Error> {
@@ -298,16 +337,16 @@ mod tests {
 
     #[test]
     fn connect() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
-        //teardown(dbname);
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
+        //teardown(settings);
     }
 
     #[test]
     fn db_init() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
-        teardown(dbname);
+        teardown(settings);
     }
 }

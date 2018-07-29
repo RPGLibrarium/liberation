@@ -104,23 +104,23 @@ mod tests {
 
     #[test]
     fn insert_rpg_system_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("SR5👿"));
         let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
             .and_then(|id| db.get::<RpgSystem>(id));
 
-        teardown(dbname);
+        teardown(settings);
         assert_eq!(system_in, system_out.unwrap().unwrap());
     }
 
     #[test]
     fn insert_rpg_system_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut RpgSystem::new(None, String::from(TOO_LONG_STRING)));
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -130,8 +130,8 @@ mod tests {
 
     #[test]
     fn update_rpg_system_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let mut system_in = RpgSystem::new(None, _s("SR5👿"));
         let result = db.insert(&mut system_in).and_then(|id| {
@@ -143,7 +143,7 @@ mod tests {
             })
         });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Ok(true) => (),
@@ -157,8 +157,8 @@ mod tests {
 
     #[test]
     fn update_rpg_system_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let mut system_in = RpgSystem::new(None, _s("SR5👿"));
         let result = db.insert(&mut system_in).and_then(|_| {
@@ -166,7 +166,7 @@ mod tests {
             db.update(&system_in)
         });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),

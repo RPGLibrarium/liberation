@@ -1,0 +1,8 @@
+# DO NOT COMMIT THIS FILE
+# Parameters to run `cargo test` locally
+
+# [database]
+# hostname = "172.18.0.2"
+# username = "root"
+# password = "thereIsNoPassword!"
+# database = ""

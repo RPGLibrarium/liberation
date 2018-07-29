@@ -138,8 +138,8 @@ mod tests {
 
     #[test]
     fn insert_title_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -152,7 +152,7 @@ mod tests {
                     None,
                 ))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -161,8 +161,8 @@ mod tests {
 
     #[test]
     fn insert_title_language_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -175,7 +175,7 @@ mod tests {
                     None,
                 ))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -184,8 +184,8 @@ mod tests {
 
     #[test]
     fn insert_title_publisher_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -198,7 +198,7 @@ mod tests {
                     None,
                 ))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -207,8 +207,8 @@ mod tests {
 
     #[test]
     fn insert_title_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
@@ -228,7 +228,7 @@ mod tests {
                     Ok(rec_title.map_or(false, |fetched_title| orig_title == fetched_title))
                 })
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted title was not in DB :("),
@@ -241,8 +241,8 @@ mod tests {
 
     #[test]
     fn update_title_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
@@ -260,7 +260,7 @@ mod tests {
                 orig_title.name = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -269,8 +269,8 @@ mod tests {
 
     #[test]
     fn update_title_language_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
@@ -288,7 +288,7 @@ mod tests {
                 orig_title.language = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -297,8 +297,8 @@ mod tests {
 
     #[test]
     fn update_title_publisher_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
@@ -316,7 +316,7 @@ mod tests {
                 orig_title.publisher = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),
@@ -325,8 +325,8 @@ mod tests {
 
     #[test]
     fn update_title_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
@@ -351,7 +351,7 @@ mod tests {
                     })
                 })
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated title to be corretly stored in DB"),

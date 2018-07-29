@@ -13,9 +13,24 @@ chrono = "~0.4"
 actix-web = "~0.7.2"
 failure = "*"
 futures = "*"
+config = "0.9"
 
 [dependencies.mysql]
 version = "*"
 features = ["rustc-serialize"]
 
 [dev-dependencies]
+
+[profile.dev]
+debug = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 0
+debug = 2
+overflow-checks = true
+
+[profile.release]
+opt-level = 3
+debug = false
+overflow-checks = false
