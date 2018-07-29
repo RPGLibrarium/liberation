@@ -46,12 +46,12 @@ impl Settings {
         // Start off by merging in the "default" configuration file
         s.merge(File::with_name("config/defaults")).unwrap();
 
-        s.merge(File::with_name("config/test").required(false))
-            .unwrap();
-
         // Add in a local configuration file
         // This file shouldn't be checked in to git
         s.merge(File::with_name("config/local").required(false))
+            .unwrap();
+
+        s.merge(File::with_name("config/test").required(false))
             .unwrap();
 
         s.merge(Environment::with_prefix("LIBERATION")).unwrap();
