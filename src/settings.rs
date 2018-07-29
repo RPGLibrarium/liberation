@@ -34,7 +34,8 @@ impl Settings {
         s.merge(File::with_name("config/local").required(false))
             .unwrap();
 
-        s.merge(Environment::with_prefix("LIBERATION")).unwrap();
+        s.merge(Environment::with_prefix("LIBERATION").separator("_"))
+            .unwrap();
 
         s.try_into()
     }
@@ -56,7 +57,8 @@ impl Settings {
 
         s.set("database.database", "")?;
 
-        s.merge(Environment::with_prefix("LIBERATION")).unwrap();
+        s.merge(Environment::with_prefix("LIBERATION").separator("_"))
+            .unwrap();
 
         s.try_into()
     }
