@@ -1,5 +1,6 @@
-use config::{Config, ConfigError, Environment, File, FileFormat};
-use std::env;
+use config::{Config, ConfigError, Environment, File};
+use url::Url;
+use url_serde;
 
 #[derive(Debug, Deserialize)]
 pub struct Database {
@@ -12,7 +13,11 @@ pub struct Database {
 
 #[derive(Debug, Deserialize)]
 pub struct Keycloak {
-    pub token: String,
+    #[serde(with = "url_serde")]
+    pub url: Url,
+    pub realm: String,
+    pub clientid: String,
+    pub clientsecret: String,
 }
 
 #[derive(Debug, Deserialize)]

@@ -40,7 +40,6 @@ docker-compose up -d
 ```
 Set connection settings as environmental variables or in `config/test.toml`:
 ```
-# export SQL_SERVER=127.0.0.1:33062
 export LIBERATION_DATABASE_HOSTNAME=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' liberation_test-db_1)
 export LIBERATION_DATABASE_USERNAME=root
 export LIBERATION_DATABASE_PASSWORD=thereIsNoPassword!

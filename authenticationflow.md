@@ -30,7 +30,7 @@ Private Client: Github server, Cronjob
 - Generate Client Secret
 - `echo -n "liberation-core:b419cbee-9187-470e-bded-b8649d5cc18e"| base64`
 - `curl -H "Authorization: Basic bGliZXJhdGlvbi1jb3JlOmI0MTljYmVlLTkxODctNDcwZS1iZGVkLWI4NjQ5ZDVjYzE4ZQ==" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -X POST http://localhost:8081/auth/realms/liberation/protocol/openid-connect/token`
-- `curl -H "Authorization: Bearer <Token>" http://localhost:8081/auth/admin/realms/liberation/users?max=20&search=p -v`
+- `curl  http://localhost:8081/auth/admin/realms/liberation/users?max=20&search=p -v -H "host: localhost" -H "Authorization: Bearer "`
 Response:
 ```json
 [
@@ -118,4 +118,9 @@ http://localhost:8081/auth/admin/realms/liberation/users?max=20&search=p
 - GetUser:
 ```
 http://localhost:8081/auth/admin/realms/liberation/users/03c2ab7f-bbc9-4cf1-a477-97d919961995
+```
+
+- Get Public Key for Keycloak
+```
+http://localhost:8081/auth/realms/master
 ```

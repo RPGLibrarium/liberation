@@ -10,10 +10,13 @@ serde_derive = "^1.0"
 serde_json = "^1.0"
 chrono = "~0.4"
 #actix-web = {git = "https://github.com/actix/actix-web", branch="master"}
-actix-web = "~0.7.2"
+actix-web = "~0.7.3"
 failure = "*"
 futures = "*"
 config = "0.9"
+oauth2 = "2.0.0-alpha.1"
+url = "*"
+url_serde="*"
 
 [dependencies.mysql]
 version = "*"
