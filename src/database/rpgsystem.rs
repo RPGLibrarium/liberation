@@ -1,4 +1,5 @@
 use super::*;
+use std::string::String;
 
 pub type RpgSystemId = Id;
 
@@ -6,11 +7,12 @@ pub type RpgSystemId = Id;
 pub struct RpgSystem {
     pub id: Option<RpgSystemId>,
     pub name: String,
+    pub shortname: Option<String>,
 }
 
 impl RpgSystem {
-    pub fn new(id: Option<RpgSystemId>, name: String) -> RpgSystem {
-        RpgSystem { id: id, name: name }
+    pub fn new(id: Option<RpgSystemId>, name: String, shortname: Option<String>) -> RpgSystem {
+        RpgSystem { id: id, name: name , shortname: shortname }
     }
 }
 
@@ -20,9 +22,10 @@ impl DMO for RpgSystem {
         check_varchar_length!(inp.name);
         Ok(db.pool
             .prep_exec(
-                "insert into rpg_systems (name) values (:name)",
+                "insert into rpg_systems (name, shortname) values (:name, :shortname)",
                 params!{
                     "name" => inp.name.clone(),
+                    "shortname" => inp.shortname.clone()
                 },
             )
             .map(|result| {
@@ -33,13 +36,17 @@ impl DMO for RpgSystem {
 
     fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {
         Ok(db.pool
-            .prep_exec("select rpg_system_id, name from rpg_systems;", ())
+            .prep_exec("select rpg_system_id, name, shortname from rpg_systems;", ())
             .map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
-                        let (id, name) = mysql::from_row(row);
-                        RpgSystem { id: id, name: name }
+                    let (id, name, short) : (Option<RpgSystemId>, String, String) = mysql::from_row(row);
+                    match short.as_ref() {
+                        "NULL" => RpgSystem { id: id, name: name, shortname: None },
+                        _ => RpgSystem { id: id, name: name, shortname: Some(short) },
+                    }
+
                     })
                     .collect()
             })?)
@@ -49,7 +56,7 @@ impl DMO for RpgSystem {
     fn get(db: &Database, rpg_system_id: Id) -> Result<Option<RpgSystem>, Error> {
         let mut results = db.pool
             .prep_exec(
-                "select rpg_system_id, name from rpg_systems where rpg_system_id=:rpg_system_id;",
+                "select rpg_system_id, name, shortname from rpg_systems where rpg_system_id=:rpg_system_id;",
                 params!{
                     "rpg_system_id" => rpg_system_id,
                 },
@@ -58,8 +65,8 @@ impl DMO for RpgSystem {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
-                        let (id, name) = mysql::from_row(row);
-                        RpgSystem { id: id, name: name }
+                        let (id, name, short) : (Option<RpgSystemId>, String, Option<String>) = mysql::from_row(row);
+                        RpgSystem { id: id, name: name, shortname: short }
                     })
                     .collect::<Vec<RpgSystem>>()
             })?;
@@ -68,11 +75,17 @@ impl DMO for RpgSystem {
 
     fn update(db: &Database, rpgsystem: &RpgSystem) -> Result<(), Error> {
         check_varchar_length!(rpgsystem.name);
+        /*match rpgsystem.shortname {
+            None => (),
+            Some(short) => check_varchar_length!(short)
+        }*/
+
         Ok(db.pool
             .prep_exec(
-                "update rpg_systems set name=:name where rpg_system_id=:id;",
+                "update rpg_systems set name=:name, shortname=:short where rpg_system_id=:id;",
                 params!{
                     "name" => rpgsystem.name.clone(),
+                    "short" => rpgsystem.shortname.clone(),
                     "id" => rpgsystem.id,
                 },
             )
@@ -106,7 +119,19 @@ mod tests {
     fn insert_rpg_system_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), Some(_s("SR5👿")));
+        let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
+            .and_then(|id| db.get::<RpgSystem>(id));
+
+        teardown(settings);
+        assert_eq!(system_in, system_out.unwrap().unwrap());
+    }
+
+    #[test]
+    fn insert_rpg_system_no_shortname_correct() {
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
+        let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
         let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
             .and_then(|id| db.get::<RpgSystem>(id));
 
@@ -119,7 +144,7 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut RpgSystem::new(None, String::from(TOO_LONG_STRING)));
+        let result = db.insert(&mut RpgSystem::new(None, String::from(TOO_LONG_STRING), None));
         teardown(settings);
 
         match result {
@@ -128,12 +153,26 @@ mod tests {
         }
     }
 
-    #[test]
-    fn update_rpg_system_correct() {
+    /*#[test]
+    fn insert_rpg_system_shortname_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), Some(String::from(TOO_LONG_STRING))));
+        teardown(settings);
+
+        match result {
+            Err(Error::DataTooLong(_)) => (),
+            _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"shortname\")"),
+        }
+    }*/
+
+    #[test]
+    fn update_rpg_system_name_correct() {
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
+
+        let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
         let result = db.insert(&mut system_in).and_then(|id| {
             system_in.name = _s("SR5");
             db.update(&system_in).and_then(|_| {
@@ -160,7 +199,7 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let mut system_in = RpgSystem::new(None, _s("SR5👿"));
+        let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), Some(_s("SR5👿")));
         let result = db.insert(&mut system_in).and_then(|_| {
             system_in.name = String::from(TOO_LONG_STRING);
             db.update(&system_in)

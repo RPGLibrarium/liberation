@@ -140,7 +140,7 @@ mod tests {
     fn insert_title_name_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -163,7 +163,7 @@ mod tests {
     fn insert_title_language_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -186,7 +186,7 @@ mod tests {
     fn insert_title_publisher_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -209,7 +209,7 @@ mod tests {
     fn insert_title_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
                     None,
@@ -243,7 +243,7 @@ mod tests {
     fn update_title_name_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
                     None,
@@ -271,7 +271,7 @@ mod tests {
     fn update_title_language_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
                     None,
@@ -299,7 +299,7 @@ mod tests {
     fn update_title_publisher_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, String::from("Kobolde"), None))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
                     None,
@@ -327,7 +327,7 @@ mod tests {
     fn update_title_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 let mut orig_title = Title::new(
                     None,
