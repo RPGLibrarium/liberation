@@ -115,8 +115,8 @@ mod tests {
 
     #[test]
     fn insert_guild_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id")))
             .and_then(|member_id| {
@@ -134,7 +134,7 @@ mod tests {
                     Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
                 })
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted Guild is not in DB :("),
@@ -147,8 +147,8 @@ mod tests {
 
     #[test]
     fn insert_guild_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id")))
             .and_then(|member_id| {
@@ -159,7 +159,7 @@ mod tests {
                     member_id,
                 ))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong(\"name\")"),
@@ -168,8 +168,8 @@ mod tests {
 
     #[test]
     fn update_guild_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
@@ -198,7 +198,7 @@ mod tests {
                     Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
                 })
             });
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Ok(true) => (),
@@ -212,8 +212,8 @@ mod tests {
 
     #[test]
     fn update_guild_name_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
@@ -231,7 +231,7 @@ mod tests {
                 db.update(&orig_guild)
             });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -243,8 +243,8 @@ mod tests {
 
     #[test]
     fn update_guild_address_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
@@ -261,7 +261,7 @@ mod tests {
                 db.update(&orig_guild)
             });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -273,8 +273,8 @@ mod tests {
 
     #[test]
     fn insert_guild_invalid_contact() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Guild::new(
             None,
@@ -282,7 +282,7 @@ mod tests {
             _s("Postfach 1231238581412 1238414812 Aachen"),
             12345,
         ));
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -291,8 +291,8 @@ mod tests {
 
     #[test]
     fn update_guild_invalid_contact() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
@@ -310,7 +310,7 @@ mod tests {
                 db.update(&orig_guild)
             });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::ConstraintError(_)) => (),

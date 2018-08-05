@@ -162,8 +162,8 @@ mod tests {
 
     #[test]
     fn insert_rental_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, _s("some-external-id"));
         let result = db.insert(&mut member_in)
             // .and_then(|member|
@@ -181,7 +181,7 @@ mod tests {
             ).and_then(|(rental_in, rental_out)|
                 Ok(rental_out.map_or(false, |rec_rental| rental_in == rec_rental))
             );
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted rental is not in DB :("),
@@ -194,8 +194,8 @@ mod tests {
 
     #[test]
     fn insert_rental_invalid_book() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, book)| {
             db.insert(&mut Rental::new(
                 None,
@@ -206,7 +206,7 @@ mod tests {
                 book.owner_type,
             ))
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -215,8 +215,8 @@ mod tests {
 
     #[test]
     fn insert_rental_invalid_owner_id() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, book)| {
             db.insert(&mut Rental::new(
                 None,
@@ -227,7 +227,7 @@ mod tests {
                 book.owner_type,
             ))
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -236,8 +236,8 @@ mod tests {
 
     #[test]
     fn insert_rental_wrong_owner_type() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, book)| {
             db.insert(&mut Rental::new(
                 None,
@@ -251,7 +251,7 @@ mod tests {
                 },
             ))
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -260,8 +260,8 @@ mod tests {
 
     #[test]
     fn update_rental_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut orig_rental = Rental::new(
@@ -327,7 +327,7 @@ mod tests {
             .and_then(|(orig_rental, rec_rental)| {
                 Ok(rec_rental.map_or(false, |fetched_rental| orig_rental == fetched_rental))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated guild to be corretly stored in DB"),
@@ -340,8 +340,8 @@ mod tests {
 
     #[test]
     fn update_rental_invalid_from() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut rental = Rental::new(
@@ -358,7 +358,7 @@ mod tests {
                 orig_rental.from = _d(-99, 10, 11);
                 db.update(&orig_rental)
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::IllegalValueForType(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
@@ -367,8 +367,8 @@ mod tests {
 
     #[test]
     fn update_rental_invalid_to() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut rental = Rental::new(
@@ -385,7 +385,7 @@ mod tests {
                 orig_rental.to = _d(-99, 11, 12);
                 db.update(&orig_rental)
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::IllegalValueForType(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
@@ -394,8 +394,8 @@ mod tests {
 
     #[test]
     fn update_rental_invalid_book() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut rental = Rental::new(
@@ -412,7 +412,7 @@ mod tests {
                 orig_rental.book = 012481632;
                 db.update(&orig_rental)
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
@@ -421,8 +421,8 @@ mod tests {
 
     #[test]
     fn update_rental_invalid_rentee_id() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut rental = Rental::new(
@@ -439,7 +439,7 @@ mod tests {
                 orig_rental.rentee = 012481632;
                 db.update(&orig_rental)
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),
@@ -448,8 +448,8 @@ mod tests {
 
     #[test]
     fn update_rental_wrong_rentee_type() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, book)| {
                 let mut rental = Rental::new(
@@ -469,7 +469,7 @@ mod tests {
                 };
                 db.update(&orig_rental)
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::IllegalValueForType)"),

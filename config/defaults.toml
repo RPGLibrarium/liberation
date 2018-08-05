@@ -1,0 +1,4 @@
+debug = false
+
+[keycloak]
+token = "<Accesstoken from Keycloak>"

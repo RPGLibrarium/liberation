@@ -151,8 +151,8 @@ mod tests {
 
     #[test]
     fn insert_book_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, orig_book)| {
                 db.get(book_id)
@@ -161,7 +161,7 @@ mod tests {
             .and_then(|(orig_book, rec_book)| {
                 Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Inserted book is not in DB :("),
@@ -174,8 +174,8 @@ mod tests {
 
     #[test]
     fn insert_book_quality_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -204,7 +204,7 @@ mod tests {
                 ))
             });
 
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!(
@@ -215,8 +215,8 @@ mod tests {
 
     #[test]
     fn insert_book_invalid_title() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut Member::new(
             None,
             _s("uiii-a-uuid-or-sth-similar-2481632"),
@@ -229,7 +229,7 @@ mod tests {
                 _s("quite good"),
             ))
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -238,8 +238,8 @@ mod tests {
 
     #[test]
     fn insert_book_invalid_owner_id() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -262,7 +262,7 @@ mod tests {
                 ))
             });
 
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -271,8 +271,8 @@ mod tests {
 
     #[test]
     fn insert_book_wrong_owner_type() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -294,7 +294,7 @@ mod tests {
                     _s("quite good"),
                 ))
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -303,8 +303,8 @@ mod tests {
 
     #[test]
     fn update_book_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = db.insert(&mut RpgSystem::new(None, _s("Cthulhu")))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
@@ -347,7 +347,7 @@ mod tests {
                     Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
                 })
             });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Ok(true) => (),
             Ok(false) => panic!("Expected updated book to be corretly stored in DB"),
@@ -360,13 +360,13 @@ mod tests {
 
     #[test]
     fn update_book_invalid_title() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.title = 0123481642;
             db.update(&orig_book)
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -375,13 +375,13 @@ mod tests {
 
     #[test]
     fn update_book_invalid_owner_id() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.owner = 0123481642;
             db.update(&orig_book)
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -390,13 +390,13 @@ mod tests {
 
     #[test]
     fn update_book_wrong_owner_type() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.owner_type = EntityType::Guild;
             db.update(&orig_book)
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -405,13 +405,13 @@ mod tests {
 
     #[test]
     fn update_book_quality_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
             orig_book.quality = _s(TOO_LONG_STRING);
             db.update(&orig_book)
         });
-        teardown(dbname);
+        teardown(settings);
         match result {
             Err(Error::DataTooLong(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::DataTooLong)"),

@@ -29,7 +29,7 @@ lang: en
 |------------|--------------------------------|---------------|
 | title_id | int auto_increment primary key |  |
 | name | varchar(255) not null unique |  |
-| system_by_id | int not null | rpg_system.rpg_system_id |
+| rpg_system_by_id | int not null | rpg_system.rpg_system_id |
 | language | varchar |  |
 | publisher | varchar |  |
 | year | smallint |  |
@@ -67,8 +67,8 @@ lang: en
 | Column | Type | References |
 |-------------|--------------------------------|---------------------|
 | rental_id | int auto_increment primary key |  |
-| from | date |  |
-| to | date |  |
+| from_date | date |  |
+| to_date | date |  |
 | book_by_id | int  | books.book_id |
 | rentee_member_by_id | int null | member.member_id |
 | rentee_guild_by_id | int null | guild.guild_id |

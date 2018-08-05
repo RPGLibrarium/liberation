@@ -4,6 +4,7 @@ extern crate mysql;
 extern crate serde_derive;
 extern crate actix_web;
 extern crate chrono;
+extern crate config;
 extern crate failure;
 extern crate futures;
 extern crate rand;
@@ -17,13 +18,14 @@ mod database;
 mod business;
 mod error;
 mod serde_formats;
+mod settings;
 
 use actix_web::{server, App, HttpRequest};
+use settings::Settings;
 
 fn main() {
-    let db = database::Database::new(String::from(
-        "mysql://root:thereIsNoPassword!@127.0.1.1:33061/liberation",
-    )).unwrap();
+    let settings = Settings::new().unwrap();
+    let db = database::Database::from_settings(&settings.database).unwrap();
 
     let state = api::AppState { db: db };
     server::new(move || vec![api::get_v1(state.clone())])

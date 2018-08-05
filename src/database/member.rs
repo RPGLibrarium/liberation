@@ -109,23 +109,23 @@ mod tests {
     use database::*;
     #[test]
     fn insert_member_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, String::from("someexternalId"));
         let member_out = db.insert(&mut member_in)
             .and_then(|member_id| db.get(member_id));
 
-        teardown(dbname);
+        teardown(settings);
         assert_eq!(member_in, member_out.unwrap().unwrap());
     }
 
     #[test]
     fn insert_member_external_id_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let result = db.insert(&mut Member::new(None, String::from(TOO_LONG_STRING)));
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),
@@ -137,8 +137,8 @@ mod tests {
 
     #[test]
     fn update_member_correct() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
 
         let mut member_in = Member::new(None, _s("somememberId"));
 
@@ -151,7 +151,7 @@ mod tests {
             })
         });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Ok(true) => (),
@@ -165,8 +165,8 @@ mod tests {
 
     #[test]
     fn update_member_external_id_too_long() {
-        let dbname = setup();
-        let db = Database::new(String::from(format!("{}/{}", _serv(), dbname))).unwrap();
+        let settings = setup();
+        let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, _s("somememberId"));
 
         let result = db.insert(&mut member_in).and_then(|member_id| {
@@ -174,7 +174,7 @@ mod tests {
             return db.update(&member_in);
         });
 
-        teardown(dbname);
+        teardown(settings);
 
         match result {
             Err(Error::DataTooLong(_)) => (),

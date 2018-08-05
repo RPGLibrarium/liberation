@@ -3,6 +3,7 @@ mod dto;
 pub use self::dto::*;
 
 use actix_web::error as actix_error;
+use actix_web::server::HttpHandlerTask;
 use actix_web::{
     http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
     Responder, ResponseError, Result,
@@ -19,15 +20,15 @@ pub struct AppState {
     pub db: Database,
 }
 
-pub fn get_v1(state: AppState) -> Box<server::HttpHandler> {
+pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {
     App::with_state(state)
         .prefix("/v1")
         .route("/rpgsystems", http::Method::GET, get_rpg_systems)
-        .route("/rpgsystem/{systemid}", http::Method::GET, get_rpg_system)
+        .route("/rpgsystems/{systemid}", http::Method::GET, get_rpg_system)
         .route("/rpgsystems", http::Method::POST, post_rpg_system)
-        .route("/rpgsystem/{systemid}", http::Method::PUT, put_rpg_system)
+        .route("/rpgsystems/{systemid}", http::Method::PUT, put_rpg_system)
         .route(
-            "/rpgsystem/{systemid}",
+            "/rpgsystems/{systemid}",
             http::Method::DELETE,
             delete_rpg_system,
         )
@@ -132,17 +133,63 @@ fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
         .map_err(Error::from)
 }
 
+// fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
+//     "GET titles"
+//
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET titles"
+    bus::get_titles(&_req.state().db, Token {}).and_then(|titles| Ok(Json(titles)))
 }
-fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET titles/<id>"
+
+// fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
+//     "GET titles/<id>"
+// }
+fn get_title(_req: HttpRequest<AppState>) -> Result<impl Responder> {
+    let id: TitleId = _req.match_info().query("titleid")?;
+
+    bus::get_title(&_req.state().db, Token {}, id)
+        .and_then(|title| Ok(Json(title)))
+        .map_err(Error::from)
 }
-fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST titles"
+
+// fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
+//     "POST titles"
+// }
+fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let localdb = _req.state().db.clone();
+    _req.json()
+        .from_err()
+        .and_then(move |mut obj: dto::PutPostTitle| {
+            bus::post_title(&localdb, Token {}, &mut obj).map_err(Error::from)
+        })
+        .and_then(|system_id| {
+            Ok(HttpResponse::Created()
+                .header("Location", format!("v1/titles/{}", system_id))
+                .finish())
+        })
+        .map_err(Error::from)
+        .responder()
 }
-fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT titles/<id>"
+
+// fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
+//     "PUT titles/<id>"
+// }
+fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let localdb = _req.state().db.clone();
+    let id: Result<TitleId> = _req.match_info()
+        .query("titleid")
+        .map_err(actix_error::ErrorBadRequest);
+
+    _req.json()
+        .from_err()
+        .and_then(|mut obj: dto::PutPostTitle| {
+            obj.title.id = Some(id?);
+            return Ok(obj);
+        })
+        .and_then(move |title: PutPostTitle| {
+            bus::put_title(&localdb, Token {}, &title).map_err(Error::from)
+        })
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder()
 }
 
 // fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
