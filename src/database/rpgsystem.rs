@@ -3,7 +3,7 @@ use std::string::String;
 
 pub type RpgSystemId = Id;
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct RpgSystem {
     pub id: Option<RpgSystemId>,
     pub name: String,
