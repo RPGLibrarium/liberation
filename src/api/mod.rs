@@ -192,8 +192,11 @@ fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Err
         .responder()
 }
 
+// fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
+//     "GET Books"
+// }
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET Books"
+    bus::get_books(&_req.state().db, Token {}).and_then(|books| Ok(Json(books)))
 }
 
 fn get_book(_req: HttpRequest<AppState>) -> impl Responder {
