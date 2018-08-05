@@ -149,6 +149,51 @@ impl Database {
             });
         return result;
     }
+
+    // one function to query them all, retrieve their data and store it in stucts
+    pub fn get_books_with_details(&self) -> Result<Vec<(Book, Option<Rental>, bool)>, Error> {
+        return self.pool
+            .prep_exec(
+                "select
+                    books.book_id, books.owner_type, books.quality, books.title_by_id, \
+                    if(books.owner_type = 'member', o_members.member_id, o_guilds.guild_id) as owner_id, \
+                    rentals.rental_id, rentals.from_date, rentals.to_date, rentals.rentee_type, \
+                    if(rentals.rentee_type = 'member', r_members.member_id, r_guilds.guild_id) as rentee_id, \
+                    (rentals.to_date is null or rentals.to_date < CURRENT_DATE) as available \
+                from books \
+                left outer join members as o_members on books.owner_member_by_id = o_members.member_id and books.owner_type = 'member' \
+                left outer join guilds as o_guilds on books.owner_guild_by_id = o_guilds.guild_id and books.owner_type = 'guild' \
+                left outer join rentals on books.book_id = rentals.book_by_id and rentals.to_date >= ALL (select to_date from rentals where book_by_id = books.book_id) \
+                left outer join members as r_members on rentals.rentee_member_by_id = r_members.member_id and rentals.rentee_type = 'member' \
+                left outer join guilds as r_guilds on rentals.rentee_guild_by_id = r_guilds.guild_id and rentals.rentee_type = 'guild' \
+                group by book_id;
+                ", ())
+            .map_err(|err| Error::DatabaseError(err))
+            .map(|result| {
+                result.map(|x| x.unwrap()).map(|row| {
+                    let (book_id, owner_type, quality, title_id, owner_id, rental_id, rental_from, rental_to, rentee_type, rentee_id, available)
+                    : (BookId, String, String, TitleId, EntityId, Option<RentalId>, Option<NaiveDate>, Option<NaiveDate>, Option<String>, Option<EntityId>, bool) = mysql::from_row(row);
+                    (
+                        Book {
+                            id: Some(book_id),
+                            title: title_id,
+                            owner_type: EntityType::from_str(owner_type.as_str()).expect("Bad owner type"),
+                            owner: owner_id,
+                            quality: quality,
+                        },
+                        rental_id.map_or_else(|| None, |id| Some(Rental {
+                            id: Some(id),
+                            from: rental_from.expect("rental start date is not set"),
+                            to: rental_to.expect("rental end date is not set"),
+                            book: book_id,
+                            rentee: rentee_id.expect("rentee_id is not set"),
+                            rentee_type: EntityType::from_str(rentee_type.expect("rentee type is not set").as_str()).expect("Bad rentee Type"),
+                        })),
+                        available,
+                    )
+                }).collect::<Vec<(Book, Option<Rental>, bool)>>()
+            });
+    }
 }
 
 pub trait DMO<T = Self> {

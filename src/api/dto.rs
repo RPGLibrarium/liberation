@@ -137,7 +137,7 @@ pub struct PartialRpgSystem {
     pub name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct TitleWithSystem {
     pub id: db::TitleId,
     pub name: String,
@@ -191,7 +191,7 @@ pub struct BookWithOwnerWithRental {
     pub owner: Entity,
     pub quality: String,
     pub available: bool,
-    pub rental: Rental,
+    pub rental: RentalWithRentee,
 }
 
 #[derive(Serialize)]
@@ -210,7 +210,7 @@ pub struct UnresolvedEntity {
 }
 
 #[derive(Serialize)]
-pub struct Rental {
+pub struct RentalWithRentee {
     #[serde(with = "serde_formats::naive_date")]
     pub from: db::Date,
     #[serde(with = "serde_formats::naive_date")]
@@ -235,7 +235,7 @@ pub struct BookWithTitleWithOwnerWithRental {
     pub owner: Entity,
     pub quality: String,
     pub available: bool,
-    pub rental: Rental,
+    pub rental: Option<RentalWithRentee>,
 }
 
 #[derive(Deserialize)]
