@@ -1,4 +1,3 @@
-use actix_web::{error, HttpResponse, ResponseError};
 use failure::Fail;
 use mysql::Error as MySqlError;
 use oauth2::basic::BasicErrorResponseType;
@@ -13,9 +12,9 @@ pub enum Error {
     DataTooLong(Field),
     IllegalValueForType(Field),
     IllegalState(),
-    JsonPayloadError(error::JsonPayloadError),
-    KeycloakConnectionError(RequestTokenError<BasicErrorResponseType>),
-    // ActixError(error::Error),
+    // JsonPayloadError(error::JsonPayloadError),
+    KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
+    KeycloakConnectionError(),
 }
 
 impl From<MySqlError> for Error {
@@ -31,15 +30,15 @@ impl From<MySqlError> for Error {
     }
 }
 
-impl From<error::JsonPayloadError> for Error {
-    fn from(error: error::JsonPayloadError) -> Self {
-        Error::JsonPayloadError(error)
-    }
-}
+// impl From<error::JsonPayloadError> for Error {
+//     fn from(error: error::JsonPayloadError) -> Self {
+//         Error::JsonPayloadError(error)
+//     }
+// }
 
 impl From<RequestTokenError<BasicErrorResponseType>> for Error {
     fn from(error: RequestTokenError<BasicErrorResponseType>) -> Self {
-        Error::KeycloakConnectionError(error)
+        Error::KeycloakAuthenticationError(error)
     }
 }
 //
@@ -59,8 +58,8 @@ impl fmt::Display for Error {
                 write!(f, "ERROR: illegal value in field: {}", field)
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
-            Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
-            Error::KeycloakConnectionError(ref err) => write!(f, "{{ {} }}", err),
+            // Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
+            Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             //Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }
@@ -69,14 +68,14 @@ impl fmt::Display for Error {
 
 impl Fail for Error {}
 
-impl ResponseError for Error {
-    fn error_response(&self) -> HttpResponse {
-        match *self {
-            Error::DataTooLong(ref e) => HttpResponse::BadRequest()
-                .header("x-field", e.clone())
-                .body(format!("{}", self)),
-            //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
-            _ => HttpResponse::InternalServerError().body(format!("{}", self)),
-        }
-    }
-}
+// impl ResponseError for Error {
+//     fn error_response(&self) -> HttpResponse {
+//         match *self {
+//             Error::DataTooLong(ref e) => HttpResponse::BadRequest()
+//                 .header("x-field", e.clone())
+//                 .body(format!("{}", self)),
+//             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
+//             _ => HttpResponse::InternalServerError().body(format!("{}", self)),
+//         }
+//     }
+// }
