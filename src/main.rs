@@ -11,6 +11,7 @@ extern crate oauth2;
 extern crate rand;
 extern crate serde;
 extern crate serde_json;
+extern crate tokio;
 extern crate url;
 extern crate url_serde;
 
@@ -23,19 +24,28 @@ mod error;
 mod serde_formats;
 mod settings;
 
-use actix_web::{server, App, HttpRequest};
+use actix_web::{actix, server, App, HttpRequest};
 use settings::Settings;
-fn main() {
-    let settings = Settings::new().unwrap();
-    let db = database::Database::from_settings(&settings.database).unwrap();
-    let kclk = auth::Keycloak::from_settings(&settings.keycloak);
+use std::sync::Arc;
 
-    kclk.get_keycloak_users();
-    let state = api::AppState { db: db };
-    server::new(move || vec![api::get_v1(state.clone())])
-        .bind("127.0.0.1:8080")
-        .unwrap()
-        .run();
+fn main() {
+    let code = actix::System::run(|| {
+        let settings = Settings::new().unwrap();
+        let db = database::Database::from_settings(&settings.database).unwrap();
+        let kclk = auth::Keycloak::from_settings(&settings.keycloak);
+
+        let state = api::AppState {
+            db: db,
+            kc: Arc::new(kclk),
+        };
+
+        server::new(move || vec![api::get_v1(state.clone())])
+            .bind("127.0.0.1:8080")
+            .unwrap()
+            .start();
+    });
+
+    std::process::exit(code);
 }
 
 #[cfg(test)]

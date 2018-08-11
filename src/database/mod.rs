@@ -37,6 +37,7 @@ pub use self::title::Title;
 pub use self::book::BookId;
 pub use self::entity::EntityId;
 pub use self::guild::GuildId;
+pub use self::member::ExternalId;
 pub use self::member::MemberId;
 pub use self::rental::RentalId;
 pub use self::rpgsystem::RpgSystemId;
@@ -50,6 +51,21 @@ pub type Id = u64;
 pub type Year = i16;
 pub type Date = NaiveDate;
 
+pub mod type_aliases {
+    pub use super::BookId;
+    pub use super::EntityId;
+    pub use super::ExternalId;
+    pub use super::GuildId;
+    pub use super::MemberId;
+    pub use super::RentalId;
+    pub use super::RpgSystemId;
+    pub use super::TitleId;
+
+    pub use super::Id;
+
+    pub use super::Date;
+    pub use super::Year;
+}
 #[derive(Clone)]
 pub struct Database {
     pool: mysql::Pool,
@@ -345,7 +361,8 @@ mod test_util {
     }
 
     pub fn insert_book_default(db: &Database) -> Result<(BookId, Book), Error> {
-        return db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
+        return db
+            .insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,

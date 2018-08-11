@@ -1,3 +1,4 @@
+use actix_web::client::SendRequestError;
 use actix_web::{error, HttpResponse, ResponseError};
 use failure::Fail;
 use mysql::Error as MySqlError;
@@ -14,8 +15,8 @@ pub enum Error {
     IllegalValueForType(Field),
     IllegalState(),
     JsonPayloadError(error::JsonPayloadError),
-    KeycloakConnectionError(RequestTokenError<BasicErrorResponseType>),
-    // ActixError(error::Error),
+    KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
+    KeycloakConnectionError(SendRequestError), // ActixError(error::Error)
 }
 
 impl From<MySqlError> for Error {
@@ -39,7 +40,7 @@ impl From<error::JsonPayloadError> for Error {
 
 impl From<RequestTokenError<BasicErrorResponseType>> for Error {
     fn from(error: RequestTokenError<BasicErrorResponseType>) -> Self {
-        Error::KeycloakConnectionError(error)
+        Error::KeycloakAuthenticationError(error)
     }
 }
 //
@@ -60,7 +61,7 @@ impl fmt::Display for Error {
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
-            Error::KeycloakConnectionError(ref err) => write!(f, "{{ {} }}", err),
+            Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             //Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }

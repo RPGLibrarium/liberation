@@ -17,6 +17,7 @@ config = "0.9"
 oauth2 = "2.0.0-alpha.1"
 url = "*"
 url_serde="*"
+tokio="*"
 
 [dependencies.mysql]
 version = "*"
