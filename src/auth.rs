@@ -1,3 +1,4 @@
+use actix_web::{actix, client};
 use error::Error;
 use futures::Future;
 use oauth2::basic::BasicClient;
@@ -66,9 +67,23 @@ impl Keycloak {
             .unwrap()
             .join("users")
             .unwrap();
+        println!("{:?}", token_result.access_token().secret());
 
-        // .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
-        // .header("host", "localhost:8081")
+        actix::run(|| {
+            client::get(user_url)   // <- Create request builder
+                .no_default_headers()
+                .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
+                .header("host", "localhost:8081")
+
+            .finish().unwrap()
+
+            .send()                               // <- Send http request
+            .map_err(|_| ())
+            .and_then(|response| {                // <- server http response
+                println!("Response: {:?}", response);
+                Ok(())
+            })
+        });
 
         Ok(())
     }
