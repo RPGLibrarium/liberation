@@ -44,9 +44,18 @@ impl Settings {
 
         s.try_into()
     }
+}
 
-    #[cfg(test)]
-    pub fn new_test() -> Result<Self, ConfigError> {
+#[cfg(test)]
+#[derive(Debug, Deserialize)]
+pub struct TestSettings {
+    pub debug: bool,
+    pub database: Database,
+}
+
+#[cfg(test)]
+impl TestSettings {
+    pub fn new() -> Result<Self, ConfigError> {
         let mut s = Config::default();
 
         // Start off by merging in the "default" configuration file

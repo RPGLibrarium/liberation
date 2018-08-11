@@ -296,7 +296,7 @@ pub struct Role {
 #[cfg(test)]
 mod test_util {
     use super::super::settings::Database as Db;
-    use super::super::settings::Settings;
+    use super::super::settings::TestSettings;
     use super::*;
     use chrono::prelude::*;
     use mysql;
@@ -313,7 +313,7 @@ mod test_util {
     pub const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
 
     pub fn setup() -> Db {
-        let mut settings = Settings::new_test().unwrap().database;
+        let mut settings = TestSettings::new().unwrap().database;
 
         let mut opts = mysql::OptsBuilder::default();
         opts.ip_or_hostname(settings.hostname.clone())
