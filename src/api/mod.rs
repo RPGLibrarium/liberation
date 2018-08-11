@@ -6,7 +6,7 @@ use actix_web::error as actix_error;
 use actix_web::server::HttpHandlerTask;
 use actix_web::{
     http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
-    Responder, ResponseError, Result,
+    Responder, ResponseError, Result, fs
 };
 use auth::Token;
 use database::*;
@@ -18,6 +18,13 @@ use business as bus;
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
+}
+
+pub fn get_static() -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {
+    App::new()
+        .prefix("/web")
+        .handler("/", fs::StaticFiles::new("./web").unwrap().index_file("index.html"))
+        .boxed()
 }
 
 pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {

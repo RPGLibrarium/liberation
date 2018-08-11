@@ -28,7 +28,7 @@ fn main() {
     let db = database::Database::from_settings(&settings.database).unwrap();
 
     let state = api::AppState { db: db };
-    server::new(move || vec![api::get_v1(state.clone())])
+    server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()
         .run();

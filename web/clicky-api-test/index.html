@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>API Test</title>
+    <script src="vex.combined.js"></script>
+    <script>vex.defaultOptions.className = 'vex-theme-flat-attack'</script>
+    <link rel="stylesheet" href="vex.css" />
+    <link rel="stylesheet" href="vex-theme-flat-attack.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            border: 0 none;
+            width: 100vw;
+            height: 100vh;
+
+        }
+
+        .vex .vex-dialog-form input {
+            color: inherit;
+        }
+        .vex-dialog-input input[data-name]::before {
+            content: attr(data-name) ":";
+            position: absolute;
+            top: -.5em;
+            left: .5em;
+            font-size: .7em;
+            color: #fff;
+            text-shadow: 0 0 .1em .05em #444;
+        }
+
+        button.action:not(.noAutoText)::after {
+            content: attr(data-method) " " attr(data-path);
+        }
+        
+        body {
+            display: flex;
+            padding: 1em;
+        }
+        #actions {
+            width: fit-content;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 0;
+        }
+        #actions > hr {
+            width: 85%;
+        }
+        #result {
+            margin: 0 0 0 1em;
+            border: 1px solid #ccc;
+            flex-grow: 1;
+            font-family: 'Fira Code', 'Hack', 'Source Code Pro', monospace;
+            overflow-y: scroll;
+            white-space: pre-wrap;
+        }
+    </style>
+    <script src="./axios.js"></script>
+    <script src="./main.js"></script>
+  <head>
+  <body>
+    <div id="actions">
+        <label><input type="checkbox" checked id="chkVerbose"/> be verbose</label>
+        <hr/>
+        <button class="action simple" data-method="GET" data-path="v1/books"></button>
+        <button class="action simple" data-method="GET" data-path="v1/guilds"></button>
+        <button class="action simple" data-method="GET" data-path="v1/members"></button>
+        <button class="action simple" data-method="GET" data-path="v1/titles"></button>
+        <button class="action simple" data-method="GET" data-path="v1/rentals"></button>
+        <button class="action simple" data-method="GET" data-path="v1/rpgsystems"></button>
+        <hr/>
+        <button class="action input" data-method="POST" data-path="v1/rpgsystems" data-inputs='[{"name":"name", "type":"text", "required":true}]'></button>
+    </div>
+    <div id="result">» RESULT HERE «</div>
+  <body>
+</html>
