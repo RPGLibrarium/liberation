@@ -139,7 +139,7 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available): (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32)  = mysql::from_row(row);
                     (
                         Title {
                             id: id,
@@ -152,7 +152,11 @@ impl Database {
                         },
                         RpgSystem {
                             id: Some(system_id),
-                            name: system_name
+                            name: system_name,
+                            shortname: match system_short.as_ref() {
+                                "NULL" => None,
+                                _ => Some(system_short),
+                            }
                         },
                         stock,
                         available
@@ -168,7 +172,7 @@ impl Database {
     ) -> Result<Option<(Title, RpgSystem, u32, u32)>, Error> {
         let mut result = self.pool
             .prep_exec(
-                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
+                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, rpg_systems.shortname, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
                  from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
                     where title_id=:titleid \
@@ -180,23 +184,27 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available) : (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32) = mysql::from_row(row);
                     (
-                        Title {
-                            id: id,
-                            name: name,
-                            system: system_id,
-                            language: language,
-                            publisher: publisher,
-                            year: year,
-                            coverimage: coverimage,
-                        },
-                        RpgSystem {
-                            id: Some(system_id),
-                            name: system_name
-                        },
-                        stock,
-                        available
+                            Title {
+                                id: id,
+                                name: name,
+                                system: system_id,
+                                language: language,
+                                publisher: publisher,
+                                year: year,
+                                coverimage: coverimage,
+                            },
+                            RpgSystem {
+                                id: Some(system_id),
+                                name: system_name,
+                                shortname: match system_short.as_ref() {
+                                    "NULL" => None,
+                                    _ => Some(system_short),
+                                },
+                            },
+                            stock,
+                            available
                     )
                 }).collect::<Vec<(Title, RpgSystem, u32, u32)>>()
             })?;
@@ -337,7 +345,7 @@ mod test_util {
     }
 
     pub fn insert_book_default(db: &Database) -> Result<(BookId, Book), Error> {
-        return db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        return db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
