@@ -29,23 +29,19 @@ use settings::Settings;
 use std::sync::Arc;
 
 fn main() {
-    let code = actix::System::run(|| {
-        let settings = Settings::new().unwrap();
-        let db = database::Database::from_settings(&settings.database).unwrap();
-        let kclk = auth::Keycloak::from_settings(&settings.keycloak);
+    let settings = Settings::new().unwrap();
+    let db = database::Database::from_settings(&settings.database).unwrap();
+    let kclk = auth::Keycloak::from_settings(&settings.keycloak);
 
-        let state = api::AppState {
-            db: db,
-            kc: Arc::new(kclk),
-        };
+    let state = api::AppState {
+        db: db,
+        kc: Arc::new(kclk),
+    };
 
-        server::new(move || vec![api::get_v1(state.clone())])
-            .bind("127.0.0.1:8080")
-            .unwrap()
-            .start();
-    });
-
-    std::process::exit(code);
+    server::new(move || vec![api::get_v1(state.clone())])
+        .bind("127.0.0.1:8080")
+        .unwrap()
+        .run();
 }
 
 #[cfg(test)]

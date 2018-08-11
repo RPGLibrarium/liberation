@@ -8,23 +8,25 @@ use oauth2::prelude::*;
 use oauth2::{AuthUrl, ClientId, ClientSecret, Scope, TokenUrl};
 use settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 use url::Url;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct KeycloakUser {
     id: String,
-    createdTimestamp: u32,
+    createdTimestamp: u64,
     username: String,
     enabled: bool,
     totp: bool,
     emailVerified: bool,
     disableableCredentialTypes: Vec<String>,
     requiredActions: Vec<String>,
-    notBefore: u32,
+    notBefore: u64,
     access: Access,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Access {
     manageGroupMembership: bool,
     view: bool,
@@ -41,7 +43,7 @@ pub struct Keycloak {
     keycloak_url: Url,
     realm: String,
     oauth_client: BasicClient,
-    cache: HashMap<ExternalId, KeycloakUser>,
+    cache: Arc<Mutex<HashMap<ExternalId, KeycloakUser>>>,
 }
 
 impl Keycloak {
@@ -75,10 +77,10 @@ impl Keycloak {
                 authUrl,
                 Some(tokenUrl),
             ),
-            cache: HashMap::new(),
+            cache: Arc::new(Mutex::new(HashMap::new())),
         };
 
-        kc.fetch().unwrap();
+        kc.fetch();
 
         return kc;
     }
@@ -105,26 +107,35 @@ impl Keycloak {
             .unwrap();
         println!("{:?}", token_result.access_token().secret());
 
-        let users = client::get(user_url)   // <- Create request builder
-            .no_default_headers()
-            .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
-            .header("host", "localhost:8081")
-        .finish().unwrap()
-        .send()                               // <- Send http request
-        .map_err(|err| Error::KeycloakConnectionError(err))
-        .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
-        .map(|obj: Vec<KeycloakUser>| obj).wait()?;
-        panic!("here");
-        println!("{:?}", users);
+        let mut cloned_cache = self.cache.clone();
+
+        actix::run(|| {
+            client::get(user_url)   // <- Create request builder
+                .no_default_headers()
+                .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
+                .header("host", "localhost:8081")
+            .finish().unwrap()
+            .send()                               // <- Send http request
+            .map_err(|err| Error::KeycloakConnectionError(err))
+            .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
+            .map_err(|err| panic!("Unexpected KeycloakError {}", err))
+            .and_then( |users: Vec<KeycloakUser>| {
+                println!("{:?}", users);
+                users.into_iter().for_each(move |user| {cloned_cache.lock().unwrap().insert(user.id.clone(), user);});
+                Ok(())
+            })
+        });
 
         Ok(())
     }
 
-    pub fn get_user(
-        &self,
-        userId: &ExternalId,
-    ) -> impl Future<Item = Option<&KeycloakUser>, Error = Error> {
-        FutureResult::from(Ok(self.cache.get(userId)))
+    pub fn get_user(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
+        Ok(self
+            .cache
+            .lock()
+            .unwrap()
+            .get(userId)
+            .map(|user| (*user).clone()))
     }
 }
 pub struct Token {}
