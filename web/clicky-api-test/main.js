@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", initPage);
 const API = axios.create({
     baseURL: 'http://localhost:8080/',
     timeout: 1000,
+    responseType:'json',
 });
 
 const _NODES = {};
@@ -26,14 +27,14 @@ function initPage(){
     });
 }
 
-function displayResult(data) {
+function displayResult(data){
     console.log('Result:', data);
     if(!_NODES.chkVerbose.checked){
         data = data.data || data;
     }
     _NODES.result.innerText = JSON.stringify(data, null, 2);
 }
-function displayError(err) {
+function displayError(err){
     console.log('Error:', err);
     _NODES.result.innerText = `Whoopsie ...\n${err}`;
 }
@@ -46,17 +47,20 @@ function showDialogForm(elem, fnOk, fnNope){
 
     let message = `${method} ${path} <br/> Enter data plz!`;
     let inputs = [];
+    let inputsByName = {};
 
     for(let inp of dataInputs) {
-        if((inp.type || 'text') === 'text'){
+        if(inp.name) { inputsByName[inp.name] = inp; }
+        if(['text', 'number'].includes(inp.type || 'text')){
             let inpId = `_dialog_input_${inp.name}`;
             let inputEl = document.createElement('input');
             inputEl.id = inpId;
             inputEl.type = inp.type || 'text';
-            if(inp.required){
-                inp.required = true;
+            if(inp.required !== false){
+                inputEl.required = true;
             }
             inputEl.placeholder = inp.placeholder || inp.name;
+            inputEl.name = inp.name;
             inputEl.setAttribute('data-name', inp.name);
 
             let label = document.createElement('label');
@@ -68,6 +72,17 @@ function showDialogForm(elem, fnOk, fnNope){
         }
     }
     console.log(dataInputs, inputs);
+
+    let fixData = (data) => {
+      for(let key of Object.keys(data)){
+        let meta = inputsByName[key];
+        if(!meta) continue;
+        if(meta.type === 'number'){
+          data[key] = Number(data[key]);
+        }
+      }
+      return data;
+    }
 
     vex.dialog.open({
         unsafeMessage: message,
@@ -82,7 +97,7 @@ function showDialogForm(elem, fnOk, fnNope){
         ],
         callback: data => {
           if(data)
-            fnOk(data)
+            fnOk(fixData(data))
           else
             fnNope()
         }
@@ -98,11 +113,28 @@ function doSimpleAction(elem) {
         method: method,
         url: path,
     })
-        .catch(err => displayError(err))
-        .then(stuff => displayResult(stuff));
+        .then(stuff => displayResult(stuff))
+        .catch(err => displayError(err));
 }
 function doInputAction(elem) {
     showDialogForm(elem, inputResult => {
         console.log('input result:', inputResult);
-    });
+
+        let method = elem.getAttribute('data-method');
+        let path = elem.getAttribute('data-path');
+        let property = elem.getAttribute('data-property');
+        let data = inputResult;
+        if(property){
+          data = { [property]: data };
+        }
+
+        window._req =
+        API({
+            method: method,
+            url: path,
+            data: data,
+        })
+            .then(stuff => displayResult(stuff))
+            .catch(err => displayError(err));
+    }, ()=>{});
 }

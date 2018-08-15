@@ -1,0 +1,124 @@
+* {
+    box-sizing: border-box;
+    --color-bg-light: #222;
+    --color-bg-heavy: #111;
+    --color-fg-light: #7c7;
+    --color-fg-heavy: #0f0;
+    --font-mono: 'Fira Code', 'Hack', 'Source Code Pro', monospace;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    border: 0 none;
+    width: 100vw;
+    height: 100vh;
+
+}
+:root {
+  background: var(--color-bg-light);
+  color: var(--color-fg-light);
+  font-family: var(--font-mono);
+}
+
+button,
+input,
+label.checkbox {
+  background: transparent;
+  outline: 0 none;
+  font-family: var(--font-mono);
+  font-size: .85em;
+  border: .15em solid var(--color-fg-light);
+  color: var(--color-fg-light);
+  margin: .25em;
+  padding: .25em .5em;
+  text-align: left;
+}
+button:hover, button:focus,
+input:hover, input:focus,
+label.checkbox:hover, label.checkbox:focus {
+  border-color: var(--color-fg-heavy);
+  color: var(--color-fg-heavy);
+}
+button:active,
+input:active,
+label.checkbox:active {
+  border-color: var(--color-fg-heavy);
+  background-color: var(--color-fg-heavy);
+  color: var(--color-bg-heavy);
+}
+
+label.checkbox {
+  display: inline-block;
+}
+label.checkbox:checked {
+  background: #f00;
+}
+label.checkbox > input[type=checkbox] {
+  visibility: hidden;
+  position: absolute;
+  pointer-events: none;
+}
+label.checkbox > input[type=checkbox] + .check {
+  display: inline-block;
+  border: inherit;
+  background: inherit;
+  margin: 0;
+  padding: 0;
+  height: 2.5ex;
+  width: 2.5ex;
+  text-align: center;
+  vertical-align: middle;
+  font-weight: bold;
+}
+label.checkbox > input[type=checkbox] + .check::before {
+  content: ' ';
+  font-size: 1.3em;
+  line-height: 1;
+}
+label.checkbox > input[type=checkbox]:checked + .check::before {
+  content: '🗸';
+}
+
+.vex .vex-dialog-form input {
+    color: inherit;
+}
+.vex-dialog-input input[data-name]::before {
+    content: attr(data-name) ":";
+    position: absolute;
+    top: -.5em;
+    left: .5em;
+    font-size: .7em;
+    color: #fff;
+    text-shadow: 0 0 .1em .05em #444;
+}
+
+button.action {
+  text-align: left;
+}
+button.action:not(.noAutoText)::after {
+    content: attr(data-method) " " attr(data-path);
+}
+
+body {
+    display: flex;
+    padding: 1em;
+}
+#actions {
+    width: fit-content;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+#actions > hr {
+    width: 85%;
+    color: var(--color-fg-heavy);
+}
+#result {
+    margin: 0 0 0 1em;
+    border: 1px solid var(--color-fg-light);
+    flex-grow: 1;
+    font-family: var(--font-mono);
+    overflow-y: scroll;
+    white-space: pre-wrap;
+}
