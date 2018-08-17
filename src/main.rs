@@ -38,7 +38,6 @@ fn main() {
         kc: Arc::new(kclk),
     };
 
-    let state = api::AppState { db: db };
     server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()
