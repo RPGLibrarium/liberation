@@ -288,7 +288,7 @@ mod tests {
                 )).and_then(|guild_id| Ok((rental_id, orig_rental, guild_id)))
             })
             .and_then(|(rental_id, orig_rental, guild_id)| {
-                db.insert(&mut RpgSystem::new(None, _s("Discworld")))
+                db.insert(&mut RpgSystem::new(None, _s("Discworld"), None))
                     .and_then(|system_id| Ok((rental_id, orig_rental, guild_id, system_id)))
             })
             .and_then(|(rental_id, orig_rental, guild_id, system_id)| {

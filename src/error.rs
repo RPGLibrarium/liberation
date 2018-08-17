@@ -1,6 +1,9 @@
+use actix_web::client::SendRequestError;
 use actix_web::{error, HttpResponse, ResponseError};
 use failure::Fail;
 use mysql::Error as MySqlError;
+use oauth2::basic::BasicErrorResponseType;
+use oauth2::RequestTokenError;
 use std::fmt;
 type Field = String;
 
@@ -12,7 +15,8 @@ pub enum Error {
     IllegalValueForType(Field),
     IllegalState(),
     JsonPayloadError(error::JsonPayloadError),
-    // ActixError(error::Error),
+    KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
+    KeycloakConnectionError(SendRequestError), // ActixError(error::Error)
 }
 
 impl From<MySqlError> for Error {
@@ -33,6 +37,12 @@ impl From<error::JsonPayloadError> for Error {
         Error::JsonPayloadError(error)
     }
 }
+
+impl From<RequestTokenError<BasicErrorResponseType>> for Error {
+    fn from(error: RequestTokenError<BasicErrorResponseType>) -> Self {
+        Error::KeycloakAuthenticationError(error)
+    }
+}
 //
 // impl From<error::Error> for Error {
 //     fn from(error: error::Error) -> Self {
@@ -51,6 +61,7 @@ impl fmt::Display for Error {
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
+            Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             //Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }

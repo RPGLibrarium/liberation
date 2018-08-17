@@ -8,16 +8,20 @@ use actix_web::{
     http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
     Responder, ResponseError, Result, fs
 };
+
+use auth::Keycloak;
 use auth::Token;
 use database::*;
 use error;
 use futures::future::Future;
+use std::sync::Arc;
 
 use business as bus;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
+    pub kc: Arc<Keycloak>,
 }
 
 pub fn get_static() -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {
@@ -77,7 +81,8 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    bus::get_rpgsystems(&_req.state().db, Token {}).and_then(|systems| Ok(Json(systems)))
+    bus::get_rpgsystems(&_req.state().db, &_req.state().kc, Token {})
+        .and_then(|systems| Ok(Json(systems)))
 }
 
 // fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
@@ -115,7 +120,8 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpRespons
 // }
 fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     let localdb = _req.state().db.clone();
-    let id: Result<RpgSystemId> = _req.match_info()
+    let id: Result<RpgSystemId> = _req
+        .match_info()
         .query("systemid")
         .map_err(actix_error::ErrorBadRequest);
 
@@ -182,7 +188,8 @@ fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Er
 // }
 fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
     let localdb = _req.state().db.clone();
-    let id: Result<TitleId> = _req.match_info()
+    let id: Result<TitleId> = _req
+        .match_info()
         .query("titleid")
         .map_err(actix_error::ErrorBadRequest);
 

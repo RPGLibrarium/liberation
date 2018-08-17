@@ -37,6 +37,7 @@ pub use self::title::Title;
 pub use self::book::BookId;
 pub use self::entity::EntityId;
 pub use self::guild::GuildId;
+pub use self::member::ExternalId;
 pub use self::member::MemberId;
 pub use self::rental::RentalId;
 pub use self::rpgsystem::RpgSystemId;
@@ -50,6 +51,21 @@ pub type Id = u64;
 pub type Year = i16;
 pub type Date = NaiveDate;
 
+pub mod type_aliases {
+    pub use super::BookId;
+    pub use super::EntityId;
+    pub use super::ExternalId;
+    pub use super::GuildId;
+    pub use super::MemberId;
+    pub use super::RentalId;
+    pub use super::RpgSystemId;
+    pub use super::TitleId;
+
+    pub use super::Id;
+
+    pub use super::Date;
+    pub use super::Year;
+}
 #[derive(Clone)]
 pub struct Database {
     pool: mysql::Pool,
@@ -139,7 +155,7 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available): (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32)  = mysql::from_row(row);
                     (
                         Title {
                             id: id,
@@ -152,7 +168,11 @@ impl Database {
                         },
                         RpgSystem {
                             id: Some(system_id),
-                            name: system_name
+                            name: system_name,
+                            shortname: match system_short.as_ref() {
+                                "NULL" => None,
+                                _ => Some(system_short),
+                            }
                         },
                         stock,
                         available
@@ -168,7 +188,7 @@ impl Database {
     ) -> Result<Option<(Title, RpgSystem, u32, u32)>, Error> {
         let mut result = self.pool
             .prep_exec(
-                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
+                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, rpg_systems.shortname, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
                  from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
                     where title_id=:titleid \
@@ -180,23 +200,27 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, stock, available) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available) : (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32) = mysql::from_row(row);
                     (
-                        Title {
-                            id: id,
-                            name: name,
-                            system: system_id,
-                            language: language,
-                            publisher: publisher,
-                            year: year,
-                            coverimage: coverimage,
-                        },
-                        RpgSystem {
-                            id: Some(system_id),
-                            name: system_name
-                        },
-                        stock,
-                        available
+                            Title {
+                                id: id,
+                                name: name,
+                                system: system_id,
+                                language: language,
+                                publisher: publisher,
+                                year: year,
+                                coverimage: coverimage,
+                            },
+                            RpgSystem {
+                                id: Some(system_id),
+                                name: system_name,
+                                shortname: match system_short.as_ref() {
+                                    "NULL" => None,
+                                    _ => Some(system_short),
+                                },
+                            },
+                            stock,
+                            available
                     )
                 }).collect::<Vec<(Title, RpgSystem, u32, u32)>>()
             })?;
@@ -272,7 +296,7 @@ pub struct Role {
 #[cfg(test)]
 mod test_util {
     use super::super::settings::Database as Db;
-    use super::super::settings::Settings;
+    use super::super::settings::TestSettings;
     use super::*;
     use chrono::prelude::*;
     use mysql;
@@ -289,7 +313,7 @@ mod test_util {
     pub const TOO_LONG_STRING: &str = "Das beste 👿System der Welt welches lä😀nger als 255 zeich👿en lang ist, damit wir 😀einen Varchar sprechen!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Du willst noch mehr=!=! Hier hast du mehr doofe Zeichen !!!!!!!!!! Bist du jetzt glücklich==";
 
     pub fn setup() -> Db {
-        let mut settings = Settings::new_test().unwrap().database;
+        let mut settings = TestSettings::new().unwrap().database;
 
         let mut opts = mysql::OptsBuilder::default();
         opts.ip_or_hostname(settings.hostname.clone())
@@ -337,7 +361,8 @@ mod test_util {
     }
 
     pub fn insert_book_default(db: &Database) -> Result<(BookId, Book), Error> {
-        return db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        return db
+            .insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,

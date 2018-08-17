@@ -1,15 +1,16 @@
 use super::*;
 
 pub type MemberId = EntityId;
+pub type ExternalId = String;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Member {
     pub id: Option<MemberId>,
-    pub external_id: String,
+    pub external_id: ExternalId,
 }
 
 impl Member {
-    pub fn new(id: Option<MemberId>, external_id: String) -> Member {
+    pub fn new(id: Option<MemberId>, external_id: ExternalId) -> Member {
         Member {
             id: id,
             external_id: external_id,
@@ -21,7 +22,8 @@ impl DMO for Member {
     type Id = MemberId;
     fn insert(db: &Database, inp: &mut Member) -> Result<MemberId, Error> {
         check_varchar_length!(inp.external_id);
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "insert into members (external_id) values (:external_id)",
                 params!{
@@ -35,7 +37,8 @@ impl DMO for Member {
     }
 
     fn get(db: &Database, member_id: MemberId) -> Result<Option<Member>, Error> {
-        let mut results = db.pool
+        let mut results = db
+            .pool
             .prep_exec(
                 "select member_id, external_id from members where member_id=:member_id;",
                 params!{
@@ -58,7 +61,8 @@ impl DMO for Member {
     }
 
     fn get_all(db: &Database) -> Result<Vec<Member>, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec("select member_id, external_id from members;", ())
             .map(|result| {
                 result
@@ -76,7 +80,8 @@ impl DMO for Member {
 
     fn update(db: &Database, member: &Member) -> Result<(), Error> {
         check_varchar_length!(member.external_id);
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "update members set external_id=:external_id where member_id=:id",
                 params!{
@@ -88,7 +93,8 @@ impl DMO for Member {
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "delete from members where member_id=:id",
                 params!{
@@ -112,7 +118,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, String::from("someexternalId"));
-        let member_out = db.insert(&mut member_in)
+        let member_out = db
+            .insert(&mut member_in)
             .and_then(|member_id| db.get(member_id));
 
         teardown(settings);

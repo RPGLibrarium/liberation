@@ -1,11 +1,10 @@
 use api::*;
+use auth::Keycloak;
 use auth::Token;
 use database::*;
 use std::collections::HashMap;
 
-pub fn get_rpgsystems(db: &Database, token: Token) -> Result<GetRpgSystems, Error> {
-    //TODO: authentication
-
+pub fn get_rpgsystems(db: &Database, kc: &Keycloak, token: Token) -> Result<GetRpgSystems, Error> {
     //TODO Error mapping
     let rpgsystems = db.get_all::<RpgSystem>()?;
     Ok(GetRpgSystems { rpgsystems })
@@ -109,8 +108,11 @@ pub fn get_books(db: &Database, token: Token) -> Result<GetBooks, Error> {
     let mut systems_map: HashMap<RpgSystemId, RpgSystem> = HashMap::new();
     for system in systems_vec {
         match system.id {
-            Some(id) => { systems_map.insert(id, system); () },
-            None => ()
+            Some(id) => {
+                systems_map.insert(id, system);
+                ()
+            }
+            None => (),
         }
     }
     let mut titles_map: HashMap<TitleId, TitleWithSystem> = HashMap::new();
@@ -118,19 +120,25 @@ pub fn get_books(db: &Database, token: Token) -> Result<GetBooks, Error> {
         match title.id {
             Some(id) => {
                 match systems_map.get(&title.system).cloned() {
-                    Some(system) => { titles_map.insert(id, TitleWithSystem::new(title, system, 0, 0)); () },
-                    None => ()
+                    Some(system) => {
+                        titles_map.insert(id, TitleWithSystem::new(title, system, 0, 0));
+                        ()
+                    }
+                    None => (),
                 }
                 ()
-            },
-            None => ()
+            }
+            None => (),
         }
     }
     let mut guilds_map: HashMap<GuildId, Guild> = HashMap::new();
     for guild in guilds_vec {
         match guild.id {
-            Some(id) => { guilds_map.insert(id, guild); () },
-            None => ()
+            Some(id) => {
+                guilds_map.insert(id, guild);
+                ()
+            }
+            None => (),
         }
     }
     let titles_map = titles_map;
@@ -153,21 +161,32 @@ pub fn get_books(db: &Database, token: Token) -> Result<GetBooks, Error> {
                                 entity_type: r.rentee_type.clone(),
                                 id: r.rentee,
                                 name: match r.rentee_type {
-                                    EntityType::Guild => guilds_map.get(&r.rentee).expect("invalid guild id").name.clone(),
+                                    EntityType::Guild => guilds_map
+                                        .get(&r.rentee)
+                                        .expect("invalid guild id")
+                                        .name
+                                        .clone(),
                                     EntityType::Member => String::from("NO DATA"), // TODO use keycloak
-                                }
-                            }
-                        })
+                                },
+                            },
+                        }),
                     },
-                    title: titles_map.get(&book.title).cloned().expect("invalid book title"),
+                    title: titles_map
+                        .get(&book.title)
+                        .cloned()
+                        .expect("invalid book title"),
                     owner: Entity {
                         entity_type: book.owner_type.clone(),
                         id: book.owner,
                         name: match book.owner_type {
-                            EntityType::Guild => guilds_map.get(&book.owner).expect("invalid guild id").name.clone(),
+                            EntityType::Guild => guilds_map
+                                .get(&book.owner)
+                                .expect("invalid guild id")
+                                .name
+                                .clone(),
                             EntityType::Member => String::from("NO DATA"), // TODO use keycloak
                         },
-                    }
+                    },
                 }
             })
             .collect(),

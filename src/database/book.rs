@@ -176,7 +176,7 @@ mod tests {
     fn insert_book_quality_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -240,7 +240,7 @@ mod tests {
     fn insert_book_invalid_owner_id() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -273,7 +273,7 @@ mod tests {
     fn insert_book_wrong_owner_type() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde")))
+        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -305,7 +305,7 @@ mod tests {
     fn update_book_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Cthulhu")))
+        let result = db.insert(&mut RpgSystem::new(None, _s("Cthulhu"), Some(_s("CoC"))))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
