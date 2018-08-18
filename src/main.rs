@@ -5,6 +5,7 @@ extern crate env_logger;
 extern crate mysql;
 #[macro_use]
 extern crate serde_derive;
+extern crate actix;
 extern crate actix_web;
 extern crate chrono;
 extern crate config;
@@ -27,9 +28,10 @@ mod error;
 mod serde_formats;
 mod settings;
 
-use actix_web::{actix, server, App, HttpRequest};
+use actix::{Actor, System};
+use actix_web::server;
+use auth::KeycloakCache;
 use settings::Settings;
-use std::sync::Arc;
 
 fn main() {
      env_logger::init();
@@ -38,20 +40,25 @@ fn main() {
     let settings = Settings::new().unwrap();
     info!("initializing DB ...");
     let db = database::Database::from_settings(&settings.database).unwrap();
+
     info!("initializing keycloak ...");
-    let kclk = auth::Keycloak::from_settings(&settings.keycloak);
+    let kc: KeycloakCache = KeycloakCache::new();
+    let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
     let state = api::AppState {
         db: db,
-        kc: Arc::new(kclk),
+        kc: kc.clone(),
     };
 
-    info!("starting http server ...");
+    let sys = System::new("server");
+    kc_actor.start();
+    
     server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()
-        .run();
-    info!("shutting down ... bye!");
+        .start();
+
+    sys.run();
 }
 
 #[cfg(test)]

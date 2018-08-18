@@ -44,7 +44,6 @@ pub use self::rpgsystem::RpgSystemId;
 pub use self::title::TitleId;
 
 use mysql;
-pub const MAX_VARCHAR_LENGTH: usize = 255;
 
 pub type Id = u64;
 
@@ -146,7 +145,7 @@ impl Database {
     pub fn get_titles_with_details(&self) -> Result<Vec<(Title, RpgSystem, u32, u32)>, Error> {
         let result = self.pool
             .prep_exec(
-                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, count(book_id) as stock, exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
+                "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, rpg_systems.shortname, count(book_id) as stock, exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
                  from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
                     group by title_id;
@@ -155,7 +154,7 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available): (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32)  = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available): (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, Option<String>, u32, u32)  = mysql::from_row(row);
                     (
                         Title {
                             id: id,
@@ -169,10 +168,7 @@ impl Database {
                         RpgSystem {
                             id: Some(system_id),
                             name: system_name,
-                            shortname: match system_short.as_ref() {
-                                "NULL" => None,
-                                _ => Some(system_short),
-                            }
+                            shortname: system_short,
                         },
                         stock,
                         available
@@ -200,7 +196,7 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available) : (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, String, u32, u32) = mysql::from_row(row);
+                    let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available) : (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, Option<String>, u32, u32) = mysql::from_row(row);
                     (
                             Title {
                                 id: id,
@@ -214,10 +210,7 @@ impl Database {
                             RpgSystem {
                                 id: Some(system_id),
                                 name: system_name,
-                                shortname: match system_short.as_ref() {
-                                    "NULL" => None,
-                                    _ => Some(system_short),
-                                },
+                                shortname: system_short
                             },
                             stock,
                             available
@@ -298,10 +291,8 @@ mod test_util {
     use super::super::settings::Database as Db;
     use super::super::settings::TestSettings;
     use super::*;
-    use chrono::prelude::*;
     use mysql;
     use rand::{thread_rng, Rng};
-    use std::env;
 
     pub fn _s(s: &str) -> String {
         String::from(s)

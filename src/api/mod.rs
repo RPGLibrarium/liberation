@@ -16,12 +16,13 @@ use error;
 use futures::future::Future;
 use std::sync::Arc;
 
+use auth::KeycloakCache;
 use business as bus;
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
-    pub kc: Arc<Keycloak>,
+    pub kc: KeycloakCache,
 }
 
 pub fn get_static() -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {

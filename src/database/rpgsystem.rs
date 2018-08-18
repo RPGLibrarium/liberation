@@ -12,7 +12,11 @@ pub struct RpgSystem {
 
 impl RpgSystem {
     pub fn new(id: Option<RpgSystemId>, name: String, shortname: Option<String>) -> RpgSystem {
-        RpgSystem { id: id, name: name , shortname: shortname }
+        RpgSystem {
+            id: id,
+            name: name,
+            shortname: shortname,
+        }
     }
 }
 
@@ -20,7 +24,8 @@ impl DMO for RpgSystem {
     type Id = RpgSystemId;
     fn insert(db: &Database, inp: &mut RpgSystem) -> Result<RpgSystemId, Error> {
         check_varchar_length!(inp.name);
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "insert into rpg_systems (name, shortname) values (:name, :shortname)",
                 params!{
@@ -35,18 +40,26 @@ impl DMO for RpgSystem {
     }
 
     fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {
-        Ok(db.pool
-            .prep_exec("select rpg_system_id, name, shortname from rpg_systems;", ())
+        Ok(db
+            .pool
+            .prep_exec(
+                "select rpg_system_id, name, shortname from rpg_systems;",
+                (),
+            )
             .map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
-                    let (id, name, short) : (Option<RpgSystemId>, String, String) = mysql::from_row(row);
-                    match short.as_ref() {
-                        "NULL" => RpgSystem { id: id, name: name, shortname: None },
-                        _ => RpgSystem { id: id, name: name, shortname: Some(short) },
-                    }
-
+                        let (id, name, short): (
+                            Option<RpgSystemId>,
+                            String,
+                            Option<String>,
+                        ) = mysql::from_row(row);
+                        RpgSystem {
+                            id: id,
+                            name: name,
+                            shortname: short,
+                        }
                     })
                     .collect()
             })?)
@@ -80,7 +93,8 @@ impl DMO for RpgSystem {
             Some(short) => check_varchar_length!(short)
         }*/
 
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "update rpg_systems set name=:name, shortname=:short where rpg_system_id=:id;",
                 params!{
@@ -93,7 +107,8 @@ impl DMO for RpgSystem {
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "delete from rpg_systems where rpg_system_id=:id",
                 params!{
@@ -120,7 +135,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), Some(_s("SR5👿")));
-        let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
+        let system_out: Result<Option<RpgSystem>, Error> = db
+            .insert(&mut system_in)
             .and_then(|id| db.get::<RpgSystem>(id));
 
         teardown(settings);
@@ -132,7 +148,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
-        let system_out: Result<Option<RpgSystem>, Error> = db.insert(&mut system_in)
+        let system_out: Result<Option<RpgSystem>, Error> = db
+            .insert(&mut system_in)
             .and_then(|id| db.get::<RpgSystem>(id));
 
         teardown(settings);
@@ -144,7 +161,11 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut RpgSystem::new(None, String::from(TOO_LONG_STRING), None));
+        let result = db.insert(&mut RpgSystem::new(
+            None,
+            String::from(TOO_LONG_STRING),
+            None,
+        ));
         teardown(settings);
 
         match result {
