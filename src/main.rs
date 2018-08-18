@@ -1,4 +1,7 @@
 #[macro_use]
+extern crate log;
+extern crate env_logger;
+#[macro_use]
 extern crate mysql;
 #[macro_use]
 extern crate serde_derive;
@@ -31,8 +34,14 @@ use auth::KeycloakCache;
 use settings::Settings;
 
 fn main() {
+     env_logger::init();
+
+    info!("retrieving settings ...");
     let settings = Settings::new().unwrap();
+    info!("initializing DB ...");
     let db = database::Database::from_settings(&settings.database).unwrap();
+
+    info!("initializing keycloak ...");
     let kc: KeycloakCache = KeycloakCache::new();
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
@@ -43,8 +52,8 @@ fn main() {
 
     let sys = System::new("server");
     kc_actor.start();
-
-    server::new(move || vec![api::get_v1(state.clone())])
+    
+    server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()
         .start();
