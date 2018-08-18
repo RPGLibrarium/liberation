@@ -105,9 +105,8 @@ impl Keycloak {
             .unwrap()
             .join("users")
             .unwrap();
-        println!("{:?}", token_result.access_token().secret());
 
-        let mut cloned_cache = self.cache.clone();
+        let cloned_cache = self.cache.clone();
 
         actix::run(|| {
             client::get(user_url)   // <- Create request builder
@@ -120,10 +119,10 @@ impl Keycloak {
             .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
             .and_then( |users: Vec<KeycloakUser>| {
-                println!("{:?}", users);
                 users.into_iter().for_each(move |user| {cloned_cache.lock().unwrap().insert(user.id.clone(), user);});
                 Ok(())
             })
+            .map(|_| actix::System::current().stop())
         });
 
         Ok(())
