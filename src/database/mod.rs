@@ -44,7 +44,6 @@ pub use self::rpgsystem::RpgSystemId;
 pub use self::title::TitleId;
 
 use mysql;
-pub const MAX_VARCHAR_LENGTH: usize = 255;
 
 pub type Id = u64;
 
