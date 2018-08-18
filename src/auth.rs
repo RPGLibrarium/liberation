@@ -197,10 +197,12 @@ impl Keycloak {
 
         let key_url = kc
             .keycloak_url
-            .join("auth/")
+            .join("realms/")
             .unwrap()
             .join(format!("{}/", kc.realm).as_str())
             .unwrap();
+
+        println!("{}", key_url.as_str());
 
         let cloned_cache = kc.cache.clone();
 
