@@ -19,6 +19,87 @@ use std::sync::Arc;
 use auth::KeycloakCache;
 use business as bus;
 
+use jsonwebtoken as jwt;
+
+// \begin{AUTH STUFF}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    uid: String,
+    roles: Vec<String>,
+    name: String,
+    email: String,
+    // ... whatever!
+}
+
+#[derive(Clone)]
+struct AuthInfoInner {
+    uid: String,
+    roles: Vec<String>,
+}
+
+#[derive(Clone)]
+enum AuthInfo {
+    NoData(),
+    Invalid(),
+    Valid(AuthInfoInner),
+}
+
+fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
+    debug!("calling get_auth_info_for_req ...");
+    match req.headers().get(http::header::AUTHORIZATION) {
+        None => {debug!("... no data"); AuthInfo::NoData()},
+        Some(header_val) => match header_val.to_str() {
+            Err(_) => {debug!("... not a string"); AuthInfo::Invalid()},
+            Ok(auth_str) => {
+                debug!("Authrorization String: {}", auth_str);
+                if auth_str.starts_with("Bearer ") {
+                    let token = auth_str.replacen("Bearer ", "", 1);
+                    let pubkey = req.state().kc.get_public_key();
+                    match jwt::decode::<Claims>(&token, pubkey.as_bytes(), &jwt::Validation::new(jwt::Algorithm::RS256)) {
+                        Err(_) => AuthInfo::Invalid(),
+                        Ok(token_data) => {
+                            debug!("Successfully decoded JWT");
+                            let token_claims: Claims = token_data.claims;
+                            AuthInfo::Valid(AuthInfoInner {
+                                uid: token_claims.uid,
+                                roles: token_claims.roles,
+                            })
+                        }
+                    }
+                }else{
+                    AuthInfo::Invalid()
+                }
+            }
+        },
+    }
+}
+
+macro_rules! check_auth {
+    ($req:expr, $roles:expr) => (
+        match get_auth_info_for_req(&$req) {
+            AuthInfo::Invalid() => (false, AuthInfo::Invalid()),
+            AuthInfo::NoData() => ($roles.is_empty(), AuthInfo::NoData()),
+            AuthInfo::Valid(auth_info) => {
+                let mut is_allowed = $roles.is_empty();
+                if !is_allowed {
+                    for role in $roles.iter() {
+                        //let roleString = String::from(*role);
+                        if auth_info.roles.contains(&String::from(*role)) {
+                            is_allowed = true;
+                            break;
+                        }
+                    }
+                }
+                (is_allowed, AuthInfo::Valid(auth_info))
+            }
+        }
+    );
+    ($req:expr) => (check_auth!($req, ["0 times a str, cauz types!"; 0]));
+}
+
+// \end{AUTH STUFF}
+
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
@@ -82,6 +163,7 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
+    let (allowed, authInfo) = check_auth!(_req);
     bus::get_rpgsystems(&_req.state().db, &_req.state().kc, Token {})
         .and_then(|systems| Ok(Json(systems)))
 }
@@ -90,6 +172,12 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
 //     "GET rpg_system"
 // }
 fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
+    let (allowed, authInfo) = check_auth!(_req);
+    debug!("allowed: {}, authInfo: {}", allowed, match authInfo {
+        AuthInfo::NoData() => "no data",
+        AuthInfo::Invalid() => "invalid",
+        AuthInfo::Valid(_) => "valid",
+    });
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::get_rpgsystem(&_req.state().db, Token {}, id)
@@ -101,6 +189,7 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "POST rpg_system"
 // }
 fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let (allowed, authInfo) = check_auth!(_req, ["admin", "librarian"]);
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
