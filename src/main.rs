@@ -8,6 +8,7 @@ extern crate chrono;
 extern crate config;
 extern crate failure;
 extern crate futures;
+extern crate jsonwebtoken;
 extern crate oauth2;
 extern crate rand;
 extern crate serde;

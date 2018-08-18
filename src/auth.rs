@@ -43,9 +43,22 @@ pub struct Access {
     manage: bool,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct KeycloakMetaInfo {
+    realm: String,
+    public_key: String,
+    #[serde(rename = "token-service")]
+    token_service: String,
+    #[serde(rename = "account-service")]
+    account_service: String,
+    #[serde(rename = "tokens-not-before")]
+    tokens_not_before: u32,
+}
+
 #[derive(Clone)]
 pub struct KeycloakCache {
     cache: Arc<Mutex<HashMap<ExternalId, KeycloakUser>>>,
+    pk: Arc<Mutex<String>>,
 }
 
 pub struct Keycloak {
@@ -57,22 +70,36 @@ pub struct Keycloak {
 
 impl KeycloakCache {
     pub fn new() -> KeycloakCache {
+        let mut empty_key: [u8; 0];
         KeycloakCache {
             cache: Arc::new(Mutex::new(HashMap::new())),
+            pk: Arc::new(Mutex::new(String::from(""))),
         }
     }
 
-    pub fn insert(&self, user: KeycloakUser) {
+    pub fn insert_user(&self, user: KeycloakUser) {
         self.cache.lock().unwrap().insert(user.id.clone(), user);
     }
 
-    pub fn get(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
+    pub fn get_user(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
         Ok(self
             .cache
             .lock()
-            .unwrap()
+            .expect("Can not lock user cache mutex.")
             .get(userId)
             .map(|user| (*user).clone()))
+    }
+
+    pub fn reset_users(&self) {}
+
+    pub fn set_public_key(&self, public_key: String) {
+        let mut pk = self.pk.lock().expect("Can not lock public_key mutex.");
+        *pk = public_key;
+    }
+
+    pub fn get_public_key(&self) -> &[u8] {
+        let pk = self.pk.lock().expect("Can not lock public_key mutex");
+        return (*pk).clone().as_str();
     }
 }
 
@@ -164,6 +191,28 @@ impl Keycloak {
             .and_then( |users: Vec<KeycloakUser>| {
                 users.into_iter().for_each(move |user| {cloned_cache.insert(user);});
                 println!("Fetched users");
+                Ok(())
+            }),
+        );
+
+        let key_url = kc
+            .keycloak_url
+            .join("auth/")
+            .unwrap()
+            .join(format!("{}/", kc.realm).as_str())
+            .unwrap();
+
+        Arbiter::spawn(
+            client::get(key_url)   // <- Create request builder
+                .no_default_headers()
+                .header("host", "localhost:8081")
+            .finish().unwrap()
+            .send()                               // <- Send http request
+            .map_err(|err| Error::KeycloakConnectionError(err))
+            .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
+            .map_err(|err| panic!("Unexpected KeycloakError {}", err))
+            .and_then( |response: KeycloakMetaInfo| {
+                cloned_cache.set_public_key(response.public_key);
                 Ok(())
             }),
         );

@@ -15,10 +15,11 @@ actix = "*"
 failure = "*"
 futures = "*"
 config = "0.9"
-oauth2 = "2.0.0-alpha.1"
+oauth2 = "2.0.0-alpha.2"
 url = "*"
 url_serde="*"
 tokio="*"
+jsonwebtoken = "5.0.0"
 
 [dependencies.mysql]
 version = "*"
