@@ -291,10 +291,8 @@ mod test_util {
     use super::super::settings::Database as Db;
     use super::super::settings::TestSettings;
     use super::*;
-    use chrono::prelude::*;
     use mysql;
     use rand::{thread_rng, Rng};
-    use std::env;
 
     pub fn _s(s: &str) -> String {
         String::from(s)

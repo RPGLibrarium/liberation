@@ -1,10 +1,14 @@
 use api::*;
-use auth::Keycloak;
+use auth::KeycloakCache;
 use auth::Token;
 use database::*;
 use std::collections::HashMap;
 
-pub fn get_rpgsystems(db: &Database, kc: &Keycloak, token: Token) -> Result<GetRpgSystems, Error> {
+pub fn get_rpgsystems(
+    db: &Database,
+    kc: &KeycloakCache,
+    token: Token,
+) -> Result<GetRpgSystems, Error> {
     //TODO Error mapping
     let rpgsystems = db.get_all::<RpgSystem>()?;
     Ok(GetRpgSystems { rpgsystems })

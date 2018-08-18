@@ -1,54 +1,98 @@
-use actix_web::{actix, client, HttpMessage};
+use actix::prelude::*;
+use actix_web::{client, HttpMessage};
 use database::type_aliases::*;
 use error::Error;
-use futures::future::FutureResult;
 use futures::Future;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
-use oauth2::{AuthUrl, ClientId, ClientSecret, Scope, TokenUrl};
+use oauth2::{AuthUrl, ClientId, ClientSecret, TokenUrl};
 use settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 use url::Url;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct KeycloakUser {
     id: String,
-    createdTimestamp: u64,
+    #[serde(rename = "createdTimestamp")]
+    created_timestamp: u64,
     username: String,
     enabled: bool,
     totp: bool,
-    emailVerified: bool,
-    disableableCredentialTypes: Vec<String>,
-    requiredActions: Vec<String>,
-    notBefore: u64,
+    #[serde(rename = "emailVerified")]
+    email_verified: bool,
+    #[serde(rename = "disableableCredentialTypes")]
+    disableable_credential_types: Vec<String>,
+    #[serde(rename = "requiredActions")]
+    required_actions: Vec<String>,
+    #[serde(rename = "notBefore")]
+    not_before: u64,
     access: Access,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Access {
-    manageGroupMembership: bool,
+    #[serde(rename = "manageGroupMembership")]
+    manage_group_membership: bool,
     view: bool,
-    mapRoles: bool,
+    #[serde(rename = "mapRoles")]
+    map_roles: bool,
     impersonate: bool,
     manage: bool,
 }
 
-pub struct UserCache {}
-
-impl UserCache {}
+#[derive(Clone)]
+pub struct KeycloakCache {
+    cache: Arc<Mutex<HashMap<ExternalId, KeycloakUser>>>,
+}
 
 pub struct Keycloak {
     keycloak_url: Url,
     realm: String,
     oauth_client: BasicClient,
-    cache: Arc<Mutex<HashMap<ExternalId, KeycloakUser>>>,
+    cache: KeycloakCache,
+}
+
+impl KeycloakCache {
+    pub fn new() -> KeycloakCache {
+        KeycloakCache {
+            cache: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub fn insert(&self, user: KeycloakUser) {
+        self.cache.lock().unwrap().insert(user.id.clone(), user);
+    }
+
+    pub fn get(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
+        Ok(self
+            .cache
+            .lock()
+            .unwrap()
+            .get(userId)
+            .map(|user| (*user).clone()))
+    }
+}
+
+impl Actor for Keycloak {
+    type Context = Context<Keycloak>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        ctx.run_interval(Duration::new(5, 0), Keycloak::fetch);
+    }
 }
 
 impl Keycloak {
-    pub fn new(keycloak_url: Url, realm: String, client_id: String, client_secret: String) -> Self {
-        let tokenUrl = TokenUrl::new(
+    pub fn new(
+        keycloak_url: Url,
+        realm: String,
+        client_id: String,
+        client_secret: String,
+        cache: KeycloakCache,
+    ) -> Self {
+        let token_url = TokenUrl::new(
             keycloak_url
                 .join("realms/")
                 .unwrap()
@@ -58,7 +102,7 @@ impl Keycloak {
                 .unwrap(),
         );
 
-        let authUrl = AuthUrl::new(
+        let auth_url = AuthUrl::new(
             keycloak_url
                 .join("realms/")
                 .unwrap()
@@ -68,47 +112,46 @@ impl Keycloak {
                 .unwrap(),
         );
 
-        let mut kc = Keycloak {
+        let kc = Keycloak {
             keycloak_url: keycloak_url.clone(),
             realm: realm.clone(),
             oauth_client: BasicClient::new(
                 ClientId::new(client_id.clone()),
                 Some(ClientSecret::new(client_secret.clone())),
-                authUrl,
-                Some(tokenUrl),
+                auth_url,
+                Some(token_url),
             ),
-            cache: Arc::new(Mutex::new(HashMap::new())),
+            cache: cache,
         };
-
-        kc.fetch();
 
         return kc;
     }
 
-    pub fn from_settings(settings: &KeycloakSettings) -> Self {
+    pub fn from_settings(settings: &KeycloakSettings, cache: KeycloakCache) -> Self {
         Keycloak::new(
             settings.url.clone(),
             settings.realm.clone(),
             settings.clientid.clone(),
             settings.clientsecret.clone(),
+            cache,
         )
     }
 
-    pub fn fetch(&mut self) -> Result<(), Error> {
-        let token_result = self.oauth_client.exchange_client_credentials().unwrap();
+    pub fn fetch(kc: &mut Self, _ctx: &mut Context<Keycloak>) {
+        let token_result = kc.oauth_client.exchange_client_credentials().unwrap();
 
-        let user_url = self
+        let user_url = kc
             .keycloak_url
             .join("admin/realms/")
             .unwrap()
-            .join(format!("{}/", self.realm).as_str())
+            .join(format!("{}/", kc.realm).as_str())
             .unwrap()
             .join("users")
             .unwrap();
 
-        let cloned_cache = self.cache.clone();
+        let cloned_cache = kc.cache.clone();
 
-        actix::run(|| {
+        Arbiter::spawn(
             client::get(user_url)   // <- Create request builder
                 .no_default_headers()
                 .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
@@ -119,22 +162,11 @@ impl Keycloak {
             .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
             .and_then( |users: Vec<KeycloakUser>| {
-                users.into_iter().for_each(move |user| {cloned_cache.lock().unwrap().insert(user.id.clone(), user);});
+                users.into_iter().for_each(move |user| {cloned_cache.insert(user);});
+                println!("Fetched users");
                 Ok(())
-            })
-            .map(|_| actix::System::current().stop())
-        });
-
-        Ok(())
-    }
-
-    pub fn get_user(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
-        Ok(self
-            .cache
-            .lock()
-            .unwrap()
-            .get(userId)
-            .map(|user| (*user).clone()))
+            }),
+        );
     }
 }
 pub struct Token {}
