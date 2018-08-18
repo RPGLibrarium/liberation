@@ -18,6 +18,8 @@ oauth2 = "2.0.0-alpha.1"
 url = "*"
 url_serde="*"
 tokio="*"
+log = "*"
+env_logger = "*"
 
 [dependencies.mysql]
 version = "*"

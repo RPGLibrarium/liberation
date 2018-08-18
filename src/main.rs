@@ -1,4 +1,7 @@
 #[macro_use]
+extern crate log;
+extern crate env_logger;
+#[macro_use]
 extern crate mysql;
 #[macro_use]
 extern crate serde_derive;
@@ -29,8 +32,13 @@ use settings::Settings;
 use std::sync::Arc;
 
 fn main() {
+     env_logger::init();
+
+    info!("retrieving settings ...");
     let settings = Settings::new().unwrap();
+    info!("initializing DB ...");
     let db = database::Database::from_settings(&settings.database).unwrap();
+    info!("initializing keycloak ...");
     let kclk = auth::Keycloak::from_settings(&settings.keycloak);
 
     let state = api::AppState {
@@ -38,10 +46,12 @@ fn main() {
         kc: Arc::new(kclk),
     };
 
+    info!("starting http server ...");
     server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()
         .run();
+    info!("shutting down ... bye!");
 }
 
 #[cfg(test)]
