@@ -97,9 +97,9 @@ impl KeycloakCache {
         *pk = public_key;
     }
 
-    pub fn get_public_key(&self) -> &[u8] {
+    pub fn get_public_key(&self) -> String {
         let pk = self.pk.lock().expect("Can not lock public_key mutex");
-        return (*pk).clone().as_str();
+        return (*pk).clone();
     }
 }
 
@@ -189,7 +189,7 @@ impl Keycloak {
             .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
             .and_then( |users: Vec<KeycloakUser>| {
-                users.into_iter().for_each(move |user| {cloned_cache.insert(user);});
+                users.into_iter().for_each(move |user| {cloned_cache.insert_user(user);});
                 println!("Fetched users");
                 Ok(())
             }),
@@ -202,6 +202,8 @@ impl Keycloak {
             .join(format!("{}/", kc.realm).as_str())
             .unwrap();
 
+        let cloned_cache = kc.cache.clone();
+
         Arbiter::spawn(
             client::get(key_url)   // <- Create request builder
                 .no_default_headers()
@@ -211,7 +213,7 @@ impl Keycloak {
             .map_err(|err| Error::KeycloakConnectionError(err))
             .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
-            .and_then( |response: KeycloakMetaInfo| {
+            .and_then( move |response: KeycloakMetaInfo| {
                 cloned_cache.set_public_key(response.public_key);
                 Ok(())
             }),

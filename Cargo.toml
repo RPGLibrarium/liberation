@@ -20,6 +20,8 @@ url = "*"
 url_serde="*"
 tokio="*"
 jsonwebtoken = "5.0.0"
+log = "*"
+env_logger = "*"
 
 [dependencies.mysql]
 version = "*"
