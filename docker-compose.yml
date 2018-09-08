@@ -10,7 +10,7 @@ services:
             - 33061:3306
 
     keycloak-db:
-        image: mariadb
+        image: mariadb:10.2
         environment:
             - MYSQL_ROOT_PASSWORD=thereIsNoPassword!
             - MYSQL_DATABASE=keycloak
@@ -38,11 +38,5 @@ services:
             - keycloak-network
         ports:
             - 8081:8080
-    webapp:
-      image: nginx:alpine
-      ports:
-        - 8082:80
-      volumes:
-        - ./web:/usr/share/nginx/html:ro
 networks:
     keycloak-network:
