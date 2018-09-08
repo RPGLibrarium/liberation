@@ -1,2 +1,7 @@
 # DO NOT COMMIT THIS FILE
-# Configure your test environment in this file
+# Parameters to run `cargo test` locally
+[database]
+hostname = "127.0.1.1"
+port = 33062
+username = "USERNAME"
+password = "PASSWORD"

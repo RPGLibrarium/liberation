@@ -1,2 +1,14 @@
 # DO NOT COMMIT THIS FILE
-# Put local configuration here
+# Local changes to config
+[database]
+hostname = "127.0.1.1"
+port = 33061
+username = "USERNAME"
+password = "PASSWORD"
+database = "liberation"
+
+[keycloak]
+url = "http://localhost:8081/auth/"
+realm = "liberation"
+clientid = "liberation-core"
+clientsecret = "CLIENTSECRET"
