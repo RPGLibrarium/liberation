@@ -7,6 +7,7 @@ extern crate mysql;
 extern crate serde_derive;
 extern crate actix;
 extern crate actix_web;
+extern crate base64;
 extern crate chrono;
 extern crate config;
 extern crate failure;
@@ -53,7 +54,7 @@ fn main() {
 
     let sys = System::new("server");
     kc_actor.start();
-    
+
     server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
         .bind("127.0.0.1:8080")
         .unwrap()

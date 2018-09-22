@@ -22,6 +22,7 @@ tokio="*"
 jsonwebtoken = "5.0.0"
 log = "*"
 env_logger = "*"
+base64 = "*"
 
 [dependencies.mysql]
 version = "*"

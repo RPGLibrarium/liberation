@@ -95,8 +95,12 @@ label.checkbox > input[type=checkbox]:checked + .check::before {
 button.action {
   text-align: left;
 }
-button.action:not(.noAutoText)::after {
+button.action[data-method][data-path]:not(.noAutoText)::after {
     content: attr(data-method) " " attr(data-path);
+}
+button.action.keycloak {
+  text-align: center;
+  text-transform: capitalize;
 }
 
 body {
@@ -104,13 +108,27 @@ body {
     padding: 1em;
 }
 #actions {
+  text-align: center;
+}
+#actions, #actions > section {
     width: fit-content;
     display: flex;
     flex-direction: column;
     flex-grow: 0;
     flex-shrink: 0;
 }
-#actions > hr {
+#actions > header, #actions > section > header {
+  font-size: .8em;
+  font-weight: bold;
+  text-transform: capitalize;
+  margin-top: .5em;
+  margin-bottom: .2em;
+}
+#actions > .status, #actions > section > .status {
+  padding: 0 .5em;
+  font-size: .85em;
+}
+#actions > hr, #actions > section > hr {
     width: 85%;
     color: var(--color-fg-heavy);
 }
@@ -122,3 +140,23 @@ body {
     overflow-y: scroll;
     white-space: pre-wrap;
 }
+
+#keycloak #keycloakState::after {
+  content: '???';
+}
+#keycloak[data-init=false] #keycloakState::after {
+  content: 'NOT initialised';
+}
+#keycloak[data-init=true] #keycloakState::after {
+  content: 'initialised';
+}
+#keycloak[data-auth=true] #keycloakState::after {
+  content: 'Logged in :)';
+}
+#keycloak[data-auth=false] #keycloakState::after {
+  content: 'NOT logged in :(';
+}
+#keycloak:not([data-init=true]) .action[data-condition~="init"] { display: none; }
+#keycloak:not([data-init=false]) .action[data-condition~="!init"] { display: none; }
+#keycloak:not([data-auth=true]) .action[data-condition~="auth"] { display: none; }
+#keycloak:not([data-auth=false]) .action[data-condition~="!auth"] { display: none; }
