@@ -1,17 +1,46 @@
 use actix::prelude::*;
-use actix_web::{client, HttpMessage};
+use actix_web::{client, http, HttpMessage, HttpRequest};
+use api::AppState;
+use base64;
 use database::type_aliases::*;
 use error::Error;
 use futures::Future;
+use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
 use oauth2::{AuthUrl, ClientId, ClientSecret, TokenUrl};
+use openssl::rsa::*;
 use settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
+
+macro_rules! check_auth {
+    ($auth:expr, $roles:expr) => {
+        match $auth {
+            AuthInfo::Invalid() => (false, AuthInfo::Invalid()),
+            AuthInfo::NoData() => ($roles.is_empty(), AuthInfo::NoData()),
+            AuthInfo::Valid(auth_info) => {
+                let mut is_allowed = $roles.is_empty();
+                if !is_allowed {
+                    for role in $roles.iter() {
+                        //let roleString = String::from(*role);
+                        if auth_info.roles.contains(&String::from(*role)) {
+                            is_allowed = true;
+                            break;
+                        }
+                    }
+                }
+                (is_allowed, AuthInfo::Valid(auth_info))
+            }
+        }
+    };
+    ($req:expr) => {
+        check_auth!($req, ["0 times a str, cauz types!"; 0])
+    };
+}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct KeycloakUser {
@@ -228,4 +257,65 @@ impl Keycloak {
         );
     }
 }
-pub struct Token {}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    pub uid: String,
+    pub roles: Vec<String>,
+    pub name: String,
+    pub email: String,
+    // ... whatever!
+}
+
+#[derive(Clone, Debug)]
+pub enum AuthInfo {
+    NoData(),
+    Invalid(),
+    Valid(Claims),
+}
+
+pub fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
+    match req.headers().get(http::header::AUTHORIZATION) {
+        None => {
+            debug!("No Authorization Header provided");
+            AuthInfo::NoData()
+        }
+        Some(header_val) => match header_val.to_str() {
+            Err(_) => {
+                debug!("Authorization header could not be converted to string");
+                AuthInfo::Invalid()
+            }
+            Ok(auth_str) => {
+                if auth_str.starts_with("Bearer ") {
+                    let token = auth_str.replacen("Bearer ", "", 1);
+                    let pubkey = req.state().kc.get_public_key();
+                    let pk_der_asn1 = base64::decode(pubkey.as_str())
+                        .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
+                    let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
+                        .expect("JWT checking: invalid ASN.1 format of Keycloak public key");
+                    let pk_der_pkcs1 = pk
+                        .public_key_to_der_pkcs1()
+                        .expect("JWT checking: converting public key to DER PKCS1 failed");
+
+                    match jwt::decode::<Claims>(
+                        &token,
+                        pk_der_pkcs1.as_slice(),
+                        &jwt::Validation::new(jwt::Algorithm::RS256),
+                    ) {
+                        Err(e) => {
+                            error!("JWT validation failed: {:?}", e);
+                            AuthInfo::Invalid()
+                        }
+                        Ok(token_data) => {
+                            debug!("Successfully verified JWT: {:?}", token_data);
+                            let token_claims: Claims = token_data.claims;
+                            AuthInfo::Valid(token_claims)
+                        }
+                    }
+                } else {
+                    AuthInfo::Invalid()
+                }
+            }
+        },
+    }
+}

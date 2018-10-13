@@ -22,11 +22,11 @@ extern crate tokio;
 extern crate url;
 extern crate url_serde;
 
-mod api;
-mod auth;
 #[macro_use]
-mod database;
+mod auth;
+mod api;
 mod business;
+mod database;
 mod error;
 mod serde_formats;
 mod settings;

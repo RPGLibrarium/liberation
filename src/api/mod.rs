@@ -10,109 +10,13 @@ use actix_web::{
 };
 
 use auth::Keycloak;
-use auth::Token;
 use database::*;
 use error;
 use futures::future::Future;
 use std::sync::Arc;
 
-use auth::KeycloakCache;
+use auth::{get_auth_info_for_req, AuthInfo, KeycloakCache};
 use business as bus;
-
-use base64;
-use jsonwebtoken as jwt;
-use openssl::rsa::*;
-
-// \begin{AUTH STUFF}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Claims {
-    uid: String,
-    roles: Vec<String>,
-    name: String,
-    email: String,
-    // ... whatever!
-}
-
-#[derive(Clone, Debug)]
-enum AuthInfo {
-    NoData(),
-    Invalid(),
-    Valid(Claims),
-}
-
-fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
-    match req.headers().get(http::header::AUTHORIZATION) {
-        None => {
-            debug!("No Authorization Header provided");
-            AuthInfo::NoData()
-        }
-        Some(header_val) => match header_val.to_str() {
-            Err(_) => {
-                debug!("Authorization header could not be converted to string");
-                AuthInfo::Invalid()
-            }
-            Ok(auth_str) => {
-                if auth_str.starts_with("Bearer ") {
-                    let token = auth_str.replacen("Bearer ", "", 1);
-                    let pubkey = req.state().kc.get_public_key();
-                    let pk_der_asn1 = base64::decode(pubkey.as_str())
-                        .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
-                    let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
-                        .expect("JWT checking: invalid ASN.1 format of Keycloak public key");
-                    let pk_der_pkcs1 = pk
-                        .public_key_to_der_pkcs1()
-                        .expect("JWT checking: converting public key to DER PKCS1 failed");
-
-                    match jwt::decode::<Claims>(
-                        &token,
-                        pk_der_pkcs1.as_slice(),
-                        &jwt::Validation::new(jwt::Algorithm::RS256),
-                    ) {
-                        Err(e) => {
-                            error!("JWT validation failed: {:?}", e);
-                            AuthInfo::Invalid()
-                        }
-                        Ok(token_data) => {
-                            debug!("Successfully verified JWT: {:?}", token_data);
-                            let token_claims: Claims = token_data.claims;
-                            AuthInfo::Valid(token_claims)
-                        }
-                    }
-                } else {
-                    AuthInfo::Invalid()
-                }
-            }
-        },
-    }
-}
-
-macro_rules! check_auth {
-    ($req:expr, $roles:expr) => {
-        match get_auth_info_for_req(&$req) {
-            AuthInfo::Invalid() => (false, AuthInfo::Invalid()),
-            AuthInfo::NoData() => ($roles.is_empty(), AuthInfo::NoData()),
-            AuthInfo::Valid(auth_info) => {
-                let mut is_allowed = $roles.is_empty();
-                if !is_allowed {
-                    for role in $roles.iter() {
-                        //let roleString = String::from(*role);
-                        if auth_info.roles.contains(&String::from(*role)) {
-                            is_allowed = true;
-                            break;
-                        }
-                    }
-                }
-                (is_allowed, AuthInfo::Valid(auth_info))
-            }
-        }
-    };
-    ($req:expr) => {
-        check_auth!($req, ["0 times a str, cauz types!"; 0])
-    };
-}
-
-// \end{AUTH STUFF}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -182,7 +86,8 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    let (allowed, auth_info) = check_auth!(_req);
+    let authInfo = get_auth_info_for_req(&_req);
+    let (allowed, auth_info) = check_auth!(authInfo);
     debug!("authInfo: {:?}", auth_info);
     debug!(
         "allowed: {}, authInfo: {}",
@@ -193,18 +98,18 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
             AuthInfo::Valid(_) => "valid",
         }
     );
-    bus::get_rpgsystems(&_req.state().db, &_req.state().kc, Token {})
-        .and_then(|systems| Ok(Json(systems)))
+    bus::get_rpgsystems(&_req.state().db, &_req.state().kc).and_then(|systems| Ok(Json(systems)))
 }
 
 // fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 //     "GET rpg_system"
 // }
 fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
-    let (allowed, authInfo) = check_auth!(_req);
+    let authInfo = get_auth_info_for_req(&_req);
+    let (allowed, authInfo) = check_auth!(authInfo);
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
-    bus::get_rpgsystem(&_req.state().db, Token {}, id)
+    bus::get_rpgsystem(&_req.state().db, id)
         .and_then(|system| Ok(Json(system)))
         .map_err(Error::from)
 }
@@ -213,12 +118,13 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "POST rpg_system"
 // }
 fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let (allowed, authInfo) = check_auth!(_req, ["admin", "librarian"]);
+    let authInfo = get_auth_info_for_req(&_req);
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostRpgSystem| {
-            bus::post_rpgsystem(&localdb, Token {}, &mut obj).map_err(Error::from)
+            bus::post_rpgsystem(&localdb, authInfo, &mut obj).map_err(Error::from)
         })
         .and_then(|system_id| {
             Ok(HttpResponse::Created()
@@ -233,6 +139,9 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpRespons
 //     "PUT rpg_system"
 // }
 fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let authInfo = get_auth_info_for_req(&_req);
+    // TODO roles
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
     let localdb = _req.state().db.clone();
     let id: Result<RpgSystemId> = _req
         .match_info()
@@ -246,16 +155,19 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse
             return Ok(obj);
         })
         .and_then(move |system: PutPostRpgSystem| {
-            bus::put_rpgsystem(&localdb, Token {}, &system).map_err(Error::from)
+            bus::put_rpgsystem(&localdb, authInfo, &system).map_err(Error::from)
         })
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder()
 }
 
 fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
+    let authInfo = get_auth_info_for_req(&_req);
+    // TODO roles
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
-    bus::delete_rpgsystem(&_req.state().db, Token {}, id)
+    bus::delete_rpgsystem(&_req.state().db, authInfo, id)
         .and_then(|_| Ok(HttpResponse::NoContent().finish()))
         .map_err(Error::from)
 }
@@ -264,7 +176,7 @@ fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "GET titles"
 //
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
-    bus::get_titles(&_req.state().db, Token {}).and_then(|titles| Ok(Json(titles)))
+    bus::get_titles(&_req.state().db).and_then(|titles| Ok(Json(titles)))
 }
 
 // fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
@@ -272,8 +184,8 @@ fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
 // }
 fn get_title(_req: HttpRequest<AppState>) -> Result<impl Responder> {
     let id: TitleId = _req.match_info().query("titleid")?;
-
-    bus::get_title(&_req.state().db, Token {}, id)
+    let authInfo = get_auth_info_for_req(&_req);
+    bus::get_title(&_req.state().db, id, authInfo)
         .and_then(|title| Ok(Json(title)))
         .map_err(Error::from)
 }
@@ -282,11 +194,14 @@ fn get_title(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "POST titles"
 // }
 fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    // TODO roles
+    let authInfo = get_auth_info_for_req(&_req);
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostTitle| {
-            bus::post_title(&localdb, Token {}, &mut obj).map_err(Error::from)
+            bus::post_title(&localdb, authInfo, &mut obj).map_err(Error::from)
         })
         .and_then(|system_id| {
             Ok(HttpResponse::Created()
@@ -301,6 +216,9 @@ fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Er
 //     "PUT titles/<id>"
 // }
 fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
+    let authInfo = get_auth_info_for_req(&_req);
+    // TODO roles
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
     let localdb = _req.state().db.clone();
     let id: Result<TitleId> = _req
         .match_info()
@@ -314,7 +232,7 @@ fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Err
             return Ok(obj);
         })
         .and_then(move |title: PutPostTitle| {
-            bus::put_title(&localdb, Token {}, &title).map_err(Error::from)
+            bus::put_title(&localdb, authInfo, &title).map_err(Error::from)
         })
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder()
@@ -324,7 +242,10 @@ fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Err
 //     "GET Books"
 // }
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
-    bus::get_books(&_req.state().db, Token {}).and_then(|books| Ok(Json(books)))
+    let authInfo = get_auth_info_for_req(&_req);
+    // TODO roles
+    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    bus::get_books(&_req.state().db, authInfo).and_then(|books| Ok(Json(books)))
 }
 
 fn get_book(_req: HttpRequest<AppState>) -> impl Responder {
