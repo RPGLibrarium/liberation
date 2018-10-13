@@ -55,7 +55,7 @@ pub struct KeycloakMetaInfo {
     tokens_not_before: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct KeycloakCache {
     cache: Arc<Mutex<HashMap<ExternalId, KeycloakUser>>>,
     pk: Arc<Mutex<String>>,
@@ -177,6 +177,7 @@ impl Keycloak {
             .unwrap();
 
         let cloned_cache = kc.cache.clone();
+        let cloned_cache2 = kc.cache.clone();
 
         Arbiter::spawn(
             client::get(user_url)   // <- Create request builder
@@ -186,11 +187,16 @@ impl Keycloak {
             .finish().unwrap()
             .send()                               // <- Send http request
             .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
+            .and_then(|response| {
+                // info!("response: {:?}", response);
+                response.json().map_err(|err| Error::JsonPayloadError(err))
+            })
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
             .and_then( |users: Vec<KeycloakUser>| {
+                //info!("users: {:?}", users);
                 users.into_iter().for_each(move |user| {cloned_cache.insert_user(user);});
                 println!("Fetched users");
+                //info!("users: {:?}", move cloned_cache2);
                 Ok(())
             }),
         );

@@ -20,6 +20,7 @@ use auth::KeycloakCache;
 use business as bus;
 
 use jsonwebtoken as jwt;
+use base64;
 
 // \begin{AUTH STUFF}
 
@@ -32,13 +33,13 @@ struct Claims {
     // ... whatever!
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct AuthInfoInner {
     uid: String,
     roles: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum AuthInfo {
     NoData(),
     Invalid(),
@@ -56,10 +57,14 @@ fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
                 if auth_str.starts_with("Bearer ") {
                     let token = auth_str.replacen("Bearer ", "", 1);
                     let pubkey = req.state().kc.get_public_key();
-                    match jwt::decode::<Claims>(&token, pubkey.as_bytes(), &jwt::Validation::new(jwt::Algorithm::RS256)) {
-                        Err(_) => AuthInfo::Invalid(),
+                    let pk_bytes = base64::decode(pubkey.as_str()).expect("bad public key (decoding base64 failed for KC pub key)");
+                    match jwt::decode::<Claims>(&token, pk_bytes.as_slice(), &jwt::Validation::new(jwt::Algorithm::RS256)) {
+                        Err(e) => {
+                            error!("token validation failed: {:?}", e);
+                            AuthInfo::Invalid()
+                        },
                         Ok(token_data) => {
-                            debug!("Successfully decoded JWT");
+                            debug!("Successfully decoded JWT: {:?}", token_data);
                             let token_claims: Claims = token_data.claims;
                             AuthInfo::Valid(AuthInfoInner {
                                 uid: token_claims.uid,
@@ -164,6 +169,12 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
     let (allowed, authInfo) = check_auth!(_req);
+    debug!("authInfo: {:?}", authInfo);
+    debug!("allowed: {}, authInfo: {}", allowed, match authInfo {
+        AuthInfo::NoData() => "no data",
+        AuthInfo::Invalid() => "invalid",
+        AuthInfo::Valid(_) => "valid",
+    });
     bus::get_rpgsystems(&_req.state().db, &_req.state().kc, Token {})
         .and_then(|systems| Ok(Json(systems)))
 }
@@ -173,11 +184,6 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
 // }
 fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
     let (allowed, authInfo) = check_auth!(_req);
-    debug!("allowed: {}, authInfo: {}", allowed, match authInfo {
-        AuthInfo::NoData() => "no data",
-        AuthInfo::Invalid() => "invalid",
-        AuthInfo::Valid(_) => "valid",
-    });
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::get_rpgsystem(&_req.state().db, Token {}, id)
