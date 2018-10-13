@@ -5,8 +5,8 @@ pub use self::dto::*;
 use actix_web::error as actix_error;
 use actix_web::server::HttpHandlerTask;
 use actix_web::{
-    http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
-    Responder, ResponseError, Result, fs
+    fs, http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
+    Responder, ResponseError, Result,
 };
 
 use auth::Keycloak;
@@ -19,12 +19,13 @@ use std::sync::Arc;
 use auth::KeycloakCache;
 use business as bus;
 
-use jsonwebtoken as jwt;
 use base64;
+use jsonwebtoken as jwt;
+use openssl::rsa::*;
 
 // \begin{AUTH STUFF}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Claims {
     uid: String,
     roles: Vec<String>,
@@ -34,45 +35,51 @@ struct Claims {
 }
 
 #[derive(Clone, Debug)]
-struct AuthInfoInner {
-    uid: String,
-    roles: Vec<String>,
-}
-
-#[derive(Clone, Debug)]
 enum AuthInfo {
     NoData(),
     Invalid(),
-    Valid(AuthInfoInner),
+    Valid(Claims),
 }
 
 fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
-    debug!("calling get_auth_info_for_req ...");
     match req.headers().get(http::header::AUTHORIZATION) {
-        None => {debug!("... no data"); AuthInfo::NoData()},
+        None => {
+            debug!("No Authorization Header provided");
+            AuthInfo::NoData()
+        }
         Some(header_val) => match header_val.to_str() {
-            Err(_) => {debug!("... not a string"); AuthInfo::Invalid()},
+            Err(_) => {
+                debug!("Authorization header could not be converted to string");
+                AuthInfo::Invalid()
+            }
             Ok(auth_str) => {
-                debug!("Authrorization String: {}", auth_str);
                 if auth_str.starts_with("Bearer ") {
                     let token = auth_str.replacen("Bearer ", "", 1);
                     let pubkey = req.state().kc.get_public_key();
-                    let pk_bytes = base64::decode(pubkey.as_str()).expect("bad public key (decoding base64 failed for KC pub key)");
-                    match jwt::decode::<Claims>(&token, pk_bytes.as_slice(), &jwt::Validation::new(jwt::Algorithm::RS256)) {
+                    let pk_der_asn1 = base64::decode(pubkey.as_str())
+                        .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
+                    let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
+                        .expect("JWT checking: invalid ASN.1 format of Keycloak public key");
+                    let pk_der_pkcs1 = pk
+                        .public_key_to_der_pkcs1()
+                        .expect("JWT checking: converting public key to DER PKCS1 failed");
+
+                    match jwt::decode::<Claims>(
+                        &token,
+                        pk_der_pkcs1.as_slice(),
+                        &jwt::Validation::new(jwt::Algorithm::RS256),
+                    ) {
                         Err(e) => {
-                            error!("token validation failed: {:?}", e);
+                            error!("JWT validation failed: {:?}", e);
                             AuthInfo::Invalid()
-                        },
+                        }
                         Ok(token_data) => {
-                            debug!("Successfully decoded JWT: {:?}", token_data);
+                            debug!("Successfully verified JWT: {:?}", token_data);
                             let token_claims: Claims = token_data.claims;
-                            AuthInfo::Valid(AuthInfoInner {
-                                uid: token_claims.uid,
-                                roles: token_claims.roles,
-                            })
+                            AuthInfo::Valid(token_claims)
                         }
                     }
-                }else{
+                } else {
                     AuthInfo::Invalid()
                 }
             }
@@ -81,7 +88,7 @@ fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
 }
 
 macro_rules! check_auth {
-    ($req:expr, $roles:expr) => (
+    ($req:expr, $roles:expr) => {
         match get_auth_info_for_req(&$req) {
             AuthInfo::Invalid() => (false, AuthInfo::Invalid()),
             AuthInfo::NoData() => ($roles.is_empty(), AuthInfo::NoData()),
@@ -99,8 +106,10 @@ macro_rules! check_auth {
                 (is_allowed, AuthInfo::Valid(auth_info))
             }
         }
-    );
-    ($req:expr) => (check_auth!($req, ["0 times a str, cauz types!"; 0]));
+    };
+    ($req:expr) => {
+        check_auth!($req, ["0 times a str, cauz types!"; 0])
+    };
 }
 
 // \end{AUTH STUFF}
@@ -114,7 +123,12 @@ pub struct AppState {
 pub fn get_static() -> Box<dyn server::HttpHandler<Task = Box<HttpHandlerTask>>> {
     App::new()
         .prefix("/web")
-        .handler("/", fs::StaticFiles::new("./web").unwrap().index_file("index.html"))
+        .handler(
+            "/",
+            fs::StaticFiles::new("./web")
+                .unwrap()
+                .index_file("index.html"),
+        )
         .boxed()
 }
 
@@ -168,13 +182,17 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    let (allowed, authInfo) = check_auth!(_req);
-    debug!("authInfo: {:?}", authInfo);
-    debug!("allowed: {}, authInfo: {}", allowed, match authInfo {
-        AuthInfo::NoData() => "no data",
-        AuthInfo::Invalid() => "invalid",
-        AuthInfo::Valid(_) => "valid",
-    });
+    let (allowed, auth_info) = check_auth!(_req);
+    debug!("authInfo: {:?}", auth_info);
+    debug!(
+        "allowed: {}, authInfo: {}",
+        allowed,
+        match auth_info {
+            AuthInfo::NoData() => "no data",
+            AuthInfo::Invalid() => "invalid",
+            AuthInfo::Valid(_) => "valid",
+        }
+    );
     bus::get_rpgsystems(&_req.state().db, &_req.state().kc, Token {})
         .and_then(|systems| Ok(Json(systems)))
 }

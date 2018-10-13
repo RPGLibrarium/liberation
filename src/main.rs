@@ -14,6 +14,7 @@ extern crate failure;
 extern crate futures;
 extern crate jsonwebtoken;
 extern crate oauth2;
+extern crate openssl;
 extern crate rand;
 extern crate serde;
 extern crate serde_json;
@@ -36,7 +37,7 @@ use auth::KeycloakCache;
 use settings::Settings;
 
 fn main() {
-     env_logger::init();
+    env_logger::init();
 
     info!("retrieving settings ...");
     let settings = Settings::new().unwrap();

@@ -23,6 +23,7 @@ jsonwebtoken = "5.0.0"
 log = "*"
 env_logger = "*"
 base64 = "*"
+openssl = "*"
 
 [dependencies.mysql]
 version = "*"
