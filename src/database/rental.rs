@@ -140,7 +140,8 @@ impl DMO for Rental {
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "delete from rentals where rental_id=:id",
                 params!{
@@ -151,7 +152,7 @@ impl DMO for Rental {
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
-                _ => Err(Error::IllegalState()),
+                _ => Err(Error::IllegalState),
             })?)
     }
 }

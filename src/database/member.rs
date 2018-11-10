@@ -105,7 +105,7 @@ impl DMO for Member {
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
-                _ => Err(Error::IllegalState()),
+                _ => Err(Error::IllegalState),
             })?)
     }
 }

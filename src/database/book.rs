@@ -128,7 +128,8 @@ impl DMO for Book {
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "delete from books where book_id=:id",
                 params!{
@@ -139,7 +140,7 @@ impl DMO for Book {
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
-                _ => Err(Error::IllegalState()),
+                _ => Err(Error::IllegalState),
             })?)
     }
 }
@@ -176,7 +177,8 @@ mod tests {
     fn insert_book_quality_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
+        let result = db
+            .insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -217,18 +219,19 @@ mod tests {
     fn insert_book_invalid_title() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut Member::new(
-            None,
-            _s("uiii-a-uuid-or-sth-similar-2481632"),
-        )).and_then(|member_id| {
-            db.insert(&mut Book::new(
+        let result =
+            db.insert(&mut Member::new(
                 None,
-                01248163264,
-                member_id,
-                EntityType::Member,
-                _s("quite good"),
-            ))
-        });
+                _s("uiii-a-uuid-or-sth-similar-2481632"),
+            )).and_then(|member_id| {
+                db.insert(&mut Book::new(
+                    None,
+                    01248163264,
+                    member_id,
+                    EntityType::Member,
+                    _s("quite good"),
+                ))
+            });
         teardown(settings);
         match result {
             Err(Error::ConstraintError(_)) => (),
@@ -240,7 +243,8 @@ mod tests {
     fn insert_book_invalid_owner_id() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
+        let result = db
+            .insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -273,7 +277,8 @@ mod tests {
     fn insert_book_wrong_owner_type() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
+        let result = db
+            .insert(&mut RpgSystem::new(None, _s("Kobolde"), None))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,
@@ -305,7 +310,8 @@ mod tests {
     fn update_book_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = db.insert(&mut RpgSystem::new(None, _s("Cthulhu"), Some(_s("CoC"))))
+        let result = db
+            .insert(&mut RpgSystem::new(None, _s("Cthulhu"), Some(_s("CoC"))))
             .and_then(|system_id| {
                 db.insert(&mut Title::new(
                     None,

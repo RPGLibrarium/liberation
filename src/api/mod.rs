@@ -8,16 +8,13 @@ use actix_web::{
     fs, http, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse, Json,
     Responder, ResponseError, Result,
 };
-
-use auth::Keycloak;
+use auth::roles::*;
+use auth::{check_roles, get_claims_for_req, Claims, Keycloak, KeycloakCache};
+use business as bus;
 use database::*;
 use error;
-use futures::future::Future;
+use futures::future::{err, Future};
 use std::sync::Arc;
-
-use auth::{get_auth_info_for_req, AuthInfo, KeycloakCache};
-use business as bus;
-
 #[derive(Clone)]
 pub struct AppState {
     pub db: Database,
@@ -86,18 +83,9 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 }
 
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
-    let authInfo = get_auth_info_for_req(&_req);
-    let (allowed, auth_info) = check_auth!(authInfo);
-    debug!("authInfo: {:?}", auth_info);
-    debug!(
-        "allowed: {}, authInfo: {}",
-        allowed,
-        match auth_info {
-            AuthInfo::NoData() => "no data",
-            AuthInfo::Invalid() => "invalid",
-            AuthInfo::Valid(_) => "valid",
-        }
-    );
+    let claims = get_claims_for_req(&_req)?;
+    let is_allowed = check_roles(&claims, vec![]);
+    debug!("is_allowed: {}, claims: {:?}", is_allowed, claims);
     bus::get_rpgsystems(&_req.state().db, &_req.state().kc).and_then(|systems| Ok(Json(systems)))
 }
 
@@ -105,8 +93,9 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
 //     "GET rpg_system"
 // }
 fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
-    let authInfo = get_auth_info_for_req(&_req);
-    let (allowed, authInfo) = check_auth!(authInfo);
+    // TODO check is_allowed
+    let claims = get_claims_for_req(&_req)?;
+    let is_allowed = check_roles(&claims, vec![]);
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::get_rpgsystem(&_req.state().db, id)
@@ -118,13 +107,16 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "POST rpg_system"
 // }
 fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let authInfo = get_auth_info_for_req(&_req);
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    let claims = match get_claims_for_req(&_req) {
+        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
+        Ok(c) => c,
+    };
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostRpgSystem| {
-            bus::post_rpgsystem(&localdb, authInfo, &mut obj).map_err(Error::from)
+            bus::post_rpgsystem(&localdb, claims, &mut obj).map_err(Error::from)
         })
         .and_then(|system_id| {
             Ok(HttpResponse::Created()
@@ -139,9 +131,12 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpRespons
 //     "PUT rpg_system"
 // }
 fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let authInfo = get_auth_info_for_req(&_req);
+    let claims = match get_claims_for_req(&_req) {
+        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
+        Ok(c) => c,
+    };
     // TODO roles
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let localdb = _req.state().db.clone();
     let id: Result<RpgSystemId> = _req
         .match_info()
@@ -155,19 +150,19 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse
             return Ok(obj);
         })
         .and_then(move |system: PutPostRpgSystem| {
-            bus::put_rpgsystem(&localdb, authInfo, &system).map_err(Error::from)
+            bus::put_rpgsystem(&localdb, claims, &system).map_err(Error::from)
         })
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder()
 }
 
 fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
-    let authInfo = get_auth_info_for_req(&_req);
+    let claims = get_claims_for_req(&_req)?;
     // TODO roles
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
-    bus::delete_rpgsystem(&_req.state().db, authInfo, id)
+    bus::delete_rpgsystem(&_req.state().db, claims, id)
         .and_then(|_| Ok(HttpResponse::NoContent().finish()))
         .map_err(Error::from)
 }
@@ -184,8 +179,8 @@ fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
 // }
 fn get_title(_req: HttpRequest<AppState>) -> Result<impl Responder> {
     let id: TitleId = _req.match_info().query("titleid")?;
-    let authInfo = get_auth_info_for_req(&_req);
-    bus::get_title(&_req.state().db, id, authInfo)
+    let claims = get_claims_for_req(&_req)?;
+    bus::get_title(&_req.state().db, id, claims)
         .and_then(|title| Ok(Json(title)))
         .map_err(Error::from)
 }
@@ -194,14 +189,16 @@ fn get_title(_req: HttpRequest<AppState>) -> Result<impl Responder> {
 //     "POST titles"
 // }
 fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    // TODO roles
-    let authInfo = get_auth_info_for_req(&_req);
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    let claims = match get_claims_for_req(&_req) {
+        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
+        Ok(c) => c,
+    };
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let localdb = _req.state().db.clone();
     _req.json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostTitle| {
-            bus::post_title(&localdb, authInfo, &mut obj).map_err(Error::from)
+            bus::post_title(&localdb, claims, &mut obj).map_err(Error::from)
         })
         .and_then(|system_id| {
             Ok(HttpResponse::Created()
@@ -216,9 +213,11 @@ fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Er
 //     "PUT titles/<id>"
 // }
 fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let authInfo = get_auth_info_for_req(&_req);
-    // TODO roles
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
+    let claims = match get_claims_for_req(&_req) {
+        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
+        Ok(c) => c,
+    };
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let localdb = _req.state().db.clone();
     let id: Result<TitleId> = _req
         .match_info()
@@ -232,7 +231,7 @@ fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Err
             return Ok(obj);
         })
         .and_then(move |title: PutPostTitle| {
-            bus::put_title(&localdb, authInfo, &title).map_err(Error::from)
+            bus::put_title(&localdb, claims, &title).map_err(Error::from)
         })
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder()
@@ -242,10 +241,10 @@ fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Err
 //     "GET Books"
 // }
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
-    let authInfo = get_auth_info_for_req(&_req);
+    let claims = get_claims_for_req(&_req)?;
     // TODO roles
-    let (allowed, authInfo) = check_auth!(authInfo, ["admin", "librarian"]);
-    bus::get_books(&_req.state().db, authInfo).and_then(|books| Ok(Json(books)))
+    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+    bus::get_books(&_req.state().db, claims).and_then(|books| Ok(Json(books)))
 }
 
 fn get_book(_req: HttpRequest<AppState>) -> impl Responder {

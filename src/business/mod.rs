@@ -1,5 +1,5 @@
 use api::*;
-use auth::{AuthInfo, KeycloakCache};
+use auth::{Claims, KeycloakCache};
 use database::*;
 use std::collections::HashMap;
 
@@ -22,7 +22,7 @@ pub fn get_rpgsystem(db: &Database, system_id: RpgSystemId) -> Result<GetRpgSyst
 
 pub fn post_rpgsystem(
     db: &Database,
-    auth: AuthInfo,
+    claims: Option<Claims>,
     system: &mut PutPostRpgSystem,
 ) -> Result<RpgSystemId, Error> {
     //TODO: Error handling
@@ -32,14 +32,18 @@ pub fn post_rpgsystem(
 
 pub fn put_rpgsystem(
     db: &Database,
-    auth: AuthInfo,
+    claims: Option<Claims>,
     system: &PutPostRpgSystem,
 ) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<RpgSystem>(&system.rpgsystem)?)
 }
 
-pub fn delete_rpgsystem(db: &Database, auth: AuthInfo, systemid: RpgSystemId) -> Result<(), Error> {
+pub fn delete_rpgsystem(
+    db: &Database,
+    claims: Option<Claims>,
+    systemid: RpgSystemId,
+) -> Result<(), Error> {
     //TODO: Errorhandling, 404
     db.delete::<RpgSystem>(systemid)?;
     Ok(())
@@ -61,9 +65,13 @@ pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
     })
 }
 
-pub fn get_title(db: &Database, title_id: TitleId, authInfo: AuthInfo) -> Result<GetTitle, Error> {
+pub fn get_title(
+    db: &Database,
+    title_id: TitleId,
+    claims: Option<Claims>,
+) -> Result<GetTitle, Error> {
     let (title, system, stock, available) = db.get_title_with_details(title_id)?.unwrap();
-    let books = get_books_by_title_id(db, title_id, authInfo)?;
+    let books = get_books_by_title_id(db, title_id, claims)?;
     //TODO: Error handling
     //Map Errors to API Errors
     //404 Not found
@@ -73,19 +81,19 @@ pub fn get_title(db: &Database, title_id: TitleId, authInfo: AuthInfo) -> Result
 
 pub fn post_title(
     db: &Database,
-    auth: AuthInfo,
+    claims: Option<Claims>,
     title: &mut PutPostTitle,
 ) -> Result<TitleId, Error> {
     //TODO: Error handling
     Ok(db.insert::<Title>(&mut title.title)?)
 }
 
-pub fn put_title(db: &Database, auth: AuthInfo, title: &PutPostTitle) -> Result<(), Error> {
+pub fn put_title(db: &Database, claims: Option<Claims>, title: &PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<Title>(&title.title)?)
 }
 
-pub fn delete_title(db: &Database, titleid: TitleId, auth: AuthInfo) -> Result<(), Error> {
+pub fn delete_title(db: &Database, titleid: TitleId, claims: Option<Claims>) -> Result<(), Error> {
     //TODO: Errorhandling
     db.delete::<Title>(titleid)?;
     Ok(())
@@ -95,12 +103,12 @@ pub fn delete_title(db: &Database, titleid: TitleId, auth: AuthInfo) -> Result<(
 fn get_books_by_title_id(
     db: &Database,
     titleid: TitleId,
-    auth: AuthInfo,
+    claims: Option<Claims>,
 ) -> Result<Vec<BookWithOwnerWithRental>, Error> {
     return Ok(vec![]);
 }
 
-pub fn get_books(db: &Database, auth: AuthInfo) -> Result<GetBooks, Error> {
+pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Error> {
     //TODO: authentication
 
     //TODO Error mapping

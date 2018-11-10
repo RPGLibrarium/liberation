@@ -13,10 +13,11 @@ pub enum Error {
     ConstraintError(Option<Field>),
     DataTooLong(Field),
     IllegalValueForType(Field),
-    IllegalState(),
+    IllegalState,
     JsonPayloadError(error::JsonPayloadError),
     KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
     KeycloakConnectionError(SendRequestError), // ActixError(error::Error)
+    InvalidAuthenticationError,
 }
 
 impl From<MySqlError> for Error {

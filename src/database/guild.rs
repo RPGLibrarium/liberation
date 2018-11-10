@@ -60,7 +60,8 @@ impl DMO for Guild {
     }
 
     fn get_all(db: &Database) -> Result<Vec<Guild>, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "select guild_id, name, address, contact_by_member_id from guilds;",
                 (),
@@ -93,7 +94,8 @@ impl DMO for Guild {
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db.pool
+        Ok(db
+            .pool
             .prep_exec(
                 "delete from guilds where GuildId=:id",
                 params!{
@@ -104,7 +106,7 @@ impl DMO for Guild {
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
-                _ => Err(Error::IllegalState()),
+                _ => Err(Error::IllegalState),
             })?)
     }
 }
@@ -118,7 +120,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id")))
             .and_then(|member_id| {
                 let mut orig_guild = Guild::new(
                     None,
@@ -150,7 +153,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id")))
             .and_then(|member_id| {
                 db.insert(&mut Guild::new(
                     None,
@@ -171,7 +175,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
                 let mut orig_guild = Guild::new(
                     None,
@@ -215,7 +220,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
                 let mut orig_guild = Guild::new(
                     None,
@@ -246,7 +252,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
                 let mut orig_guild = Guild::new(
                     None,
@@ -294,7 +301,8 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let result = db.insert(&mut Member::new(None, _s("external_id1")))
+        let result = db
+            .insert(&mut Member::new(None, _s("external_id1")))
             .and_then(|member_id| {
                 let mut orig_guild = Guild::new(
                     None,

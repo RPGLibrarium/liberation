@@ -17,29 +17,11 @@ use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
 
-macro_rules! check_auth {
-    ($auth:expr, $roles:expr) => {
-        match $auth {
-            AuthInfo::Invalid() => (false, AuthInfo::Invalid()),
-            AuthInfo::NoData() => ($roles.is_empty(), AuthInfo::NoData()),
-            AuthInfo::Valid(auth_info) => {
-                let mut is_allowed = $roles.is_empty();
-                if !is_allowed {
-                    for role in $roles.iter() {
-                        //let roleString = String::from(*role);
-                        if auth_info.roles.contains(&String::from(*role)) {
-                            is_allowed = true;
-                            break;
-                        }
-                    }
-                }
-                (is_allowed, AuthInfo::Valid(auth_info))
-            }
-        }
-    };
-    ($req:expr) => {
-        check_auth!($req, ["0 times a str, cauz types!"; 0])
-    };
+pub mod roles {
+    pub const ROLE_ADMIN: &str = "admin";
+    pub const ROLE_LIBRARIAN: &str = "librarian";
+    pub const ROLE_MEMBER: &str = "member";
+    pub const ROLE_ARISTOCRAT: &str = "aristocrat";
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -267,23 +249,16 @@ pub struct Claims {
     // ... whatever!
 }
 
-#[derive(Clone, Debug)]
-pub enum AuthInfo {
-    NoData(),
-    Invalid(),
-    Valid(Claims),
-}
-
-pub fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
+pub fn get_claims_for_req(req: &HttpRequest<AppState>) -> Result<Option<Claims>, Error> {
     match req.headers().get(http::header::AUTHORIZATION) {
         None => {
             debug!("No Authorization Header provided");
-            AuthInfo::NoData()
+            Ok(None)
         }
         Some(header_val) => match header_val.to_str() {
             Err(_) => {
                 debug!("Authorization header could not be converted to string");
-                AuthInfo::Invalid()
+                Err(Error::InvalidAuthenticationError)
             }
             Ok(auth_str) => {
                 if auth_str.starts_with("Bearer ") {
@@ -304,18 +279,36 @@ pub fn get_auth_info_for_req(req: &HttpRequest<AppState>) -> AuthInfo {
                     ) {
                         Err(e) => {
                             error!("JWT validation failed: {:?}", e);
-                            AuthInfo::Invalid()
+                            Err(Error::InvalidAuthenticationError)
                         }
                         Ok(token_data) => {
                             debug!("Successfully verified JWT: {:?}", token_data);
                             let token_claims: Claims = token_data.claims;
-                            AuthInfo::Valid(token_claims)
+                            Ok(Some(token_claims))
                         }
                     }
                 } else {
-                    AuthInfo::Invalid()
+                    Err(Error::InvalidAuthenticationError)
                 }
             }
+        },
+    }
+}
+
+pub fn check_roles(claims: &Option<Claims>, roles: Vec<&str>) -> bool {
+    match roles.is_empty() {
+        true => true,
+        false => match claims {
+            Some(cl) => {
+                for role in roles.iter() {
+                    //let roleString = String::from(*role);
+                    if cl.roles.contains(&String::from(*role)) {
+                        return true;
+                    }
+                }
+                false
+            }
+            None => false,
         },
     }
 }
