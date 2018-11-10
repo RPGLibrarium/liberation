@@ -115,46 +115,37 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
         }).responder())
 }
 
-fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
-    let localdb = _req.state().db.clone();
-    let id: Result<RpgSystemId> = _req
-        .match_info()
-        .query("systemid")
-        .map_err(actix_error::ErrorBadRequest);
+fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
-    _req.json()
+    let localdb = _req.state().db.clone();
+    let id: RpgSystemId = _req.match_info().query("systemid")?;
+
+    Ok(_req
+        .json()
         .from_err()
         .and_then(|mut obj: dto::PutPostRpgSystem| {
-            obj.rpgsystem.id = Some(id?);
+            obj.rpgsystem.id = Some(id);
             return Ok(obj);
-        }).and_then(move |system: PutPostRpgSystem| {
-            bus::put_rpgsystem(&localdb, claims, &system).map_err(Error::from)
-        }).and_then(|()| Ok(HttpResponse::Ok().finish()))
-        .responder()
+        }).and_then(move |system: PutPostRpgSystem| bus::put_rpgsystem(&localdb, claims, &system))
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder())
 }
 
-fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder> {
-    let claims = get_claims_for_req(&_req)?;
-    // TODO roles
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+fn delete_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+
+    let localdb = _req.state().db.clone();
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::delete_rpgsystem(&_req.state().db, claims, id)
         .and_then(|_| Ok(HttpResponse::NoContent().finish()))
-        .map_err(Error::from)
 }
 
-// fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
-//     "GET titles"
-//
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
     bus::get_titles(&_req.state().db).and_then(|titles| Ok(Json(titles)))
 }
 
-// fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
-//     "GET titles/<id>"
-// }
 fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
     let claims = assert_roles(&_req, vec![])?;
 
