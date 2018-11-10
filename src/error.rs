@@ -30,6 +30,8 @@ pub enum Error {
     InvalidAuthenticationError,
     /// Missing a required claim -> 403
     YouShallNotPassError,
+    ActixError(error::Error),
+    ActixInternalError(error::InternalError),
 }
 
 impl From<MySqlError> for Error {
@@ -56,12 +58,18 @@ impl From<RequestTokenError<BasicErrorResponseType>> for Error {
         Error::KeycloakAuthenticationError(error)
     }
 }
-//
-// impl From<error::Error> for Error {
-//     fn from(error: error::Error) -> Self {
-//         Error::ActixError(error)
-//     }
-// }
+
+impl From<error::Error> for Error {
+    fn from(error: error::Error) -> Self {
+        Error::ActixError(error)
+    }
+}
+
+impl<T> From<error::InternalError<T>> for Error {
+    fn from(error: error::InternalError<T>) -> Self {
+        Error::ActixInternalError(error)
+    }
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -75,7 +83,8 @@ impl fmt::Display for Error {
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
             Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
-            //Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
+            Error::ActixInternalError(ref err) => write!(f, "{{ {} }}", err),
+            Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }
     }
@@ -96,6 +105,8 @@ impl ResponseError for Error {
                 ).finish(),
             Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
+            Error::ActixError(err) => err.as_response_error().error_response(),
+            Error::ActixInternalError(err) => err.error_response(),
             _ => HttpResponse::InternalServerError().body(format!("{}", self)),
         }
     }

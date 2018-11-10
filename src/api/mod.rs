@@ -97,39 +97,26 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::get_rpgsystem(&_req.state().db, id).and_then(|system| Ok(Json(system)))
-    //.map_err(Error::from)
 }
 
-fn post_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let claims = match get_claims_for_req(&_req) {
-        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
-        Ok(c) => c,
-    };
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let localdb = _req.state().db.clone();
-    _req.json()
+    Ok(_req
+        .json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostRpgSystem| {
-            bus::post_rpgsystem(&localdb, claims, &mut obj).map_err(Error::from)
+            bus::post_rpgsystem(&localdb, claims, &mut obj)
         }).and_then(|system_id| {
             Ok(HttpResponse::Created()
                 .header("Location", format!("v1/rpgsystems/{}", system_id))
                 .finish())
-        }).map_err(Error::from)
-        .responder()
+        }).responder())
 }
 
-// fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
-//     "PUT rpg_system"
-// }
 fn put_rpg_system(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let claims = match get_claims_for_req(&_req) {
-        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
-        Ok(c) => c,
-    };
-    // TODO roles
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+    assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
     let localdb = _req.state().db.clone();
     let id: Result<RpgSystemId> = _req
         .match_info()
