@@ -191,25 +191,29 @@ impl Keycloak {
         let cloned_cache2 = kc.cache.clone();
 
         Arbiter::spawn(
-            client::get(user_url)   // <- Create request builder
+            client::get(user_url) // <- Create request builder
                 .no_default_headers()
-                .header("Authorization", format!("Bearer {}", token_result.access_token().secret()))
-                .header("host", "localhost:8081")
-            .finish().unwrap()
-            .send()                               // <- Send http request
-            .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|response| {
-                // info!("response: {:?}", response);
-                response.json().map_err(|err| Error::JsonPayloadError(err))
-            })
-            .map_err(|err| panic!("Unexpected KeycloakError {}", err))
-            .and_then( |users: Vec<KeycloakUser>| {
-                //info!("users: {:?}", users);
-                users.into_iter().for_each(move |user| {cloned_cache.insert_user(user);});
-                println!("Fetched users");
-                //info!("users: {:?}", move cloned_cache2);
-                Ok(())
-            }),
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", token_result.access_token().secret()),
+                ).header("host", "localhost:8081")
+                .finish()
+                .unwrap()
+                .send() // <- Send http request
+                .map_err(|err| Error::KeycloakConnectionError(err))
+                .and_then(|response| {
+                    // info!("response: {:?}", response);
+                    response.json().map_err(|err| Error::JsonPayloadError(err))
+                }).map_err(|err| panic!("Unexpected KeycloakError {}", err))
+                .and_then(|users: Vec<KeycloakUser>| {
+                    //info!("users: {:?}", users);
+                    users.into_iter().for_each(move |user| {
+                        cloned_cache.insert_user(user);
+                    });
+                    println!("Fetched users");
+                    //info!("users: {:?}", move cloned_cache2);
+                    Ok(())
+                }),
         );
 
         let key_url = kc
@@ -224,18 +228,19 @@ impl Keycloak {
         let cloned_cache = kc.cache.clone();
 
         Arbiter::spawn(
-            client::get(key_url)   // <- Create request builder
+            client::get(key_url) // <- Create request builder
                 .no_default_headers()
                 .header("host", "localhost:8081")
-            .finish().unwrap()
-            .send()                               // <- Send http request
-            .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
-            .map_err(|err| panic!("Unexpected KeycloakError {}", err))
-            .and_then( move |response: KeycloakMetaInfo| {
-                cloned_cache.set_public_key(response.public_key);
-                Ok(())
-            }),
+                .finish()
+                .unwrap()
+                .send() // <- Send http request
+                .map_err(|err| Error::KeycloakConnectionError(err))
+                .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
+                .map_err(|err| panic!("Unexpected KeycloakError {}", err))
+                .and_then(move |response: KeycloakMetaInfo| {
+                    cloned_cache.set_public_key(response.public_key);
+                    Ok(())
+                }),
         );
     }
 }
@@ -295,20 +300,25 @@ pub fn get_claims_for_req(req: &HttpRequest<AppState>) -> Result<Option<Claims>,
     }
 }
 
-pub fn check_roles(claims: &Option<Claims>, roles: Vec<&str>) -> bool {
+pub fn assert_roles(
+    req: &HttpRequest<AppState>,
+    roles: Vec<&str>,
+) -> Result<Option<Claims>, Error> {
+    let claims = get_claims_for_req(req)?;
+
     match roles.is_empty() {
-        true => true,
+        true => Ok(claims),
         false => match claims {
             Some(cl) => {
                 for role in roles.iter() {
                     //let roleString = String::from(*role);
                     if cl.roles.contains(&String::from(*role)) {
-                        return true;
+                        return Ok(claims);
                     }
                 }
-                false
+                Err(Error::YouShallNotPassError)
             }
-            None => false,
+            None => Ok(claims),
         },
     }
 }

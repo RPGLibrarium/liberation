@@ -8,16 +8,30 @@ use std::fmt;
 type Field = String;
 
 #[derive(Debug)]
+/// An custom error type, that handles convertion to HTTP error codes
 pub enum Error {
+    /// Internal Database Errors -> 500
     DatabaseError(MySqlError),
+    /// Database Constraints, usually from invalid User input -> 400 or 500
     ConstraintError(Option<Field>),
+    /// User input is too long -> 400
     DataTooLong(Field),
+    /// User input has wrong type -> 400
     IllegalValueForType(Field),
+    /// Database is inconsistent -> 500
     IllegalState,
+    /// Invalid Json from user -> 400
     JsonPayloadError(error::JsonPayloadError),
+    /// Backend can not authenticate with the Keycloak server-> 500
     KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
-    KeycloakConnectionError(SendRequestError), // ActixError(error::Error)
+    /// No connection to Keycloak server -> 500
+    KeycloakConnectionError(SendRequestError),
+    /// Authentication Token is invalid -> 401
     InvalidAuthenticationError,
+    /// Missing a required claim -> 403
+    YouShallNotPassError,
+    ActixError(error::Error),
+    ActixInternalError(error::InternalError),
 }
 
 impl From<MySqlError> for Error {
@@ -44,12 +58,18 @@ impl From<RequestTokenError<BasicErrorResponseType>> for Error {
         Error::KeycloakAuthenticationError(error)
     }
 }
-//
-// impl From<error::Error> for Error {
-//     fn from(error: error::Error) -> Self {
-//         Error::ActixError(error)
-//     }
-// }
+
+impl From<error::Error> for Error {
+    fn from(error: error::Error) -> Self {
+        Error::ActixError(error)
+    }
+}
+
+impl<T> From<error::InternalError<T>> for Error {
+    fn from(error: error::InternalError<T>) -> Self {
+        Error::ActixInternalError(error)
+    }
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -63,7 +83,8 @@ impl fmt::Display for Error {
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
             Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
-            //Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
+            Error::ActixInternalError(ref err) => write!(f, "{{ {} }}", err),
+            Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }
     }
@@ -77,7 +98,15 @@ impl ResponseError for Error {
             Error::DataTooLong(ref e) => HttpResponse::BadRequest()
                 .header("x-field", e.clone())
                 .body(format!("{}", self)),
+            Error::InvalidAuthenticationError => HttpResponse::Unauthorized()
+                .header(
+                    "WWW-Authenticate",
+                    format!("Bearer realm=\"{}\"", "liberation"), //TODO: Use config for realm name
+                ).finish(),
+            Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
+            Error::ActixError(err) => err.as_response_error().error_response(),
+            Error::ActixInternalError(err) => err.error_response(),
             _ => HttpResponse::InternalServerError().body(format!("{}", self)),
         }
     }
