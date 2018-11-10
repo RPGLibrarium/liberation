@@ -4,7 +4,7 @@ use super::*;
 pub type BookId = Id;
 
 /// Book describes a specific (physical) book
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Book {
     /// Unique id
     pub id: Option<BookId>,

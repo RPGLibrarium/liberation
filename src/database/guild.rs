@@ -4,7 +4,7 @@ use super::*;
 pub type GuildId = EntityId;
 
 /// Any organisation involved in book renting
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Guild {
     /// Unique id
     pub id: Option<GuildId>,

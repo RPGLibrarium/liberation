@@ -135,7 +135,6 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 fn delete_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
-    let localdb = _req.state().db.clone();
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
     bus::delete_rpgsystem(&_req.state().db, claims, id)
@@ -143,6 +142,8 @@ fn delete_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
+    assert_roles(&_req, vec![])?;
+
     bus::get_titles(&_req.state().db).and_then(|titles| Ok(Json(titles)))
 }
 
@@ -151,12 +152,9 @@ fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
 
     let id: TitleId = _req.match_info().query("titleid")?;
 
-    bus::get_title(&_req.state().db, id, claims).and_then(|title| Ok(Json(title)))
+    bus::get_title(&_req.state().db, claims, id).and_then(|title| Ok(Json(title)))
 }
 
-// fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
-//     "POST titles"
-// }
 fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
@@ -164,18 +162,14 @@ fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
     Ok(_req
         .json()
         .from_err()
-        .and_then(move |mut obj: dto::PutPostTitle| {
-            bus::post_title(&localdb, claims, &mut obj).map_err(Error::from)
-        }).and_then(|system_id| {
+        .and_then(move |mut obj: dto::PutPostTitle| bus::post_title(&localdb, claims, obj))
+        .and_then(|title_id| {
             Ok(HttpResponse::Created()
-                .header("Location", format!("v1/titles/{}", system_id))
+                .header("Location", format!("v1/titles/{}", title_id))
                 .finish())
         }).responder())
 }
 
-// fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
-//     "PUT titles/<id>"
-// }
 fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
@@ -188,10 +182,18 @@ fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
         .and_then(|mut obj: dto::PutPostTitle| {
             obj.title.id = Some(id);
             Ok(obj)
-        }).and_then(move |title: PutPostTitle| {
-            bus::put_title(&localdb, claims, &title).map_err(Error::from)
-        }).and_then(|()| Ok(HttpResponse::Ok().finish()))
+        }).and_then(move |title: PutPostTitle| bus::put_title(&localdb, claims, title))
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder())
+}
+
+fn delete_title(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+
+    let id: TitleId = _req.match_info().query("titleid")?;
+
+    bus::delete_title(&_req.state().db, claims, id)
+        .and_then(|_| Ok(HttpResponse::NoContent().finish()))
 }
 
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
@@ -201,23 +203,66 @@ fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 fn get_book(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET Book by Id"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
+    let id: BookId = _req.match_info().query("bookid")?;
+
+    bus::get_book(&_req.state().db, claims, id).and_then(|book| Ok(Json(book)))
 }
 
 fn post_book(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST Book"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
+    let localdb = _req.state().db.clone();
+    Ok(_req
+        .json()
+        .from_err()
+        .and_then(move |mut obj: dto::PutPostBook| bus::post_book(&localdb, claims, obj))
+        .and_then(|book_id| {
+            Ok(HttpResponse::Created()
+                .header("Location", format!("v1/books/{}", book_id))
+                .finish())
+        }).responder())
 }
 
 fn put_book(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT Book"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
+    let localdb = _req.state().db.clone();
+    let id: BookId = _req.match_info().query("bookid")?;
+
+    Ok(_req
+        .json()
+        .from_err()
+        .and_then(|mut obj: PutPostBook| {
+            obj.book.id = Some(id);
+            Ok(obj)
+        }).and_then(move |book: PutPostBook| bus::put_book(&localdb, claims, book))
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder())
+}
+
+fn delete_book(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+
+    let id: BookId = _req.match_info().query("bookid")?;
+
+    bus::delete_book(&_req.state().db, claims, id)
+        .and_then(|_| Ok(HttpResponse::NoContent().finish()))
 }
 
 fn get_members(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET members"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
+    bus::get_members(&_req.state().db, claims).and_then(|members| Ok(Json(members)))
 }
 
 fn get_member(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET members/<id>"
+    let claims = assert_roles(&_req, vec![])?;
+
+    let id: MemberId = _req.match_info().query("memberid")?;
+
+    bus::get_member(&_req.state().db, claims, id).and_then(|member| Ok(Json(member)))
 }
 
 fn get_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
@@ -229,25 +274,43 @@ fn post_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 fn get_guilds(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET Guilds"
+    let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
+
+    bus::get_guilds(&_req.state().db, claims).and_then(|guilds| Ok(Json(guilds)))
 }
 
 fn get_guild(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET Guild by Id"
-}
+    let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
 
-fn get_guild_inventory(_req: HttpRequest<AppState>) -> impl Responder {
-    "GET Guild inventory by Id"
+    let id: GuildId = _req.match_info().query("guildid")?;
+
+    bus::get_guild(&_req.state().db, claims, id).and_then(|guild| Ok(Json(guild)))
 }
 
 fn post_guild(_req: HttpRequest<AppState>) -> impl Responder {
-    "POST Guild"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+
+    let localdb = _req.state().db.clone();
+    let id: GuildId = _req.match_info().query("guildid")?;
+
+    Ok(_req
+        .json()
+        .from_err()
+        .and_then(|mut obj: PutPostGuild| {
+            obj.guild.id = Some(id);
+            Ok(obj)
+        }).and_then(move |guild: PutPostGuild| bus::put_guild(&localdb, claims, guild))
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder())
 }
 
 fn put_guild(_req: HttpRequest<AppState>) -> impl Responder {
     "PUT Guild"
 }
 
+fn get_guild_inventory(_req: HttpRequest<AppState>) -> impl Responder {
+    "GET Guild inventory by Id"
+}
 fn post_guild_inventory(_req: HttpRequest<AppState>) -> impl Responder {
     "POST Guild Inventory"
 }

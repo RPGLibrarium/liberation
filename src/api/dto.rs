@@ -96,7 +96,7 @@ pub struct GetBook {
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct PutPostBook {
-    pub book: PartialBook,
+    pub book: db::Book,
 }
 
 #[derive(Serialize)]
@@ -146,7 +146,7 @@ pub struct GetGuildInventory {
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct PutPostGuild {
-    pub guild: PartialGuild,
+    pub guild: db::Guild,
 }
 
 // ############### Inner DTOS ############################

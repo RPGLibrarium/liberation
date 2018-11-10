@@ -60,15 +60,14 @@ pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
             .into_iter()
             .map(|(title, system, stock, available)| {
                 TitleWithSystem::new(title, system, stock, available)
-            })
-            .collect(),
+            }).collect(),
     })
 }
 
 pub fn get_title(
     db: &Database,
-    title_id: TitleId,
     claims: Option<Claims>,
+    title_id: TitleId,
 ) -> Result<GetTitle, Error> {
     let (title, system, stock, available) = db.get_title_with_details(title_id)?.unwrap();
     let books = get_books_by_title_id(db, title_id, claims)?;
@@ -82,29 +81,29 @@ pub fn get_title(
 pub fn post_title(
     db: &Database,
     claims: Option<Claims>,
-    title: &mut PutPostTitle,
+    title: PutPostTitle,
 ) -> Result<TitleId, Error> {
     //TODO: Error handling
     Ok(db.insert::<Title>(&mut title.title)?)
 }
 
-pub fn put_title(db: &Database, claims: Option<Claims>, title: &PutPostTitle) -> Result<(), Error> {
+pub fn put_title(db: &Database, claims: Option<Claims>, title: PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<Title>(&title.title)?)
 }
 
-pub fn delete_title(db: &Database, titleid: TitleId, claims: Option<Claims>) -> Result<(), Error> {
+pub fn delete_title(db: &Database, claims: Option<Claims>, id: TitleId) -> Result<(), Error> {
     //TODO: Errorhandling
-    db.delete::<Title>(titleid)?;
+    db.delete::<Title>(id)?;
     Ok(())
 }
 
-//TODO: Stub
-fn get_books_by_title_id(
+pub fn get_books_by_title_id(
     db: &Database,
-    titleid: TitleId,
+    id: TitleId,
     claims: Option<Claims>,
 ) -> Result<Vec<BookWithOwnerWithRental>, Error> {
+    //TODO: Stub
     return Ok(vec![]);
 }
 
@@ -200,7 +199,74 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                         },
                     },
                 }
-            })
-            .collect(),
+            }).collect(),
     })
+}
+
+pub fn get_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(), Error> {
+    //TODO:: Stub
+    //TODO: authentication
+    Ok(())
+}
+
+pub fn post_book(
+    db: &Database,
+    claims: Option<Claims>,
+    book: PutPostBook,
+) -> Result<BookId, Error> {
+    //TODO:: Stub
+    //TODO: authentication
+    Ok(1234)
+}
+
+pub fn put_book(db: &Database, claims: Option<Claims>, book: PutPostBook) -> Result<(), Error> {
+    //TODO:: Stub
+    //TODO: authentication
+    Ok(())
+}
+
+pub fn delete_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(), Error> {
+    //TODO:: Stub
+    //TODO: Errorhandling
+    db.delete::<Book>(id)?;
+    Ok(())
+}
+
+pub fn get_members(db: &Database, claims: Option<Claims>) -> Result<GetMembers, Error> {
+    //TODO: Stub
+    //TODO: Get Members from Database
+    //TODO: Complete Infos from Keycloak
+    Ok(GetMembers { members: vec![] })
+}
+
+pub fn get_member(db: &Database, claims: Option<Claims>, id: MemberId) -> Result<(), Error> {
+    //TODO: Stub
+    //TODO: Get Members from Database
+    //TODO: Complete Infos from Keycloak
+    Ok(())
+}
+
+pub fn get_guilds(db: &Database, claims: Option<Claims>) -> Result<GetGuilds, Error> {
+    //TODO: Stub
+    Ok(GetGuilds { guilds: vec![] })
+}
+
+pub fn get_guild(db: &Database, claims: Option<Claims>, id: GuildId) -> Result<(), Error> {
+    //TODO: Stub
+    Ok(())
+}
+
+pub fn post_guild(db: &Database, claims: Option<Claims>, guild: Guild) -> Result<GuildId, Error> {
+    //TODO: Stub
+    Ok(1234)
+}
+
+pub fn put_guild(db: &Database, claims: Option<Claims>, guild: Guild) -> Result<(), Error> {
+    //TODO: Stub
+    Ok(())
+}
+
+pub fn delete_guild(db: &Database, claims: Option<Claims>, guild: Guild) -> Result<(), Error> {
+    //TODO: Stub
+    Ok(())
 }
