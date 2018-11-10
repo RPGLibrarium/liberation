@@ -8,16 +8,28 @@ use std::fmt;
 type Field = String;
 
 #[derive(Debug)]
+/// An custom error type, that handles convertion to HTTP error codes
 pub enum Error {
+    /// Internal Database Errors -> 500
     DatabaseError(MySqlError),
+    /// Database Constraints, usually from invalid User input -> 400 or 500
     ConstraintError(Option<Field>),
+    /// User input is too long -> 400
     DataTooLong(Field),
+    /// User input has wrong type -> 400
     IllegalValueForType(Field),
+    /// Database is inconsistent -> 500
     IllegalState,
+    /// Invalid Json from user -> 400
     JsonPayloadError(error::JsonPayloadError),
+    /// Backend can not authenticate with the Keycloak server-> 500
     KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
-    KeycloakConnectionError(SendRequestError), // ActixError(error::Error)
+    /// No connection to Keycloak server -> 500
+    KeycloakConnectionError(SendRequestError),
+    /// Authentication Token is invalid -> 401
     InvalidAuthenticationError,
+    /// Missing a required claim -> 403
+    YouShallNotPassError,
 }
 
 impl From<MySqlError> for Error {
@@ -77,6 +89,12 @@ impl ResponseError for Error {
             Error::DataTooLong(ref e) => HttpResponse::BadRequest()
                 .header("x-field", e.clone())
                 .body(format!("{}", self)),
+            Error::InvalidAuthenticationError => HttpResponse::Unauthorized()
+                .header(
+                    "WWW-Authenticate",
+                    format!("Bearer realm=\"{}\"", "liberation"), //TODO: Use config for realm name
+                ).finish(),
+            Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
             _ => HttpResponse::InternalServerError().body(format!("{}", self)),
         }
