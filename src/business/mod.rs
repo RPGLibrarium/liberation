@@ -1,25 +1,24 @@
 use api::*;
 use auth::{Claims, KeycloakCache};
 use database::*;
+use error::Error;
 use std::collections::HashMap;
 
 /// Get all RPG systems from database
 pub fn get_rpgsystems(db: &Database, kc: &KeycloakCache) -> Result<GetRpgSystems, Error> {
-    //TODO Error mapping
-    let rpgsystems = db.get_all::<RpgSystem>()?;
-    Ok(GetRpgSystems { rpgsystems })
+    match db.get_all::<RpgSystem>() {
+        Ok(rpgsystems) => Ok(GetRpgSystems { rpgsystems }),
+        Err(e) => Err(e),
+    }
 }
 
 /// Get an RPG system with given id from database
 pub fn get_rpgsystem(db: &Database, system_id: RpgSystemId) -> Result<GetRpgSystem, Error> {
-    //TODO: Handle None()
-    let system = db.get::<RpgSystem>(system_id)?.unwrap();
     let titles = db.get_titles_by_rpg_system(system_id)?;
-    //TODO: Error handling
-    //Map Errors to API Errors
-    //404 Not found
-
-    Ok(GetRpgSystem::new(system, titles))
+    match db.get::<RpgSystem>(system_id) {
+        Ok(Some(rpgsystem)) => Ok(GetRpgSystem::new(rpgsystem, titles)),
+        _ => Err(Error::ItemNotFound),
+    }
 }
 
 /// Insert a RPG system into database
@@ -49,9 +48,11 @@ pub fn delete_rpgsystem(
     claims: Option<Claims>,
     systemid: RpgSystemId,
 ) -> Result<(), Error> {
-    //TODO: Errorhandling, 404
-    db.delete::<RpgSystem>(systemid)?;
-    Ok(())
+    match db.delete::<RpgSystem>(systemid) {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(Error::ItemNotFound),
+        Err(e) => Err(e),
+    }
 }
 
 /// Get all titles from database

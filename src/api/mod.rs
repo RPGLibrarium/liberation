@@ -271,14 +271,20 @@ fn delete_book(_req: HttpRequest<AppState>) -> impl Responder {
 
 /// Get all Members (if authentification is successful)
 fn get_members(_req: HttpRequest<AppState>) -> impl Responder {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+    let claims = assert_roles(
+        &_req,
+        vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
+    )?;
 
     bus::get_members(&_req.state().db, claims).and_then(|members| Ok(Json(members)))
 }
 
 /// Get a requested Member (if authentification is successful)
 fn get_member(_req: HttpRequest<AppState>) -> impl Responder {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+    let claims = assert_roles(
+        &_req,
+        vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
+    )?;
 
     let id: MemberId = _req.match_info().query("memberid")?;
 
@@ -291,7 +297,7 @@ fn get_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Insert into a member's inventory (if authentification is successful)
-fn post_member_inventory(_req: HttpRequest<AppState>) -> iROLE_ARISTOCRATmpl Responder {
+fn post_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
     "POST members/<id>/inventory"
 }
 
@@ -324,14 +330,27 @@ fn post_guild(_req: HttpRequest<AppState>) -> impl Responder {
         .and_then(|mut obj: PutPostGuild| {
             obj.guild.id = Some(id);
             Ok(obj)
-        }).and_then(move |guild: PutPostGuild| bus::put_guild(&localdb, claims, guild))
+        }).and_then(move |guild: PutPostGuild| bus::post_guild(&localdb, claims, guild))
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder())
 }
 
 /// Update an existing Guild (if authentification is successful)
 fn put_guild(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT Guild"
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT])?;
+
+    let localdb = _req.state().db.clone();
+    let id: GuildId = _req.match_info().query("guildid")?;
+
+    Ok(_req
+        .json()
+        .from_err()
+        .and_then(|mut obj: PutPostGuild| {
+            obj.guild.id = Some(id);
+            Ok(obj)
+        }).and_then(move |guild: PutPostGuild| bus::put_guild(&localdb, claims, guild))
+        .and_then(|()| Ok(HttpResponse::Ok().finish()))
+        .responder())
 }
 
 /// Get the inventory of a Guild (if authentification is successful)
