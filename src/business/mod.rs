@@ -3,12 +3,14 @@ use auth::{Claims, KeycloakCache};
 use database::*;
 use std::collections::HashMap;
 
+/// Get all RPG systems from database
 pub fn get_rpgsystems(db: &Database, kc: &KeycloakCache) -> Result<GetRpgSystems, Error> {
     //TODO Error mapping
     let rpgsystems = db.get_all::<RpgSystem>()?;
     Ok(GetRpgSystems { rpgsystems })
 }
 
+/// Get an RPG system with given id from database
 pub fn get_rpgsystem(db: &Database, system_id: RpgSystemId) -> Result<GetRpgSystem, Error> {
     //TODO: Handle None()
     let system = db.get::<RpgSystem>(system_id)?.unwrap();
@@ -20,6 +22,7 @@ pub fn get_rpgsystem(db: &Database, system_id: RpgSystemId) -> Result<GetRpgSyst
     Ok(GetRpgSystem::new(system, titles))
 }
 
+/// Insert a RPG system into database
 pub fn post_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -30,6 +33,7 @@ pub fn post_rpgsystem(
     Ok(db.insert::<RpgSystem>(&mut system.rpgsystem)?)
 }
 
+/// Update a specific system in database
 pub fn put_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -39,6 +43,7 @@ pub fn put_rpgsystem(
     Ok(db.update::<RpgSystem>(&system.rpgsystem)?)
 }
 
+/// Delete the RPG system with given id from database
 pub fn delete_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -49,6 +54,7 @@ pub fn delete_rpgsystem(
     Ok(())
 }
 
+/// Get all titles from database
 pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
     //TODO: authentication
 
@@ -60,11 +66,11 @@ pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
             .into_iter()
             .map(|(title, system, stock, available)| {
                 TitleWithSystem::new(title, system, stock, available)
-            })
-            .collect(),
+            }).collect(),
     })
 }
 
+/// Get a title with given id from database
 pub fn get_title(
     db: &Database,
     title_id: TitleId,
@@ -79,6 +85,7 @@ pub fn get_title(
     Ok(GetTitle::new(title, system, stock, available, books))
 }
 
+/// Insert a title into database
 pub fn post_title(
     db: &Database,
     claims: Option<Claims>,
@@ -88,17 +95,20 @@ pub fn post_title(
     Ok(db.insert::<Title>(&mut title.title)?)
 }
 
+/// Update a specific title in database
 pub fn put_title(db: &Database, claims: Option<Claims>, title: &PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<Title>(&title.title)?)
 }
 
+/// Delete the title with given id from database
 pub fn delete_title(db: &Database, titleid: TitleId, claims: Option<Claims>) -> Result<(), Error> {
     //TODO: Errorhandling
     db.delete::<Title>(titleid)?;
     Ok(())
 }
 
+/// Get all books of a title including rental information
 //TODO: Stub
 fn get_books_by_title_id(
     db: &Database,
@@ -108,6 +118,7 @@ fn get_books_by_title_id(
     return Ok(vec![]);
 }
 
+/// Get all books from database
 pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Error> {
     //TODO: authentication
 
@@ -200,7 +211,6 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                         },
                     },
                 }
-            })
-            .collect(),
+            }).collect(),
     })
 }
