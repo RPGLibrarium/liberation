@@ -159,22 +159,20 @@ fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
 
 /// Get a requested Title (if authentification is successful)
 fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![])?;
+
     let id: TitleId = _req.match_info().query("titleid")?;
-    let claims = get_claims_for_req(&_req)?;
-    bus::get_title(&_req.state().db, id, claims)
-        .and_then(|title| Ok(Json(title)))
-        .map_err(Error::from)
+
+    bus::get_title(&_req.state().db, id, claims).and_then(|title| Ok(Json(title)))
 }
 
 /// Insert a new Title (if authentification is successful)
-fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let claims = match get_claims_for_req(&_req) {
-        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
-        Ok(c) => c,
-    };
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
     let localdb = _req.state().db.clone();
-    _req.json()
+    Ok(_req
+        .json()
         .from_err()
         .and_then(move |mut obj: dto::PutPostTitle| {
             bus::post_title(&localdb, claims, &mut obj).map_err(Error::from)
@@ -182,39 +180,32 @@ fn post_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Er
             Ok(HttpResponse::Created()
                 .header("Location", format!("v1/titles/{}", system_id))
                 .finish())
-        }).map_err(Error::from)
-        .responder()
+        }).responder())
 }
 
 /// Update an existing Title (if authentification is successful)
-fn put_title(_req: HttpRequest<AppState>) -> Box<Future<Item = HttpResponse, Error = Error>> {
-    let claims = match get_claims_for_req(&_req) {
-        Err(_) => return Box::new(err(Error::from(error::Error::InvalidAuthenticationError))),
-        Ok(c) => c,
-    };
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
-    let localdb = _req.state().db.clone();
-    let id: Result<TitleId> = _req
-        .match_info()
-        .query("titleid")
-        .map_err(actix_error::ErrorBadRequest);
+fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
-    _req.json()
+    let localdb = _req.state().db.clone();
+    let id: TitleId = _req.match_info().query("titleid")?;
+
+    Ok(_req
+        .json()
         .from_err()
         .and_then(|mut obj: dto::PutPostTitle| {
-            obj.title.id = Some(id?);
-            return Ok(obj);
+            obj.title.id = Some(id);
+            Ok(obj)
         }).and_then(move |title: PutPostTitle| {
             bus::put_title(&localdb, claims, &title).map_err(Error::from)
         }).and_then(|()| Ok(HttpResponse::Ok().finish()))
-        .responder()
+        .responder())
 }
 
 /// Get all Books (if authentification is successful)
 fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
-    let claims = get_claims_for_req(&_req)?;
-    // TODO roles
-    let is_allowed = check_roles(&claims, vec![ROLE_ADMIN, ROLE_LIBRARIAN]);
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+
     bus::get_books(&_req.state().db, claims).and_then(|books| Ok(Json(books)))
 }
 
