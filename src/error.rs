@@ -33,6 +33,8 @@ pub enum Error {
     YouShallNotPassError,
     ActixError(error::Error),
     ActixInternalError(error::InternalError<ParseIntError>),
+    /// No item with given id found -> 404
+    ItemNotFound,
 }
 
 impl From<MySqlError> for Error {

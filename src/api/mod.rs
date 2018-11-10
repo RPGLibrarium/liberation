@@ -109,7 +109,8 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> 
 
 /// Insert a new RpgSystem (if authentification is successful)
 fn post_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims: Option<Claims> = assert_roles(&_req, vec!["admin", "librarian"])?;
+    let claims: Option<Claims> =
+        assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let localdb = _req.state().db.clone();
     Ok(_req
@@ -272,14 +273,20 @@ fn delete_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
 
 /// Get all Members (if authentification is successful)
 fn get_members(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+    let claims = assert_roles(
+        &_req,
+        vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
+    )?;
 
     bus::get_members(&_req.state().db, claims).and_then(|members| Ok(Json(members)))
 }
 
 /// Get a requested Member (if authentification is successful)
 fn get_member(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![])?;
+    let claims = assert_roles(
+        &_req,
+        vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
+    )?;
 
     let id: MemberId = _req.match_info().query("memberid")?;
 
@@ -298,14 +305,14 @@ fn post_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
 
 /// Get all Guilds (if authentification is successful)
 fn get_guilds(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_MEMBER])?;
 
     bus::get_guilds(&_req.state().db, claims).and_then(|guilds| Ok(Json(guilds)))
 }
 
 /// Get a requested Guild (if authentification is successful)
 fn get_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_MEMBER])?;
 
     let id: GuildId = _req.match_info().query("guildid")?;
 
@@ -314,7 +321,7 @@ fn get_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
 
 /// Insert a new Guild (if authentification is successful)
 fn post_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN])?;
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT])?;
 
     let localdb = _req.state().db.clone();
 
@@ -331,7 +338,7 @@ fn post_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
 
 /// Update an existing Guild (if authentification is successful)
 fn put_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT])?;
 
     let localdb = _req.state().db.clone();
     let id: GuildId = _req.match_info().query("guildid")?;
