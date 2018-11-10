@@ -3,6 +3,7 @@ use super::settings;
 use chrono::prelude::*;
 pub static INIT_DB_STRUCTURE: &str = include_str!("../../res/init-db-structure.sql");
 
+/// Checks string and returns error if string is too long
 macro_rules! check_varchar_length {
     ($( $x:expr ),+) => {
         $(if $x.chars().count() > 255 {
@@ -10,6 +11,8 @@ macro_rules! check_varchar_length {
         };)*
     }
 }
+
+/// Sanity check for dates
 macro_rules! check_date {
     ($( $x:expr ),+) => {
         $(if 1000 > $x.year() || $x.year() > 9999 {
@@ -45,6 +48,7 @@ pub use self::title::TitleId;
 
 use mysql;
 
+/// Type for ids
 pub type Id = u64;
 
 pub type Year = i16;
@@ -65,14 +69,18 @@ pub mod type_aliases {
     pub use super::Date;
     pub use super::Year;
 }
+
+/// Underlaying database
 #[derive(Clone)]
 pub struct Database {
+    /// MYSQL pool
     pool: mysql::Pool,
 }
 
 //static SQL_DATEFORMAT: &str = "%Y-%m-%d";
 
 impl Database {
+    /// Construct a new Database object from given settings
     pub fn from_settings(settings: &settings::Database) -> Result<Database, Error> {
         let mut opts = mysql::OptsBuilder::default();
         opts.ip_or_hostname(settings.hostname.clone())
@@ -96,26 +104,32 @@ impl Database {
         return Ok(Database { pool: pool });
     }
 
+    /// Gets all objects of self type from the underlaying database
     pub fn get_all<T: DMO>(&self) -> Result<Vec<T>, Error> {
         T::get_all(self)
     }
 
+    /// Gets an object of self type with given id from the underlaying database
     pub fn get<T: DMO>(&self, id: T::Id) -> Result<Option<T>, Error> {
         T::get(self, id)
     }
 
+    /// Inserts an object of self type into the underlaying database
     pub fn insert<T: DMO>(&self, inp: &mut T) -> Result<Id, Error> {
         T::insert(self, inp)
     }
 
+    /// Updates an object of self type in the underlaying database
     pub fn update<T: DMO>(&self, up: &T) -> Result<(), Error> {
         T::update(self, up)
     }
 
+    /// Delets an object of self type from the underlaying database
     pub fn delete<T: DMO>(&self, id: T::Id) -> Result<bool, Error> {
         T::delete(self, id)
     }
 
+    /// Gets all Titles associated with the given RpgSystem
     pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<Title>, Error> {
         let results = self.pool
         .prep_exec(
@@ -142,6 +156,7 @@ impl Database {
         return results;
     }
 
+    /// Gets Titles with additional information about availability and rentals of corresponding books
     pub fn get_titles_with_details(&self) -> Result<Vec<(Title, RpgSystem, u32, u32)>, Error> {
         let result = self.pool
             .prep_exec(
@@ -178,6 +193,7 @@ impl Database {
         return result;
     }
 
+    /// Gets a specific Title with additional information about availability and rentals of corresponding books
     pub fn get_title_with_details(
         &self,
         title_id: TitleId,
@@ -221,11 +237,13 @@ impl Database {
     }
 
     //TODO: Unfinished
+    /// Gets all Book objects associated with the given Title
     pub fn get_books_by_title(&self, id: TitleId) -> Result<Vec<Book>, Error> {
         return Ok(vec![]);
     }
 
     // one function to query them all, retrieve their data and store it in stucts
+    /// Gets all Book objects with additional rental information
     pub fn get_books_with_details(&self) -> Result<Vec<(Book, Option<Rental>, bool)>, Error> {
         return self.pool
             .prep_exec(
@@ -271,16 +289,26 @@ impl Database {
     }
 }
 
+/// Implementing the DMO trait guarantees the provision of basic database functions
 pub trait DMO<T = Self> {
+    /// Id
     type Id;
+    /// Gets all objects of self type from the underlaying database
     fn get_all(&Database) -> Result<Vec<T>, Error>;
+    /// Gets an object of self type with given id from the underlaying database
     fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
+    /// Inserts an object of self type into the underlaying database
     fn insert(&Database, &mut T) -> Result<Id, Error>;
+    /// Updates an object of self type in the underlaying database
     fn update(&Database, &T) -> Result<(), Error>;
+    /// Delets an object of self type from the underlaying database
     fn delete(&Database, Self::Id) -> Result<bool, Error>;
 }
 
-#[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
+#[deprecated(
+    since = "0.0.0",
+    note = "this is a stub for later oauth roles"
+)]
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Role {
     pub identifier: String,
@@ -288,6 +316,13 @@ pub struct Role {
 
 #[cfg(test)]
 mod test_util {
+    /*
+    ████████ ███████ ███████ ████████ ███████
+       ██    ██      ██         ██    ██
+       ██    █████   ███████    ██    ███████
+       ██    ██           ██    ██         ██
+       ██    ███████ ███████    ██    ███████
+    */
     use super::super::settings::Database as Db;
     use super::super::settings::TestSettings;
     use super::*;
@@ -364,14 +399,12 @@ mod test_util {
                     2031,
                     None,
                 ))
-            })
-            .and_then(|title_id| {
+            }).and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("uiii-a-uuid-or-sth-similar-2481632"),
                 )).and_then(|member_id| Ok((title_id, member_id)))
-            })
-            .and_then(|(title_id, member_id)| {
+            }).and_then(|(title_id, member_id)| {
                 let mut book = Book::new(
                     None,
                     title_id,
