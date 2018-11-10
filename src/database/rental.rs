@@ -1,21 +1,30 @@
 use super::*;
 use serde_formats;
 
+/// Id type for Rental
 pub type RentalId = Id;
 
+/// Stores all information of a rental process
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Rental {
+    /// Id
     pub id: Option<RentalId>,
+    /// Date of rental
     #[serde(with = "serde_formats::naive_date")]
     pub from: Date,
+    /// Date of end of rental
     #[serde(with = "serde_formats::naive_date")]
     pub to: Date,
+    /// Id of rented Book
     pub book: BookId,
+    /// Type of rentee
     pub rentee_type: EntityType,
+    /// Id of rentee
     pub rentee: EntityId,
 }
 
 impl Rental {
+    /// Construct a new Rental object with given parameters
     pub fn new(
         id: Option<RentalId>,
         from: Date,
@@ -34,6 +43,7 @@ impl Rental {
         };
     }
 
+    /// Construct a new Rental object with given parameters with manual input of rentee type
     pub fn from_db(
         id: RentalId,
         from: Date,
@@ -147,8 +157,7 @@ impl DMO for Rental {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -166,22 +175,30 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, _s("some-external-id"));
-        let result = db.insert(&mut member_in)
+        let result = db
+            .insert(&mut member_in)
             // .and_then(|member|
             //     db.insert_guild(_s("Yordle Academy of Science and Progress"), _s("Piltover"), member.id)
             //         .and_then(|guild| Ok((member, guild)))
             // )
-            .and_then(|member_id|
-                insert_book_default(&db)
-                    .and_then(|(book_id, _)| Ok((book_id, member_id)))
-            ).and_then(|(book_id, member_id)| {
-                let mut rental_in = Rental::new(None, _d(2018, 2, 4), _d(2018, 4, 16), book_id, member_id, EntityType::Member);
+            .and_then(|member_id| {
+                insert_book_default(&db).and_then(|(book_id, _)| Ok((book_id, member_id)))
+            }).and_then(|(book_id, member_id)| {
+                let mut rental_in = Rental::new(
+                    None,
+                    _d(2018, 2, 4),
+                    _d(2018, 4, 16),
+                    book_id,
+                    member_id,
+                    EntityType::Member,
+                );
                 db.insert(&mut rental_in).and_then(|id| Ok((id, rental_in)))
-            }).and_then(|(id, rental_in)|
-                db.get::<Rental>(id).and_then(|rental_out| Ok((rental_in, rental_out)))
-            ).and_then(|(rental_in, rental_out)|
+            }).and_then(|(id, rental_in)| {
+                db.get::<Rental>(id)
+                    .and_then(|rental_out| Ok((rental_in, rental_out)))
+            }).and_then(|(rental_in, rental_out)| {
                 Ok(rental_out.map_or(false, |rec_rental| rental_in == rec_rental))
-            );
+            });
         teardown(settings);
         match result {
             Ok(true) => (),
@@ -275,24 +292,20 @@ mod tests {
                 );
                 db.insert(&mut orig_rental)
                     .and_then(|rental_id| Ok((rental_id, orig_rental)))
-            })
-            .and_then(|(rental_id, orig_rental)| {
+            }).and_then(|(rental_id, orig_rental)| {
                 db.insert(&mut Member::new(None, _s("rincewind")))
                     .and_then(|member_id| Ok((rental_id, orig_rental, member_id)))
-            })
-            .and_then(|(rental_id, orig_rental, member_id)| {
+            }).and_then(|(rental_id, orig_rental, member_id)| {
                 db.insert(&mut Guild::new(
                     None,
                     _s("Yordle Academy of Science and Progress"),
                     _s("Piltover"),
                     member_id,
                 )).and_then(|guild_id| Ok((rental_id, orig_rental, guild_id)))
-            })
-            .and_then(|(rental_id, orig_rental, guild_id)| {
+            }).and_then(|(rental_id, orig_rental, guild_id)| {
                 db.insert(&mut RpgSystem::new(None, _s("Discworld"), None))
                     .and_then(|system_id| Ok((rental_id, orig_rental, guild_id, system_id)))
-            })
-            .and_then(|(rental_id, orig_rental, guild_id, system_id)| {
+            }).and_then(|(rental_id, orig_rental, guild_id, system_id)| {
                 db.insert(&mut Title::new(
                     None,
                     _s("Unseen University Adventures"),
@@ -302,8 +315,7 @@ mod tests {
                     2048,
                     None,
                 )).and_then(|title_id| Ok((rental_id, orig_rental, guild_id, title_id)))
-            })
-            .and_then(|(rental_id, orig_rental, guild_id, title_id)| {
+            }).and_then(|(rental_id, orig_rental, guild_id, title_id)| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -311,8 +323,7 @@ mod tests {
                     EntityType::Guild,
                     _s("impressive"),
                 )).and_then(|book_id| Ok((rental_id, orig_rental, book_id, guild_id)))
-            })
-            .and_then(|(rental_id, mut orig_rental, book_id, guild_id)| {
+            }).and_then(|(rental_id, mut orig_rental, book_id, guild_id)| {
                 orig_rental.from = _d(2090, 10, 11);
                 orig_rental.to = _d(2112, 1, 3);
                 orig_rental.book = book_id;
@@ -320,12 +331,10 @@ mod tests {
                 orig_rental.rentee_type = EntityType::Guild;
                 db.update(&orig_rental)
                     .and_then(|_| Ok((rental_id, orig_rental)))
-            })
-            .and_then(|(rental_id, orig_rental)| {
+            }).and_then(|(rental_id, orig_rental)| {
                 db.get(rental_id)
                     .and_then(|rec_rental| Ok((orig_rental, rec_rental)))
-            })
-            .and_then(|(orig_rental, rec_rental)| {
+            }).and_then(|(orig_rental, rec_rental)| {
                 Ok(rec_rental.map_or(false, |fetched_rental| orig_rental == fetched_rental))
             });
         teardown(settings);
@@ -354,8 +363,7 @@ mod tests {
                     book.owner_type,
                 );
                 db.insert(&mut rental).and_then(|_| Ok(rental))
-            })
-            .and_then(|mut orig_rental| {
+            }).and_then(|mut orig_rental| {
                 orig_rental.from = _d(-99, 10, 11);
                 db.update(&orig_rental)
             });
@@ -381,8 +389,7 @@ mod tests {
                     book.owner_type,
                 );
                 db.insert(&mut rental).and_then(|_| Ok(rental))
-            })
-            .and_then(|mut orig_rental| {
+            }).and_then(|mut orig_rental| {
                 orig_rental.to = _d(-99, 11, 12);
                 db.update(&orig_rental)
             });
@@ -408,8 +415,7 @@ mod tests {
                     book.owner_type,
                 );
                 db.insert(&mut rental).and_then(|_| Ok(rental))
-            })
-            .and_then(|mut orig_rental| {
+            }).and_then(|mut orig_rental| {
                 orig_rental.book = 012481632;
                 db.update(&orig_rental)
             });
@@ -435,8 +441,7 @@ mod tests {
                     book.owner_type,
                 );
                 db.insert(&mut rental).and_then(|_| Ok(rental))
-            })
-            .and_then(|mut orig_rental| {
+            }).and_then(|mut orig_rental| {
                 orig_rental.rentee = 012481632;
                 db.update(&orig_rental)
             });
@@ -462,8 +467,7 @@ mod tests {
                     book.owner_type,
                 );
                 db.insert(&mut rental).and_then(|_| Ok(rental))
-            })
-            .and_then(|mut orig_rental| {
+            }).and_then(|mut orig_rental| {
                 orig_rental.rentee_type = match orig_rental.rentee_type {
                     EntityType::Member => EntityType::Guild,
                     EntityType::Guild => EntityType::Member,

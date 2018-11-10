@@ -1,15 +1,21 @@
 use super::*;
 
+/// Id type for Member
 pub type MemberId = EntityId;
+/// Id type for external identification
 pub type ExternalId = String;
 
+/// Identification information for a person
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Member {
+    /// Id
     pub id: Option<MemberId>,
+    /// External id for identification with KeyCloak
     pub external_id: ExternalId,
 }
 
 impl Member {
+    /// Construct a new Member object with given parameters
     pub fn new(id: Option<MemberId>, external_id: ExternalId) -> Member {
         Member {
             id: id,
@@ -29,8 +35,7 @@ impl DMO for Member {
                 params!{
                     "external_id" => inp.external_id.clone(),
                 },
-            )
-            .map(|result| {
+            ).map(|result| {
                 inp.id = Some(result.last_insert_id());
                 result.last_insert_id()
             })?)
@@ -44,8 +49,7 @@ impl DMO for Member {
                 params!{
                     "member_id" => member_id,
                 },
-            )
-            .map(|result| {
+            ).map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
@@ -54,8 +58,7 @@ impl DMO for Member {
                             id: id,
                             external_id: external_id,
                         }
-                    })
-                    .collect::<Vec<Member>>()
+                    }).collect::<Vec<Member>>()
             })?;
         return Ok(results.pop());
     }
@@ -73,8 +76,7 @@ impl DMO for Member {
                             id: id,
                             external_id: external_id,
                         }
-                    })
-                    .collect()
+                    }).collect()
             })?)
     }
 
@@ -88,8 +90,7 @@ impl DMO for Member {
                     "external_id" => member.external_id.clone(),
                     "id" => member.id,
                 },
-            )
-            .and(Ok(()))?)
+            ).and(Ok(()))?)
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
@@ -100,8 +101,7 @@ impl DMO for Member {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),

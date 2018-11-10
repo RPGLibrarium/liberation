@@ -1,17 +1,25 @@
 use super::*;
 
+/// Id type for Book
 pub type BookId = Id;
 
+/// Book describes a specific (physical) book
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Book {
+    /// Unique id
     pub id: Option<BookId>,
+    /// Title of (physical) book
     pub title: TitleId,
+    /// Type of current possessor
     pub owner_type: EntityType,
+    /// Id of current possessor
     pub owner: EntityId,
+    /// Condition of book
     pub quality: String,
 }
 
 impl Book {
+    /// Construct a new Book object with given parameters
     pub fn new(
         id: Option<BookId>,
         title: TitleId,
@@ -28,6 +36,7 @@ impl Book {
         };
     }
 
+    /// Construct a new Book object with guven parameters with manual input of owner type
     pub fn from_db(
         id: BookId,
         title: TitleId,
@@ -51,7 +60,6 @@ impl Book {
                     "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
                 )),
             };
-
         Ok(Book::new(Some(id), title, owner, owner_type, quality))
     }
 }
@@ -70,7 +78,6 @@ impl DMO for Book {
     })?)
     }
 
-    //TODO: Test
     fn get(db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
         let mut results = db.pool
         .prep_exec(
@@ -82,7 +89,7 @@ impl DMO for Book {
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
                 let (id, title, owner_member, owner_guild, owner_type, quality) = mysql::from_row(row);
-                //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
+                //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.possessor
                 Book::from_db(id, title, owner_member, owner_guild, owner_type, quality).unwrap()
             }).collect::<Vec<Book>>()
         })?;
@@ -135,8 +142,7 @@ impl DMO for Book {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -151,15 +157,14 @@ mod tests {
     use database::*;
 
     #[test]
-    fn insert_book_correct() {
+    fn insert_and_get_book_correct() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, orig_book)| {
                 db.get(book_id)
                     .and_then(|rec_book| Ok((orig_book, rec_book)))
-            })
-            .and_then(|(orig_book, rec_book)| {
+            }).and_then(|(orig_book, rec_book)| {
                 Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
             });
         teardown(settings);
@@ -189,14 +194,12 @@ mod tests {
                     2031,
                     None,
                 ))
-            })
-            .and_then(|title_id| {
+            }).and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("uiii-a-uuid-or-sth-similar-2481632"),
                 )).and_then(|member_id| Ok((title_id, member_id)))
-            })
-            .and_then(|(title_id, member_id)| {
+            }).and_then(|(title_id, member_id)| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -219,8 +222,8 @@ mod tests {
     fn insert_book_invalid_title() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result =
-            db.insert(&mut Member::new(
+        let result = db
+            .insert(&mut Member::new(
                 None,
                 _s("uiii-a-uuid-or-sth-similar-2481632"),
             )).and_then(|member_id| {
@@ -255,8 +258,7 @@ mod tests {
                     2031,
                     None,
                 ))
-            })
-            .and_then(|title_id| {
+            }).and_then(|title_id| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -289,8 +291,7 @@ mod tests {
                     2031,
                     None,
                 ))
-            })
-            .and_then(|title_id| {
+            }).and_then(|title_id| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -322,33 +323,28 @@ mod tests {
                     2066,
                     None,
                 ))
-            })
-            .and_then(|title_id| {
+            }).and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("annother-uuuuuiiii-iiiiddd-123443214"),
                 )).and_then(|member_id| Ok((title_id, member_id)))
-            })
-            .and_then(|(title_id, member_id)| {
+            }).and_then(|(title_id, member_id)| {
                 db.insert(&mut Guild::new(
                     None,
                     _s("Ravenclaw"),
                     _s("Sesame Street 123"),
                     member_id,
                 )).and_then(|guild_id| Ok((title_id, guild_id)))
-            })
-            .and_then(|(title_id, guild_id)| {
+            }).and_then(|(title_id, guild_id)| {
                 insert_book_default(&db)
                     .and_then(|(book_id, orig_book)| Ok((orig_book, book_id, title_id, guild_id)))
-            })
-            .and_then(|(mut orig_book, book_id, title_id, guild_id)| {
+            }).and_then(|(mut orig_book, book_id, title_id, guild_id)| {
                 orig_book.title = title_id;
                 orig_book.owner = guild_id;
                 orig_book.owner_type = EntityType::Guild;
                 orig_book.quality = _s("bad");
                 db.update(&orig_book).and_then(|_| Ok((orig_book, book_id)))
-            })
-            .and_then(|(orig_book, book_id)| {
+            }).and_then(|(orig_book, book_id)| {
                 db.get(book_id).and_then(|rec_book| {
                     Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
                 })

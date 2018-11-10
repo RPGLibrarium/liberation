@@ -2,15 +2,21 @@ use super::*;
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
+/// Id type for Entity
 pub type EntityId = Id;
 
+/// EntityType describes whether an entity is a person or an organisation
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum EntityType {
+    /// Member of a guild
     Member,
+    /// Guild
     Guild,
 }
 
 impl EntityType {
+    // TODO: document possible strings
+    /// Converts a string describing an EntityType to an EntityType
     pub fn from_str(s: &str) -> Result<EntityType, String> {
         match s {
             "member" => Ok(EntityType::Member),
@@ -19,6 +25,7 @@ impl EntityType {
         }
     }
 
+    /// Converts an EntityType to a corresponding string
     pub fn to_string(&self) -> String {
         match self {
             EntityType::Member => String::from("member"),

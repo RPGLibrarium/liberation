@@ -1,20 +1,30 @@
 use super::*;
-
 use mysql;
+
+/// Id type for Title
 pub type TitleId = Id;
 
+/// Describes an abstract book. Copys of the book are stored in the Book type.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Title {
+    /// Id
     pub id: Option<TitleId>,
+    /// Name/title of the book
     pub name: String,
+    /// RPG System to which the book belongs
     pub system: RpgSystemId,
+    /// Language
     pub language: String,
+    /// Publisher
     pub publisher: String,
+    /// Year of publishing
     pub year: Year,
+    /// Cover image of book
     pub coverimage: Option<String>,
 }
 
 impl Title {
+    /// Construct a new Title object with given parameters
     pub fn new(
         id: Option<TitleId>,
         name: String,
@@ -122,8 +132,7 @@ impl DMO for Title {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -227,8 +236,7 @@ mod tests {
                 );
                 db.insert(&mut orig_title)
                     .and_then(|title_id| Ok((title_id, orig_title)))
-            })
-            .and_then(|(title_id, orig_title)| {
+            }).and_then(|(title_id, orig_title)| {
                 db.get(title_id).and_then(|rec_title| {
                     Ok(rec_title.map_or(false, |fetched_title| orig_title == fetched_title))
                 })
@@ -261,8 +269,7 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            })
-            .and_then(|mut orig_title| {
+            }).and_then(|mut orig_title| {
                 orig_title.name = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -290,8 +297,7 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            })
-            .and_then(|mut orig_title| {
+            }).and_then(|mut orig_title| {
                 orig_title.language = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -319,8 +325,7 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            })
-            .and_then(|mut orig_title| {
+            }).and_then(|mut orig_title| {
                 orig_title.publisher = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -349,8 +354,7 @@ mod tests {
                 );
                 db.insert(&mut orig_title)
                     .and_then(|title_id| Ok((title_id, orig_title)))
-            })
-            .and_then(|(title_id, mut orig_title)| {
+            }).and_then(|(title_id, mut orig_title)| {
                 orig_title.name = _s("new name");
                 orig_title.year = 1999;
                 orig_title.publisher = _s("new publisher");

@@ -1,16 +1,22 @@
 use super::*;
 use std::string::String;
 
+/// Id type for RpgSystem
 pub type RpgSystemId = Id;
 
+/// An RPG System
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct RpgSystem {
+    /// Id
     pub id: Option<RpgSystemId>,
+    /// Name of RPG System
     pub name: String,
+    /// Common abbreviation of the system name, e.g. D&D
     pub shortname: Option<String>,
 }
 
 impl RpgSystem {
+    /// Construct a new RpgSystem object with given parameters
     pub fn new(id: Option<RpgSystemId>, name: String, shortname: Option<String>) -> RpgSystem {
         RpgSystem {
             id: id,
@@ -32,8 +38,7 @@ impl DMO for RpgSystem {
                     "name" => inp.name.clone(),
                     "shortname" => inp.shortname.clone()
                 },
-            )
-            .map(|result| {
+            ).map(|result| {
                 inp.id = Some(result.last_insert_id());
                 result.last_insert_id()
             })?)
@@ -45,8 +50,7 @@ impl DMO for RpgSystem {
             .prep_exec(
                 "select rpg_system_id, name, shortname from rpg_systems;",
                 (),
-            )
-            .map(|result| {
+            ).map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
@@ -60,8 +64,7 @@ impl DMO for RpgSystem {
                             name: name,
                             shortname: short,
                         }
-                    })
-                    .collect()
+                    }).collect()
             })?)
     }
 
@@ -102,8 +105,7 @@ impl DMO for RpgSystem {
                     "short" => rpgsystem.shortname.clone(),
                     "id" => rpgsystem.id,
                 },
-            )
-            .map(|_| ())?)
+            ).map(|_| ())?)
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
@@ -114,8 +116,7 @@ impl DMO for RpgSystem {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -263,6 +264,7 @@ mod tests {
         }
     }
 
+    //TODO
     #[test]
     fn get_rpg_system_by_id_correct() {}
 }

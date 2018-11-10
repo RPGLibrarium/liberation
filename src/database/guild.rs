@@ -1,16 +1,23 @@
 use super::*;
 
+/// Id type for guild
 pub type GuildId = EntityId;
 
+/// Any organisation involved in book renting
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Guild {
+    /// Unique id
     pub id: Option<GuildId>,
+    /// Name of Guild
     pub name: String,
+    /// Address of Guild
     pub address: String,
+    /// Id of Member to contact
     pub contact: MemberId,
 }
 
 impl Guild {
+    /// Construct a new Guild object with given parameters
     pub fn new(id: Option<GuildId>, name: String, address: String, contact: MemberId) -> Guild {
         Guild {
             id: id,
@@ -65,8 +72,7 @@ impl DMO for Guild {
             .prep_exec(
                 "select guild_id, name, address, contact_by_member_id from guilds;",
                 (),
-            )
-            .map(|result| {
+            ).map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
@@ -77,8 +83,7 @@ impl DMO for Guild {
                             address: address,
                             contact: contact,
                         }
-                    })
-                    .collect()
+                    }).collect()
             })?)
     }
 
@@ -101,8 +106,7 @@ impl DMO for Guild {
                 params!{
                     "id" => id,
                 },
-            )
-            .map_err(|err| Error::DatabaseError(err))
+            ).map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -131,8 +135,7 @@ mod tests {
                 );
                 db.insert(&mut orig_guild)
                     .and_then(|guild_id| Ok((guild_id, orig_guild)))
-            })
-            .and_then(|(guild_id, orig_guild)| {
+            }).and_then(|(guild_id, orig_guild)| {
                 db.get(guild_id).and_then(|rec_guild| {
                     Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
                 })
@@ -186,19 +189,16 @@ mod tests {
                 );
                 db.insert(&mut orig_guild)
                     .and_then(|guild_id| Ok((guild_id, orig_guild)))
-            })
-            .and_then(|(guild_id, orig_guild)| {
+            }).and_then(|(guild_id, orig_guild)| {
                 db.insert(&mut Member::new(None, _s("other_id")))
                     .and_then(|other_member_id| Ok((guild_id, orig_guild, other_member_id)))
-            })
-            .and_then(|(guild_id, mut orig_guild, other_member_id)| {
+            }).and_then(|(guild_id, mut orig_guild, other_member_id)| {
                 orig_guild.name = _s("RPG Librarium Aaachen");
                 orig_guild.address = _s("postsfadfeddfasdfasdff");
                 orig_guild.contact = other_member_id;
                 db.update(&orig_guild)
                     .and_then(|_| Ok((guild_id, orig_guild)))
-            })
-            .and_then(|(guild_id, orig_guild)| {
+            }).and_then(|(guild_id, orig_guild)| {
                 db.get(guild_id).and_then(|rec_guild| {
                     Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
                 })
@@ -231,8 +231,7 @@ mod tests {
                 );
                 db.insert(&mut orig_guild)
                     .and_then(|guild_id| Ok(orig_guild))
-            })
-            .and_then(|mut orig_guild| {
+            }).and_then(|mut orig_guild| {
                 orig_guild.name = _s(TOO_LONG_STRING);
                 db.update(&orig_guild)
             });
@@ -262,8 +261,7 @@ mod tests {
                     member_id,
                 );
                 db.insert(&mut orig_guild).and_then(|_| Ok(orig_guild))
-            })
-            .and_then(|mut orig_guild| {
+            }).and_then(|mut orig_guild| {
                 orig_guild.address = _s(TOO_LONG_STRING);
                 db.update(&orig_guild)
             });
@@ -312,8 +310,7 @@ mod tests {
                 );
                 db.insert(&mut orig_guild)
                     .and_then(|guild_id| Ok(orig_guild))
-            })
-            .and_then(|mut orig_guild| {
+            }).and_then(|mut orig_guild| {
                 orig_guild.contact = 12345;
                 db.update(&orig_guild)
             });
