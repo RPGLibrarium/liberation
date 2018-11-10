@@ -36,7 +36,7 @@ impl Book {
         };
     }
 
-    /// Construct a new Book object with guven parameters with manual input of owner type
+    /// Construct a new Book object with given parameters with manual input of owner type
     pub fn from_db(
         id: BookId,
         title: TitleId,
