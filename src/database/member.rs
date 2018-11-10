@@ -26,7 +26,7 @@ impl Member {
 
 impl DMO for Member {
     type Id = MemberId;
-    fn insert(db: &Database, inp: &mut Member) -> Result<MemberId, Error> {
+    fn insert(db: &Database, inp: &Member) -> Result<MemberId, Error> {
         check_varchar_length!(inp.external_id);
         Ok(db
             .pool
@@ -35,10 +35,7 @@ impl DMO for Member {
                 params!{
                     "external_id" => inp.external_id.clone(),
                 },
-            ).map(|result| {
-                inp.id = Some(result.last_insert_id());
-                result.last_insert_id()
-            })?)
+            ).map(|result| result.last_insert_id())?)
     }
 
     fn get(db: &Database, member_id: MemberId) -> Result<Option<Member>, Error> {

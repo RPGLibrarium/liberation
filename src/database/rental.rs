@@ -107,7 +107,7 @@ impl DMO for Rental {
     })?)
     }
 
-    fn insert(db: &Database, inp: &mut Rental) -> Result<RentalId, Error> {
+    fn insert(db: &Database, inp: &Rental) -> Result<RentalId, Error> {
         check_date!(inp.from, inp.to);
         Ok(db.pool.prep_exec("insert into rentals (from_date, to_date, book_by_id, rentee_member_by_id, rentee_guild_by_id) values (:from, :to, :book, :rentee_member, :rentee_guild)",
         params!{
@@ -122,10 +122,8 @@ impl DMO for Rental {
                 EntityType::Member => None,
                 EntityType::Guild => Some(inp.rentee),
             },
-        }).map(|result| {
-            inp.id = Some(result.last_insert_id());
-            result.last_insert_id()
-        })?)
+        }).map(|result| result.last_insert_id()
+        )?)
     }
 
     fn update(db: &Database, rental: &Rental) -> Result<(), Error> {

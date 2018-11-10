@@ -2,19 +2,20 @@ mod dto;
 
 pub use self::dto::*;
 
-use actix_web::error as actix_error;
+use actix_web::error::Error as ActixError;
+use actix_web::error::InternalError;
+
 use actix_web::server::HttpHandlerTask;
 use actix_web::{
     fs, http, server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Json, Responder,
-    ResponseError, Result,
 };
 use auth::roles::*;
-use auth::{assert_roles, get_claims_for_req, Claims, Keycloak, KeycloakCache};
+use auth::{assert_roles, Claims, KeycloakCache};
 use business as bus;
 use database::*;
-use error::Error;
-use futures::future::{err, result, Future};
-use std::sync::Arc;
+use futures::future::Future;
+
+use core::num::ParseIntError;
 
 /// Handling of external modules
 #[derive(Clone)]
@@ -88,7 +89,7 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 // https://actix.rs/actix-web/actix_web/trait.Responder.html
 
 /// Get all RpgSystems (if authentification is successful)
-fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_rpg_systems(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     assert_roles(&_req, vec![])?;
 
     return bus::get_rpgsystems(&_req.state().db, &_req.state().kc)
@@ -98,7 +99,7 @@ fn get_rpg_systems(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Get a requested RpgSystem (if authentification is successful)
-fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     assert_roles(&_req, vec![])?;
 
     let id: RpgSystemId = _req.match_info().query("systemid")?;
@@ -107,8 +108,8 @@ fn get_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Insert a new RpgSystem (if authentification is successful)
-fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
+fn post_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
+    let claims: Option<Claims> = assert_roles(&_req, vec!["admin", "librarian"])?;
 
     let localdb = _req.state().db.clone();
     Ok(_req
@@ -124,7 +125,7 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Update an existing RpgSystem (if authentification is successful)
-fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+fn put_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let localdb = _req.state().db.clone();
@@ -133,7 +134,7 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
     Ok(_req
         .json()
         .from_err()
-        .and_then(|mut obj: dto::PutPostRpgSystem| {
+        .and_then(move |mut obj: dto::PutPostRpgSystem| {
             obj.rpgsystem.id = Some(id);
             return Ok(obj);
         }).and_then(move |system: PutPostRpgSystem| bus::put_rpgsystem(&localdb, claims, &system))
@@ -142,7 +143,7 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Delete a given RpgSystem (if authentification is successful)
-fn delete_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
+fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: RpgSystemId = _req.match_info().query("systemid")?;
@@ -152,7 +153,7 @@ fn delete_rpg_system(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Get all Titles (if authentification is successful)
-fn get_titles(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_titles(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     assert_roles(&_req, vec![])?;
 
     bus::get_titles(&_req.state().db).and_then(|titles| Ok(Json(titles)))
@@ -168,14 +169,14 @@ fn get_title(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Insert a new Title (if authentification is successful)
-fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
+fn post_title(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let localdb = _req.state().db.clone();
     Ok(_req
         .json()
         .from_err()
-        .and_then(move |mut obj: dto::PutPostTitle| bus::post_title(&localdb, claims, obj))
+        .and_then(move |obj: dto::PutPostTitle| bus::post_title(&localdb, claims, obj))
         .and_then(|title_id| {
             Ok(HttpResponse::Created()
                 .header("Location", format!("v1/titles/{}", title_id))
@@ -184,7 +185,7 @@ fn post_title(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Update an existing Title (if authentification is successful)
-fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
+fn put_title(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let localdb = _req.state().db.clone();
@@ -193,7 +194,7 @@ fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
     Ok(_req
         .json()
         .from_err()
-        .and_then(|mut obj: dto::PutPostTitle| {
+        .and_then(move |mut obj: dto::PutPostTitle| {
             obj.title.id = Some(id);
             Ok(obj)
         }).and_then(move |title: PutPostTitle| bus::put_title(&localdb, claims, title))
@@ -201,7 +202,7 @@ fn put_title(_req: HttpRequest<AppState>) -> impl Responder {
         .responder())
 }
 
-fn delete_title(_req: HttpRequest<AppState>) -> impl Responder {
+fn delete_title(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: TitleId = _req.match_info().query("titleid")?;
@@ -211,14 +212,14 @@ fn delete_title(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Get all Books (if authentification is successful)
-fn get_books(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_books(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     bus::get_books(&_req.state().db, claims).and_then(|books| Ok(Json(books)))
 }
 
 /// Get a requested Book (if authentification is successful)
-fn get_book(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let id: BookId = _req.match_info().query("bookid")?;
@@ -227,7 +228,7 @@ fn get_book(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Insert a new Book (if authentification is successful)
-fn post_book(_req: HttpRequest<AppState>) -> impl Responder {
+fn post_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let localdb = _req.state().db.clone();
@@ -243,7 +244,7 @@ fn post_book(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Update an existing Book (if authentification is successful)
-fn put_book(_req: HttpRequest<AppState>) -> impl Responder {
+fn put_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let localdb = _req.state().db.clone();
@@ -252,7 +253,7 @@ fn put_book(_req: HttpRequest<AppState>) -> impl Responder {
     Ok(_req
         .json()
         .from_err()
-        .and_then(|mut obj: PutPostBook| {
+        .and_then(move |mut obj: PutPostBook| {
             obj.book.id = Some(id);
             Ok(obj)
         }).and_then(move |book: PutPostBook| bus::put_book(&localdb, claims, book))
@@ -260,7 +261,7 @@ fn put_book(_req: HttpRequest<AppState>) -> impl Responder {
         .responder())
 }
 
-fn delete_book(_req: HttpRequest<AppState>) -> impl Responder {
+fn delete_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: BookId = _req.match_info().query("bookid")?;
@@ -270,14 +271,14 @@ fn delete_book(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Get all Members (if authentification is successful)
-fn get_members(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_members(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     bus::get_members(&_req.state().db, claims).and_then(|members| Ok(Json(members)))
 }
 
 /// Get a requested Member (if authentification is successful)
-fn get_member(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_member(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![])?;
 
     let id: MemberId = _req.match_info().query("memberid")?;
@@ -296,14 +297,14 @@ fn post_member_inventory(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Get all Guilds (if authentification is successful)
-fn get_guilds(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_guilds(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
 
     bus::get_guilds(&_req.state().db, claims).and_then(|guilds| Ok(Json(guilds)))
 }
 
 /// Get a requested Guild (if authentification is successful)
-fn get_guild(_req: HttpRequest<AppState>) -> impl Responder {
+fn get_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_MEMBER])?;
 
     let id: GuildId = _req.match_info().query("guildid")?;
@@ -312,7 +313,24 @@ fn get_guild(_req: HttpRequest<AppState>) -> impl Responder {
 }
 
 /// Insert a new Guild (if authentification is successful)
-fn post_guild(_req: HttpRequest<AppState>) -> impl Responder {
+fn post_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
+    let claims = assert_roles(&_req, vec![ROLE_ADMIN])?;
+
+    let localdb = _req.state().db.clone();
+
+    Ok(_req
+        .json()
+        .from_err()
+        .and_then(move |mut obj: dto::PutPostGuild| bus::post_guild(&localdb, claims, obj))
+        .and_then(|id| {
+            Ok(HttpResponse::Created()
+                .header("Location", format!("v1/guilds/{}", id))
+                .finish())
+        }).responder())
+}
+
+/// Update an existing Guild (if authentification is successful)
+fn put_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let localdb = _req.state().db.clone();
@@ -321,17 +339,12 @@ fn post_guild(_req: HttpRequest<AppState>) -> impl Responder {
     Ok(_req
         .json()
         .from_err()
-        .and_then(|mut obj: PutPostGuild| {
+        .and_then(move |mut obj: PutPostGuild| {
             obj.guild.id = Some(id);
             Ok(obj)
         }).and_then(move |guild: PutPostGuild| bus::put_guild(&localdb, claims, guild))
         .and_then(|()| Ok(HttpResponse::Ok().finish()))
         .responder())
-}
-
-/// Update an existing Guild (if authentification is successful)
-fn put_guild(_req: HttpRequest<AppState>) -> impl Responder {
-    "PUT Guild"
 }
 
 /// Get the inventory of a Guild (if authentification is successful)

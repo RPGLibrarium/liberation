@@ -313,7 +313,7 @@ pub fn assert_roles(
                 for role in roles.iter() {
                     //let roleString = String::from(*role);
                     if cl.roles.contains(&String::from(*role)) {
-                        return Ok(claims);
+                        return Ok(Some(cl));
                     }
                 }
                 Err(Error::YouShallNotPassError)

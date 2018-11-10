@@ -31,17 +31,15 @@ impl Guild {
 impl DMO for Guild {
     type Id = GuildId;
 
-    fn insert(db: &Database, inp: &mut Guild) -> Result<GuildId, Error> {
+    fn insert(db: &Database, inp: &Guild) -> Result<GuildId, Error> {
         check_varchar_length!(inp.name, inp.address);
         Ok(db.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
         params!{
             "name" => inp.name.clone(),
             "address" => inp.address.clone(),
             "contact" => inp.contact,
-        }).map(|result| {
-            inp.id = Some(result.last_insert_id());
-            result.last_insert_id()
-        })?)
+        }).map(|result|result.last_insert_id()
+        )?)
     }
 
     fn get(db: &Database, guild_id: GuildId) -> Result<Option<Guild>, Error> {
@@ -157,7 +155,7 @@ mod tests {
         let db = Database::from_settings(&settings).unwrap();
 
         let result = db
-            .insert(&mut Member::new(None, _s("external_id")))
+            .insert(&Member::new(None, _s("external_id")))
             .and_then(|member_id| {
                 db.insert(&mut Guild::new(
                     None,

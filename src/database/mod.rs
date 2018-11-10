@@ -115,7 +115,7 @@ impl Database {
     }
 
     /// Inserts an object of self type into the underlaying database
-    pub fn insert<T: DMO>(&self, inp: &mut T) -> Result<Id, Error> {
+    pub fn insert<T: DMO>(&self, inp: &T) -> Result<Id, Error> {
         T::insert(self, inp)
     }
 
@@ -298,7 +298,7 @@ pub trait DMO<T = Self> {
     /// Gets an object of self type with given id from the underlaying database
     fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
     /// Inserts an object of self type into the underlaying database
-    fn insert(&Database, &mut T) -> Result<Id, Error>;
+    fn insert(&Database, &T) -> Result<Id, Error>;
     /// Updates an object of self type in the underlaying database
     fn update(&Database, &T) -> Result<(), Error>;
     /// Delets an object of self type from the underlaying database

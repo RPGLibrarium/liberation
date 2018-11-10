@@ -92,7 +92,7 @@ pub fn post_title(
     title: PutPostTitle,
 ) -> Result<TitleId, Error> {
     //TODO: Error handling
-    Ok(db.insert::<Title>(&mut title.title)?)
+    Ok(db.insert::<Title>(&title.title)?)
 }
 
 /// Update a specific title in database

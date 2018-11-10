@@ -10,6 +10,7 @@ extern crate actix_web;
 extern crate base64;
 extern crate chrono;
 extern crate config;
+extern crate core;
 extern crate failure;
 extern crate futures;
 extern crate jsonwebtoken;

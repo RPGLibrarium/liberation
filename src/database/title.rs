@@ -94,7 +94,7 @@ impl DMO for Title {
 
     //TODO Test
 
-    fn insert(db: &Database, inp: &mut Title) -> Result<TitleId, Error> {
+    fn insert(db: &Database, inp: &Title) -> Result<TitleId, Error> {
         check_varchar_length!(inp.name, inp.language, inp.publisher);
         Ok(db.pool.prep_exec("insert into titles (name, rpg_system_by_id, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
         params!{
@@ -104,10 +104,7 @@ impl DMO for Title {
             "publisher" => inp.publisher.clone(),
             "year" => inp.year,
             "coverimage" => inp.coverimage.clone(),
-        }).map(|result| {
-                inp.id = Some(result.last_insert_id());
-                return result.last_insert_id()
-        })?)
+        }).map(|result| result.last_insert_id())?)
     }
 
     fn update(db: &Database, title: &Title) -> Result<(), Error> {

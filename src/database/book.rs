@@ -96,7 +96,7 @@ impl DMO for Book {
         return Ok(results.pop());
     }
 
-    fn insert(db: &Database, inp: &mut Book) -> Result<BookId, Error> {
+    fn insert(db: &Database, inp: &Book) -> Result<BookId, Error> {
         check_varchar_length!(inp.quality);
         Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
         params!{
@@ -111,7 +111,6 @@ impl DMO for Book {
             },
             "quality" => inp.quality.clone(),
         }).map(|result| {
-                inp.id = Some(result.last_insert_id());
                 result.last_insert_id()
         })?)
     }

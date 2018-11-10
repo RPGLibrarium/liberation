@@ -28,7 +28,7 @@ impl RpgSystem {
 
 impl DMO for RpgSystem {
     type Id = RpgSystemId;
-    fn insert(db: &Database, inp: &mut RpgSystem) -> Result<RpgSystemId, Error> {
+    fn insert(db: &Database, inp: &RpgSystem) -> Result<RpgSystemId, Error> {
         check_varchar_length!(inp.name);
         Ok(db
             .pool
@@ -38,10 +38,7 @@ impl DMO for RpgSystem {
                     "name" => inp.name.clone(),
                     "shortname" => inp.shortname.clone()
                 },
-            ).map(|result| {
-                inp.id = Some(result.last_insert_id());
-                result.last_insert_id()
-            })?)
+            ).map(|result| result.last_insert_id())?)
     }
 
     fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {

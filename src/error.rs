@@ -1,5 +1,6 @@
 use actix_web::client::SendRequestError;
 use actix_web::{error, HttpResponse, ResponseError};
+use core::num::ParseIntError;
 use failure::Fail;
 use mysql::Error as MySqlError;
 use oauth2::basic::BasicErrorResponseType;
@@ -31,7 +32,7 @@ pub enum Error {
     /// Missing a required claim -> 403
     YouShallNotPassError,
     ActixError(error::Error),
-    ActixInternalError(error::InternalError),
+    ActixInternalError(error::InternalError<ParseIntError>),
 }
 
 impl From<MySqlError> for Error {
@@ -59,14 +60,14 @@ impl From<RequestTokenError<BasicErrorResponseType>> for Error {
     }
 }
 
-impl From<error::Error> for Error {
-    fn from(error: error::Error) -> Self {
-        Error::ActixError(error)
-    }
-}
+// impl From<error::Error> for Error {
+//     fn from(error: error::Error) -> Self {
+//         Error::ActixError(error)
+//     }
+// }
 
-impl<T> From<error::InternalError<T>> for Error {
-    fn from(error: error::InternalError<T>) -> Self {
+impl From<error::InternalError<ParseIntError>> for Error {
+    fn from(error: error::InternalError<ParseIntError>) -> Self {
         Error::ActixInternalError(error)
     }
 }
@@ -84,7 +85,7 @@ impl fmt::Display for Error {
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
             Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             Error::ActixInternalError(ref err) => write!(f, "{{ {} }}", err),
-            Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
+            // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }
     }
@@ -105,8 +106,8 @@ impl ResponseError for Error {
                 ).finish(),
             Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
-            Error::ActixError(err) => err.as_response_error().error_response(),
-            Error::ActixInternalError(err) => err.error_response(),
+            // Error::ActixError(err) => err.as_response_error().error_response(),
+            // Error::ActixInternalError(err) => err.error_response(),
             _ => HttpResponse::InternalServerError().body(format!("{}", self)),
         }
     }
