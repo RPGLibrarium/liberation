@@ -30,7 +30,7 @@
       <button class="action simple" data-method="GET" data-path="v1/titles"></button>
       <button class="action simple" data-method="GET" data-path="v1/rpgsystems"></button>
       <hr/>
-      <button class="action input" data-method="POST" data-path="v1/rpgsystems" data-inputs='[{"name":"name", "type":"text", "required":true}]' data-property="rpgsystem"></button>
+      <button class="action input" data-method="POST" data-path="v1/rpgsystems" data-inputs='[{"name":"name", "type":"text", "required":true}, {"name":"shortname", "type":"text", "required":false}]' data-property="rpgsystem"></button>
       <button class="action input" data-method="POST" data-path="v1/titles" data-inputs='[{"name":"name"},{"name":"system", "type":"number"},{"name":"language"},{"name":"publisher"},{"name":"year","type":"number"},{"name":"coverimage","required":false}]' data-property="title"></button>
     </div>
     <div id="result">» RESULT HERE «</div>
