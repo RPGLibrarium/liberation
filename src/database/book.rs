@@ -149,6 +149,7 @@ impl DMO for Book {
             })?)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
@@ -161,10 +162,17 @@ mod tests {
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db)
             .and_then(|(book_id, orig_book)| {
-                db.get(book_id)
-                    .and_then(|rec_book| Ok((orig_book, rec_book)))
-            }).and_then(|(orig_book, rec_book)| {
-                Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
+                db.get(book_id).and_then(|rec_book| {
+                    Ok((
+                        Book {
+                            id: Some(book_id),
+                            ..orig_book
+                        },
+                        rec_book,
+                    ))
+                })
+            }).and_then(|(book, rec_book)| {
+                Ok(rec_book.map_or(false, |fetched_book| book == fetched_book))
             });
         teardown(settings);
         match result {
@@ -338,14 +346,19 @@ mod tests {
                 insert_book_default(&db)
                     .and_then(|(book_id, orig_book)| Ok((orig_book, book_id, title_id, guild_id)))
             }).and_then(|(mut orig_book, book_id, title_id, guild_id)| {
-                orig_book.title = title_id;
-                orig_book.owner = guild_id;
-                orig_book.owner_type = EntityType::Guild;
-                orig_book.quality = _s("bad");
-                db.update(&orig_book).and_then(|_| Ok((orig_book, book_id)))
-            }).and_then(|(orig_book, book_id)| {
+                let book_update = Book {
+                    id: Some(book_id),
+                    title: title_id,
+                    owner: guild_id,
+                    owner_type: EntityType::Guild,
+                    quality: _s("bad"),
+                    ..orig_book
+                };
+                db.update(&book_update)
+                    .and_then(|_| Ok((book_update, book_id)))
+            }).and_then(|(book_update, book_id)| {
                 db.get(book_id).and_then(|rec_book| {
-                    Ok(rec_book.map_or(false, |fetched_book| orig_book == fetched_book))
+                    Ok(rec_book.map_or(false, |fetched_book| book_update == fetched_book))
                 })
             });
         teardown(settings);
@@ -364,8 +377,12 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
-            orig_book.title = 0123481642;
-            db.update(&orig_book)
+            let book_update = Book{
+                id: Some(book_id),
+                title: 012481642,
+                ..orig_book
+            };
+            db.update(&book_update)
         });
         teardown(settings);
         match result {
@@ -379,11 +396,14 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
-            orig_book.owner = 0123481642;
-            db.update(&orig_book)
+            let book_update = Book{
+                id: Some(book_id),
+                owner: 012481642,
+                ..orig_book
+            };
+            db.update(&book_update)
         });
         teardown(settings);
-        println!(" >> res: {:?}", result);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
@@ -395,8 +415,12 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
-            orig_book.owner_type = EntityType::Guild;
-            db.update(&orig_book)
+            let book_update = Book{
+                id: Some(book_id),
+                owner_type: EntityType::Guild,
+                ..orig_book
+            };
+            db.update(&book_update)
         });
         teardown(settings);
         match result {
