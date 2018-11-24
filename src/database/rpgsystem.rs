@@ -133,12 +133,15 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), Some(_s("SR5👿")));
-        let system_out: Result<Option<RpgSystem>, Error> = db
-            .insert(&mut system_in)
-            .and_then(|id| db.get::<RpgSystem>(id));
+
+        let result = db.insert(&system_in).and_then(|id|
+            Ok((id,db.get::<RpgSystem>(id)?))
+        );
 
         teardown(settings);
-        assert_eq!(system_in, system_out.unwrap().unwrap());
+        let (new_id, system_out) = result.unwrap();
+        system_in.id = Some(new_id);
+        assert_eq!(system_in, system_out.unwrap());
     }
 
     #[test]
@@ -146,12 +149,15 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
-        let system_out: Result<Option<RpgSystem>, Error> = db
-            .insert(&mut system_in)
-            .and_then(|id| db.get::<RpgSystem>(id));
+
+        let result = db.insert(&system_in).and_then(|id|
+            Ok((id,db.get::<RpgSystem>(id)?))
+        );
 
         teardown(settings);
-        assert_eq!(system_in, system_out.unwrap().unwrap());
+        let (new_id, system_out) = result.unwrap();
+        system_in.id = Some(new_id);
+        assert_eq!(system_in, system_out.unwrap());
     }
 
     #[test]
@@ -193,7 +199,7 @@ mod tests {
 
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
         let result = db.insert(&mut system_in).and_then(|id| {
-            system_in.name = _s("SR5");
+            system_in.id = Some(id);
             db.update(&system_in).and_then(|_| {
                 db.get::<RpgSystem>(id).and_then(|recovered| {
                     Ok(recovered.map_or(false, |fetched_system| system_in == fetched_system))
