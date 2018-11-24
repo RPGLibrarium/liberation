@@ -232,7 +232,10 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title)
-                    .and_then(|title_id| Ok((title_id, orig_title)))
+                    .and_then(|title_id| {
+                        orig_title.id = Some(title_id);
+                        Ok((title_id, orig_title))
+                    })
             }).and_then(|(title_id, orig_title)| {
                 db.get(title_id).and_then(|rec_title| {
                     Ok(rec_title.map_or(false, |fetched_title| orig_title == fetched_title))
@@ -352,6 +355,7 @@ mod tests {
                 db.insert(&mut orig_title)
                     .and_then(|title_id| Ok((title_id, orig_title)))
             }).and_then(|(title_id, mut orig_title)| {
+                orig_title.id = Some(title_id);
                 orig_title.name = _s("new name");
                 orig_title.year = 1999;
                 orig_title.publisher = _s("new publisher");
