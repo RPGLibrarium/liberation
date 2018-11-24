@@ -132,7 +132,10 @@ mod tests {
                     member_id,
                 );
                 db.insert(&mut orig_guild)
-                    .and_then(|guild_id| Ok((guild_id, orig_guild)))
+                    .and_then(|guild_id| {
+                        orig_guild.id = Some(guild_id);
+                        Ok((guild_id, orig_guild))
+                    })
             }).and_then(|(guild_id, orig_guild)| {
                 db.get(guild_id).and_then(|rec_guild| {
                     Ok(rec_guild.map_or(false, |fetched_guild| orig_guild == fetched_guild))
@@ -186,7 +189,10 @@ mod tests {
                     member_id,
                 );
                 db.insert(&mut orig_guild)
-                    .and_then(|guild_id| Ok((guild_id, orig_guild)))
+                    .and_then(|guild_id| {
+                        orig_guild.id = Some(guild_id);
+                        Ok((guild_id, orig_guild))
+                    })
             }).and_then(|(guild_id, orig_guild)| {
                 db.insert(&mut Member::new(None, _s("other_id")))
                     .and_then(|other_member_id| Ok((guild_id, orig_guild, other_member_id)))
@@ -307,7 +313,10 @@ mod tests {
                     member_id,
                 );
                 db.insert(&mut orig_guild)
-                    .and_then(|guild_id| Ok(orig_guild))
+                    .and_then(|guild_id| {
+                        orig_guild.id = Some(guild_id);
+                        Ok(orig_guild)
+                    })
             }).and_then(|mut orig_guild| {
                 orig_guild.contact = 12345;
                 db.update(&orig_guild)
