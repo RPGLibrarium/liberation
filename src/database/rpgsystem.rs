@@ -197,9 +197,11 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
 
-        let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
+        let mut system_in = RpgSystem::new(None, _s("Shadowrunn 5"), None);
         let result = db.insert(&mut system_in).and_then(|id| {
             system_in.id = Some(id);
+            system_in.name = _s("Shadowrun 5");
+            system_in.shortname = Some(_s("SR5"));
             db.update(&system_in).and_then(|_| {
                 db.get::<RpgSystem>(id).and_then(|recovered| {
                     Ok(recovered.map_or(false, |fetched_system| system_in == fetched_system))
