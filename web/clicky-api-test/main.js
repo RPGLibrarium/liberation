@@ -104,11 +104,12 @@ function initKeycloak(){
     // TODO the following seems to be easier than passing the conf object o_O ... we should be able to reuse it!
     keycloak = new Keycloak(KC_CONF_LOCATION);
   }
+
   keycloak.init({
     onLoad: 'check-sso',
   })
-    .then(updateKeycloakState)
-    .catch(err => {
+    .success(updateKeycloakState)
+    .error(err => {
       console.error('failed initialising keycloak', err);
       vex.dialog.alert('Keycloak initialisation failed!')
     })
