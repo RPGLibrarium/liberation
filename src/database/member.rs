@@ -32,7 +32,7 @@ impl DMO for Member {
             .pool
             .prep_exec(
                 "insert into members (external_id) values (:external_id)",
-                params!{
+                params! {
                     "external_id" => inp.external_id.clone(),
                 },
             ).map(|result| result.last_insert_id())?)
@@ -43,7 +43,7 @@ impl DMO for Member {
             .pool
             .prep_exec(
                 "select member_id, external_id from members where member_id=:member_id;",
-                params!{
+                params! {
                     "member_id" => member_id,
                 },
             ).map(|result| {
@@ -83,7 +83,7 @@ impl DMO for Member {
             .pool
             .prep_exec(
                 "update members set external_id=:external_id where member_id=:id",
-                params!{
+                params! {
                     "external_id" => member.external_id.clone(),
                     "id" => member.id,
                 },
@@ -95,7 +95,7 @@ impl DMO for Member {
             .pool
             .prep_exec(
                 "delete from members where member_id=:id",
-                params!{
+                params! {
                     "id" => id,
                 },
             ).map_err(|err| Error::DatabaseError(err))
@@ -115,12 +115,20 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, String::from("someexternalId"));
-        let member_out = db
-            .insert(&mut member_in)
-            .and_then(|member_id| db.get(member_id));
+        let mut member_new_id = None;
+        let member_out = db.insert(&mut member_in).and_then(|member_id| {
+            member_new_id = Some(member_id);
+            db.get(member_id)
+        });
 
         teardown(settings);
-        assert_eq!(member_in, member_out.unwrap().unwrap());
+        assert_eq!(
+            Member {
+                id: member_new_id,
+                ..member_in
+            },
+            member_out.unwrap().unwrap()
+        );
     }
 
     #[test]
@@ -147,10 +155,14 @@ mod tests {
         let mut member_in = Member::new(None, _s("somememberId"));
 
         let result = db.insert(&mut member_in).and_then(|member_id| {
-            member_in.external_id = _s("someotherId");
-            db.update(&member_in).and_then(|_| {
+            let member_update = Member {
+                id: Some(member_id),
+                external_id: _s("someotherId"),
+                ..member_in
+            };
+            db.update(&member_update).and_then(|_| {
                 db.get(member_id).and_then(|rec_member| {
-                    Ok(rec_member.map_or(false, |fetched_member| member_in == fetched_member))
+                    Ok(rec_member.map_or(false, |fetched_member| member_update == fetched_member))
                 })
             })
         });

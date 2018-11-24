@@ -383,6 +383,7 @@ mod tests {
             db.update(&orig_book)
         });
         teardown(settings);
+        println!(" >> res: {:?}", result);
         match result {
             Err(Error::ConstraintError(_)) => (),
             _ => panic!("Expected DatabaseError::FieldError(FieldError::ConstraintError)"),
