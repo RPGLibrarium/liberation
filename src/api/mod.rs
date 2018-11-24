@@ -236,7 +236,7 @@ fn post_book(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     Ok(_req
         .json()
         .from_err()
-        .and_then(move |mut obj: dto::PutPostBook| bus::post_book(&localdb, claims, obj))
+        .and_then(move |obj: dto::PutPostBook| bus::post_book(&localdb, claims, obj))
         .and_then(|book_id| {
             Ok(HttpResponse::Created()
                 .header("Location", format!("v1/books/{}", book_id))
@@ -328,7 +328,7 @@ fn post_guild(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     Ok(_req
         .json()
         .from_err()
-        .and_then(move |mut obj: dto::PutPostGuild| bus::post_guild(&localdb, claims, obj))
+        .and_then(move |obj: dto::PutPostGuild| bus::post_guild(&localdb, claims, obj))
         .and_then(|id| {
             Ok(HttpResponse::Created()
                 .header("Location", format!("v1/guilds/{}", id))

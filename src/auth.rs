@@ -92,12 +92,12 @@ impl KeycloakCache {
         self.cache.lock().unwrap().insert(user.id.clone(), user);
     }
 
-    pub fn get_user(&self, userId: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
+    pub fn get_user(&self, user_id: &ExternalId) -> Result<Option<KeycloakUser>, Error> {
         Ok(self
             .cache
             .lock()
             .expect("Can not lock user cache mutex.")
-            .get(userId)
+            .get(user_id)
             .map(|user| (*user).clone()))
     }
 

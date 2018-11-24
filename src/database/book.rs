@@ -345,7 +345,7 @@ mod tests {
             }).and_then(|(title_id, guild_id)| {
                 insert_book_default(&db)
                     .and_then(|(book_id, orig_book)| Ok((orig_book, book_id, title_id, guild_id)))
-            }).and_then(|(mut orig_book, book_id, title_id, guild_id)| {
+            }).and_then(|(orig_book, book_id, title_id, guild_id)| {
                 let book_update = Book {
                     id: Some(book_id),
                     title: title_id,
@@ -376,7 +376,7 @@ mod tests {
     fn update_book_invalid_title() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
+        let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
             let book_update = Book{
                 id: Some(book_id),
                 title: 012481642,
@@ -395,7 +395,7 @@ mod tests {
     fn update_book_invalid_owner_id() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
+        let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
             let book_update = Book{
                 id: Some(book_id),
                 owner: 012481642,
@@ -414,7 +414,7 @@ mod tests {
     fn update_book_wrong_owner_type() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
+        let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
             let book_update = Book{
                 id: Some(book_id),
                 owner_type: EntityType::Guild,
