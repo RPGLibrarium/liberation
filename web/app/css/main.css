@@ -4,20 +4,29 @@ Light Green: rgb(115, 173, 39)
 Brown: rgb(163, 141, 91)
 Light Grey: rgb(231, 230, 226)
 Lighter Light Grey: rgb(237, 236, 233)
+Lightest Light Grey: rgb(250, 250, 249)
 Dark Grey: rgb(56, 52, 45)
 Lighter Dark Grey: rgb(74, 70, 64)
 */
 
 body {
-  margin: 0;
-  background-color: rgb(231, 230, 226);
-  font-family: 'Source Sans Pro', Arial, Helvetica, sans-serif
+  margin: 0px;
+  background-color: rgb(250, 250, 249);
+  font-family: 'Source Sans Pro', Arial, Helvetica, sans-serif;
 }
 
+/* Navbar floating on top */
 .topnav {
   background-color: rgb(56, 52, 45);
-  overflow: hidden;
   text-transform: uppercase;
+
+  /* make it stick at the top */
+  position: fixed;
+  top: 0px;
+
+  /* let it stay ontop of other fixed content */
+  z-index: 200;
+  width: 100%;
 }
 
 .topnav a {
@@ -43,13 +52,88 @@ body {
   border-bottom: 3px solid rgb(115, 173, 39);
 }
 
-main {
-
+.vflexing {
+  flex: 1 0 auto;
 }
-footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 60px;
+
+main {
+  margin-top: 60px;
+  /*display: flex;*/
+  flex-direction: column;
+  height: 100vh;
+}
+
+main .content {
+  /* keep content out of navbar */
+  justify-content: top;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 300;
+}
+
+main .wushing {
+  position: relative;
+  left: 50vw;
+  right: 50vw;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+table {
+  background: rgb(237, 236, 233);
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+table thead
+
+table thead tr {
+  height: 40px;
+}
+
+table tbody tr {
+  height:
+}
+th {
   background-color: rgb(56, 52, 45);
+  font-weight: 400;
+  color: rgb(231, 230, 226);
+  text-align: left;
+}
+table, th, td {
+   border: 1px solid rgb(74, 70, 64);
+   padding: 3px;
+}
+
+
+footer {
+  flex-shrink: 0;
+  height: 120px;
+  width: 100%;
+  background-color: rgb(56, 52, 45);
+  color: rgb(231, 230, 226);
+  padding: 30px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+footer div {
+  flex: 1 1 0;
+  height: 100%;
+  margin-left: 5px;
+  margin-right: 5px;
+  /*background-color: rgb(74, 70, 64);*/
+}
+
+footer a {
+  color: rgb(231, 230, 226);
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
