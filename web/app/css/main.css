@@ -13,6 +13,8 @@ Dark Grey: rgb(56, 52, 45)
 Lighter Dark Grey: rgb(74, 70, 64)
 */
 
+/* TODO: .woosh und .plopp sinnvoll™ ausarbeiten */
+
 :root {
   /* colorz (converted from hsv to hsl, cauz missing in CD document) */
   --color-cd-dark-green: hsla(123, 56%, 41%, 1);
