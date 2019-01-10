@@ -173,6 +173,20 @@ table.fancytbl th {
   padding: .5em inherit;
 }
 
+body table:first-of-type::before {
+  background-image: url("Biene.svg");
+  background-position: right top;
+  background-size: 10vw;
+  background-repeat: no-repeat;
+  content: ' ';
+  display: block;
+  width: 10vw;
+  height: 10vw;
+  right: 9em;
+  top: 9em;
+  position: absolute;
+}
+
 /* FOOTER */
 footer {
   flex-shrink: 0;
