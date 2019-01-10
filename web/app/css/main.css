@@ -14,6 +14,13 @@ Lighter Dark Grey: rgb(74, 70, 64)
 */
 
 :root {
+  /* colorz (converted from hsv to hsl, cauz missing in CD document) */
+  --color-cd-dark-green: hsla(123, 56%, 41%, 1);
+  --color-cd-light-green: hsla(86, 63%, 42%, 1);
+  --color-cd-brown-ish: hsla(42, 28%, 50%, 1);
+  --color-cd-light-ish: hsla(48, 9%, 90%, 1);
+  --color-cd-dark-ish: hsla(38, 11%, 20%, 1);
+
   --header-height: 4rem;
 }
 
@@ -28,7 +35,7 @@ Lighter Dark Grey: rgb(74, 70, 64)
 }
 
 body {
-  background-color: rgb(250, 250, 249);
+  background-color: var(--color-cd-light-ish);
   font-family: 'Source Sans Pro', Arial, Helvetica, sans-serif;
   display: flex;
   min-height: 100vh;
@@ -37,7 +44,7 @@ body {
 
 /* Navbar floating on top */
 header {
-  background-color: rgb(56, 52, 45);
+  background-color: var(--color-cd-dark-ish);
   text-transform: uppercase;
   height: var(--header-height);
 
@@ -63,26 +70,26 @@ header nav .nav-profile {
 
 .topnav a {
   display: inline-block;
-  color: rgb(231, 230, 226);
+  color: var(--color-cd-light-ish);
   text-align: center;
   padding: 0em 1.2em;
   line-height: var(--header-height);
   text-decoration: none;
   font-size: 1.2em;
   letter-spacing: 1px;
-  border-bottom: 3px solid rgb(56, 52, 45);
+  border-bottom: 3px solid var(--color-cd-dark-ish);
 }
 
 .topnav a:hover {
   background-color: rgb(74, 70, 64);
-  color: rgb(237, 236, 233);
-  border-bottom: 3px solid rgb(115, 173, 39);
+  color: var(--color-cd-light-ish);
+  border-bottom: 3px solid var(--color-cd-light-green);
 }
 
 .topnav a.active {
-  background-color: rgb(115, 173, 39);
-  color: rgb(237, 236, 233);
-  border-bottom: 3px solid rgb(115, 173, 39);
+  background-color: var(--color-cd-light-green);
+  color: var(--color-cd-light-ish);
+  border-bottom: 3px solid var(--color-cd-light-green);
 }
 
 .vflexing {
@@ -132,7 +139,7 @@ table {
   margin: .5em 0;
 }
 table.fancytbl {
-  /* background: rgb(237, 236, 233); */
+  /* background: var(--color-cd-light-ish); */
   border-collapse: collapse;
   overflow: hidden;
 }
@@ -144,7 +151,7 @@ table.fancytbl thead {
 
 table.fancytbl thead tr {
   height: 2em;
-  background-color: rgb(56, 52, 45);
+  background-color: var(--color-cd-dark-ish);
 }
 
 .fancytbl tbody > tr:nth-last-of-type(2n) {
@@ -152,7 +159,7 @@ table.fancytbl thead tr {
 }
 
 .fancytbl tbody > tr:hover {
-  background: hsla(85deg, 70%, 50%, .5);
+  background: hsla(85, 70%, 50%, .5);
 }
 
 .fancytbl th, .fancytbl td {
@@ -160,7 +167,7 @@ table.fancytbl thead tr {
 }
 
 table.fancytbl th {
-  color: rgb(231, 230, 226);
+  color: var(--color-cd-light-ish);
   font-weight: 700;
   text-align: left;
   padding: .5em inherit;
@@ -171,8 +178,8 @@ footer {
   flex-shrink: 0;
   min-height: 120px;
   width: 100%;
-  background-color: rgb(56, 52, 45);
-  color: rgb(231, 230, 226);
+  background-color: var(--color-cd-dark-ish);
+  color: var(--color-cd-light-ish);
   padding: 2em;
   box-sizing: border-box;
   display: flex;
@@ -189,7 +196,7 @@ footer div {
 }
 
 footer a {
-  color: rgb(231, 230, 226);
+  color: var(--color-cd-light-ish);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
