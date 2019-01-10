@@ -173,18 +173,18 @@ footer {
   width: 100%;
   background-color: rgb(56, 52, 45);
   color: rgb(231, 230, 226);
-  padding: 2em;
+  padding-top: 2em;
   box-sizing: border-box;
   display: flex;
-  justify-content: space-evenly;
+  justify-content: space-between;
   margin-top: 2em;
 }
 
 footer div {
-  flex: 1 1 0;
+  flex: 1 1 0 auto;
   height: 100%;
-  margin-left: 5px;
-  margin-right: 5px;
+  margin-left: 10%;
+  margin-right: 10%;
   /*background-color: rgb(74, 70, 64);*/
 }
 
