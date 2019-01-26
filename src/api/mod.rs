@@ -2,9 +2,6 @@ mod dto;
 
 pub use self::dto::*;
 
-use actix_web::error::Error as ActixError;
-use actix_web::error::InternalError;
-
 use actix_web::server::HttpHandlerTask;
 use actix_web::{
     fs, http, server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Json, Responder,
@@ -14,8 +11,6 @@ use auth::{assert_roles, Claims, KeycloakCache};
 use business as bus;
 use database::*;
 use futures::future::Future;
-
-use core::num::ParseIntError;
 
 /// Handling of external modules
 #[derive(Clone)]

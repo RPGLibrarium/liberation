@@ -81,7 +81,7 @@ pub struct Keycloak {
 
 impl KeycloakCache {
     pub fn new() -> KeycloakCache {
-        let mut empty_key: [u8; 0];
+        let empty_key: [u8; 0];
         KeycloakCache {
             cache: Arc::new(Mutex::new(HashMap::new())),
             pk: Arc::new(Mutex::new(String::from(""))),
@@ -188,7 +188,6 @@ impl Keycloak {
             .unwrap();
 
         let cloned_cache = kc.cache.clone();
-        let cloned_cache2 = kc.cache.clone();
 
         Arbiter::spawn(
             client::get(user_url) // <- Create request builder
