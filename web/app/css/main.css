@@ -175,18 +175,22 @@ table.fancytbl th {
   padding: .5em inherit;
 }
 
-body table:first-of-type::before {
+body table:first-of-type {
+  position: relative;
+}
+body section:first-of-type table:first-of-type::before {
   background-image: url("Biene.svg");
-  background-position: right top;
-  background-size: 10vw;
+  background-position: right bottom;
+  background-size: contain;
   background-repeat: no-repeat;
   content: ' ';
   display: block;
-  width: 10vw;
-  height: 10vw;
-  right: 9em;
-  top: 9em;
+  width: 12rem;
+  height: 9rem;
+  right: -2rem;
+  top: -8rem;
   position: absolute;
+  opacity: counter(fist-tables);
 }
 
 /* FOOTER */
