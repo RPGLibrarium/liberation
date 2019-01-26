@@ -220,3 +220,8 @@ footer a {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+
+/* SPECIFI CONTENT */
+table.titles .shortname {
+  text-decoration: underline dotted var(--color-cd-dark-green);
+}

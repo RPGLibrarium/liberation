@@ -25,21 +25,41 @@ function initPage(){
 }
 
 function loadTemplates(){
-  return axios('templates/rpg_systems_list.mustache')
+  const loadTpl = name => axios(`templates/${name}.mustache`)
     .then(res => {
-      TEMPLATES.rpg_systems_list = res.data;
-      Mustache.parse(TEMPLATES.rpg_systems_list);
-    })
+      TEMPLATES[name] = res.data;
+      Mustache.parse(TEMPLATES[name]);
+    });
+  return axios.all([
+    loadTpl('rpg_systems_list'),
+    loadTpl('titles_list'),
+  ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
 
 function loadStuff(){
+  // rpg systems
   API({
       method: 'GET',
       url: '/rpgsystems',
   })
+    .then(stuff => {
+      let rendered = Mustache.render(TEMPLATES.rpg_systems_list, stuff.data);
+      console.log('rendered', rendered);
+      let section = document.createElement('section');
+      section.classList.add('content');
+      section.innerHTML = rendered;
+      document.querySelector('main').appendChild(section);
+    })
+    .catch(err => console.error('we got error'));
+
+    // titles
+    API({
+        method: 'GET',
+        url: '/titles',
+    })
       .then(stuff => {
-        let rendered = Mustache.render(TEMPLATES.rpg_systems_list, stuff.data);
+        let rendered = Mustache.render(TEMPLATES.titles_list, stuff.data);
         console.log('rendered', rendered);
         let section = document.createElement('section');
         section.classList.add('content');
