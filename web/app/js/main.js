@@ -16,11 +16,25 @@ const API = axios.create({
 
 const TEMPLATES = {};
 
+// setup basic routing
+const ROUTER = new Navigo(null, true, '#');
+//ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
+ROUTER
+  .on(()=>ROUTER.navigate('librarium'))
+  .on('librarium', ()=>console.info('Startpage!'));
+ROUTER.notFound((a,b,c,d,e)=>{
+  console.error(a,b,c,d,e);
+  const page = ROUTER._lastRouteResolved;
+  console.error('Whoopsie! Looks like 404 to me ...', page);
+});
+
 // testing in progrss
 document.addEventListener("DOMContentLoaded", initPage);
 
 function initPage(){
-  loadTemplates().then(()=>loadStuff());
+  loadTemplates()
+    .then(()=>loadStuff())
+    .then(()=>ROUTER.resolve());
   // loadStuff();
 }
 
@@ -45,7 +59,6 @@ function loadStuff(){
   })
     .then(stuff => {
       let rendered = Mustache.render(TEMPLATES.rpg_systems_list, stuff.data);
-      console.log('rendered', rendered);
       let section = document.createElement('section');
       section.classList.add('content');
       section.innerHTML = rendered;
@@ -60,7 +73,6 @@ function loadStuff(){
     })
       .then(stuff => {
         let rendered = Mustache.render(TEMPLATES.titles_list, stuff.data);
-        console.log('rendered', rendered);
         let section = document.createElement('section');
         section.classList.add('content');
         section.innerHTML = rendered;
@@ -68,3 +80,9 @@ function loadStuff(){
       })
       .catch(err => console.error('we got error'));
 }
+
+// TODO: remove! just for demo purposes
+location.hash = '';
+ROUTER.on('aristocracy', ()=>{
+  document.querySelector(':root').classList.add('loading');
+})

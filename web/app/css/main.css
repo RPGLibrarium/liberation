@@ -221,6 +221,99 @@ footer a {
   text-transform: uppercase;
 }
 
+/* overall page contents */
+#loading {
+  display: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9042;
+
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255,255,255,.85);
+  color: var(--color-cd-dark-green);
+  font-size: 3rem;
+  font-weight: bold;
+}
+:root.loading {
+  overflow: hidden;
+}
+:root.loading #loading {
+  display: flex;
+}
+
+#loading .loading-dice-container {
+  font-size: .75em;
+  display: inline-block;
+  color: var(--color-cd-brown-ish);
+  animation: 5s linear 2s infinite normal none loading-dice-X;
+}
+#loading .loading-dice {
+  animation: 5s linear 2s infinite normal none loading-dice-Y;
+}
+#loading .loading-dice::before {
+  display: inline-block;
+  animation: 5s linear 2s infinite normal none loading-dice-rot;
+}
+@keyframes loading-dice-X {
+  0% {transform: translateX(-1em); opacity: 0;}
+  5% {opacity: 1;}
+  80% {opacity: 1;}
+  85% {transform: translateX(+4em); opacity: 0;}
+  100% {transform: translateX(-1em); opacity: 0;}
+}
+@keyframes loading-dice-Y {
+  0% {transform: translateY(-10em);}
+  2.5% {transform: translateY(-9.5em);}
+  5% {transform: translateY(-8.5em);}
+  7.5% {transform: translateY(-7em);}
+  10% {transform: translateY(-5em);}
+  12.5% {transform: translateY(-2.5em);}
+  15% {transform: translateY(0em);}
+  17.5% {transform: translateY(-2.1em);}
+  20% {transform: translateY(-3.7em);}
+  22.5% {transform: translateY(-4.8em);}
+  25% {transform: translateY(-5.4em);}
+  27.5% {transform: translateY(-5.5em);}
+  30% {transform: translateY(-5.1em);}
+  32.5% {transform: translateY(-4.2em);}
+  35% {transform: translateY(-2.8em);}
+  37.5% {transform: translateY(-0.9em);}
+  40% {transform: translateY(0em);}
+  42.5% {transform: translateY(-1.74em);}
+  45% {transform: translateY(-2.98em);}
+  47.5% {transform: translateY(-3.72em);}
+  50% {transform: translateY(-3.96em);}
+  52.5% {transform: translateY(-3.7em);}
+  55% {transform: translateY(-2.94em);}
+  57.5% {transform: translateY(-1.68em);}
+  60% {transform: translateY(0em);}
+  62.5% {transform: translateY(-1.356em);}
+  65% {transform: translateY(-2.212em);}
+  67.5% {transform: translateY(-2.568em);}
+  70% {transform: translateY(-2.424em);}
+  72.5% {transform: translateY(-1.78em);}
+  75% {transform: translateY(-0.636em);}
+  77.5% {transform: translateY(1.008em);}
+  80% {transform: translateY(3.152em);}
+  82.5% {transform: translateY(5.796em);}
+  85% {transform: translateY(8.94em);}
+  87.5% {transform: translateY(12.584em);}
+}
+@keyframes loading-dice-rot {
+  0% {transform: rotate(0deg);}
+  15% {transform: rotate(+60deg);}
+  40% {transform: rotate(+960deg);}
+  60% {transform: rotate(+1410deg);}
+  75% {transform: rotate(+1635deg);}
+  90% {transform: rotate(+1747.5deg);}
+}
+
 /* SPECIFI CONTENT */
 table.titles .shortname {
   text-decoration: underline dotted var(--color-cd-dark-green);
