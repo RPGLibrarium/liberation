@@ -227,7 +227,7 @@ footer a {
   display: flex;
   pointer-events: none;
   opacity: 0;
-  transition: opacity .5s ease-in-out;
+  transition: opacity .5s ease-in-out 0s;
   position: fixed;
   top: 0;
   bottom: 0;
@@ -250,7 +250,8 @@ footer a {
 :root.loading #loading {
   /* display: flex; */
   opacity: 1;
-  transition-duration: 1s
+  transition-duration: 1s;
+  transition-delay: .25s;
 }
 
 #loading .loading-dice-container {
