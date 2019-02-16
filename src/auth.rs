@@ -201,7 +201,7 @@ impl Keycloak {
                 .send() // <- Send http request
                 .map_err(|err| Error::KeycloakConnectionError(err))
                 .and_then(|response| {
-                    // info!("response: {:?}", response);
+                    debug!("response: {:?}", response);
                     response.json().map_err(|err| Error::JsonPayloadError(err))
                 }).map_err(|err| panic!("Unexpected KeycloakError {}", err))
                 .and_then(|users: Vec<KeycloakUser>| {

@@ -15,6 +15,16 @@ Latest docs hosted on [Github.io](https://rpglibrarium.github.io/Liberation/)
 ## Setup
 ####Install MariaDB
 ####Install Keycloak
+1. Start docker containers `keycloak` and `keycloak-db`
+```
+docker-compose pull keycloak keycloak-db
+docker-compose up keycloak keycloak-db
+```
+2. Login on the admin console: `http://localhost:8081/auth` with `admin:admin`
+3. Import realm from `liberation-realm-export.json`. Make sure you use the correct Keycloak version.
+4. Reset and retrieve client-secret (Realms->Liberation->Clients->liberation-core->Credentials) for later use.
+5. Allow `realm-management`/`view-users` for the Service Account Roles of `liberation-core`. For some reason this is not exported.
+
 ####Install Liberation-core
 1. Build
 ```
