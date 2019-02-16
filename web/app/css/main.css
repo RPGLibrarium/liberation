@@ -1,3 +1,7 @@
+@import "../lib/fontawesome/css/all.css";
+@import "../lib/source-sans-pro/source-sans-variable.css";
+@import "../lib/source-sans-pro/source-sans-pro.css";
+
 /*
 Dark Green: rgb(46, 162, 51)
 Light Green: rgb(115, 173, 39)
@@ -9,46 +13,85 @@ Dark Grey: rgb(56, 52, 45)
 Lighter Dark Grey: rgb(74, 70, 64)
 */
 
+/* TODO: .woosh und .plopp sinnvoll™ ausarbeiten */
+
+:root {
+  /* colorz (converted from hsv to hsl, cauz missing in CD document) */
+  --color-cd-dark-green: hsla(123, 56%, 41%, 1);
+  --color-cd-light-green: hsla(86, 63%, 42%, 1);
+  --color-cd-brown-ish: hsla(42, 28%, 50%, 1);
+  --color-cd-light-ish: hsla(48, 9%, 90%, 1);
+  --color-cd-dark-ish: hsla(38, 11%, 20%, 1);
+
+  --header-height: 4rem;
+}
+
+:root, html, body {
+  margin: 0;
+  padding: 0;
+  border: 0 none;
+  outline: 0 none;
+  box-sizing: border-box;
+  min-height: 100%;
+  width: 100%;
+}
+
 body {
-  background-color: rgb(250, 250, 249);
+  background-color: var(--color-cd-light-ish);
   font-family: 'Source Sans Pro', Arial, Helvetica, sans-serif;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
 }
 
 /* Navbar floating on top */
-.topnav {
-  background-color: rgb(56, 52, 45);
+header {
+  background-color: var(--color-cd-dark-ish);
   text-transform: uppercase;
+  height: var(--header-height);
 
   /* make it stick at the top */
-  position: fixed;
-  top: 0px;
+  /* or don't do this ... */
+  /* position: sticky;
+  top: 0; */
 
   /* let it stay ontop of other fixed content */
   z-index: 200;
   width: 100%;
 }
 
+header nav {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+
+header nav .nav-profile {
+  margin-left: auto;
+}
+
 .topnav a {
-  float: left;
-  color: rgb(231, 230, 226);
+  display: inline-block;
+  color: var(--color-cd-light-ish);
   text-align: center;
-  padding: 16px 20px;
+  padding: 0em 1.2em;
+  line-height: var(--header-height);
   text-decoration: none;
-  font-size: 18px;
+  font-size: 1.2em;
   letter-spacing: 1px;
-  border-bottom: 3px solid rgb(56, 52, 45);
+  border-bottom: 3px solid var(--color-cd-dark-ish);
 }
 
 .topnav a:hover {
   background-color: rgb(74, 70, 64);
-  color: rgb(237, 236, 233);
-  border-bottom: 3px solid rgb(115, 173, 39);
+  color: var(--color-cd-light-ish);
+  border-bottom: 3px solid var(--color-cd-light-green);
 }
 
 .topnav a.active {
-  background-color: rgb(115, 173, 39);
-  color: rgb(237, 236, 233);
-  border-bottom: 3px solid rgb(115, 173, 39);
+  background-color: var(--color-cd-light-green);
+  color: var(--color-cd-light-ish);
+  border-bottom: 3px solid var(--color-cd-light-green);
 }
 
 .vflexing {
@@ -59,7 +102,7 @@ main {
   margin-top: 60px;
   /*display: flex;*/
   flex-direction: column;
-  height: 100vh;
+  /* height: 100vh; */
 }
 
 main .content {
@@ -67,6 +110,22 @@ main .content {
   justify-content: top;
   margin-left: 10%;
   margin-right: 10%;
+}
+
+.breadcrumb ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb ul > li {
+  display: inline-block;
+  padding: .2em 0;
+}
+
+.breadcrumb ul > li::before {
+  content: "›";
+  padding: 0 .35em;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -78,51 +137,184 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* FANCY TABLE */
+table {
+  margin: .5em 0;
+}
 table.fancytbl {
-  background: rgb(237, 236, 233);
+  /* background: var(--color-cd-light-ish); */
   border-collapse: collapse;
   overflow: hidden;
 }
 
-table.fancytbl thead tr{
-  height: 60px;
-  background-color: rgb(56, 52, 45);
+table.fancytbl thead {
+  position: sticky;
+  top: 0;
+}
+
+table.fancytbl thead tr {
+  height: 2em;
+  background-color: var(--color-cd-dark-ish);
+}
+
+.fancytbl tbody > tr:nth-last-of-type(2n) {
+  background: hsla(0deg,0%,85%,.5);
+}
+
+.fancytbl tbody > tr:hover {
+  background: hsla(85, 70%, 50%, .5);
+}
+
+.fancytbl th, .fancytbl td {
+  padding: .2em .25em;
 }
 
 table.fancytbl th {
-  color: rgb(231, 230, 226);
-  font-weight: 400;
+  color: var(--color-cd-light-ish);
+  font-weight: 700;
   text-align: left;
-  padding: 5px;
+  padding: .5em inherit;
 }
 
-table.fancytbl td {
-
+body table:first-of-type {
+  position: relative;
+}
+body section:first-of-type table:first-of-type::before {
+  background-image: url("Biene.svg");
+  background-position: right bottom;
+  background-size: contain;
+  background-repeat: no-repeat;
+  content: ' ';
+  display: block;
+  width: 12rem;
+  height: 9rem;
+  right: -2rem;
+  top: -8rem;
+  position: absolute;
+  opacity: counter(fist-tables);
 }
 
 /* FOOTER */
 footer {
   flex-shrink: 0;
-  height: 120px;
+  min-height: 120px;
   width: 100%;
-  background-color: rgb(56, 52, 45);
-  color: rgb(231, 230, 226);
-  padding: 30px;
+  background-color: var(--color-cd-dark-ish);
+  color: var(--color-cd-light-ish);
+  padding: 2em;
   box-sizing: border-box;
   display: flex;
-  justify-content: space-evenly;
+  justify-content: space-between;
+  margin-top: 2em;
 }
 
 footer div {
-  flex: 1 1 0;
+  flex: 1 1 0 auto;
   height: 100%;
-  margin-left: 5px;
-  margin-right: 5px;
+  margin-left: 10%;
+  margin-right: 10%;
   /*background-color: rgb(74, 70, 64);*/
 }
 
 footer a {
-  color: rgb(231, 230, 226);
+  color: var(--color-cd-light-ish);
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+/* overall page contents */
+#loading {
+  display: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9042;
+
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255,255,255,.85);
+  color: var(--color-cd-dark-green);
+  font-size: 3rem;
+  font-weight: bold;
+}
+:root.loading {
+  overflow: hidden;
+}
+:root.loading #loading {
+  display: flex;
+}
+
+#loading .loading-dice-container {
+  font-size: .75em;
+  display: inline-block;
+  color: var(--color-cd-brown-ish);
+  animation: 5s linear 2s infinite normal none loading-dice-X;
+}
+#loading .loading-dice {
+  animation: 5s linear 2s infinite normal none loading-dice-Y;
+}
+#loading .loading-dice::before {
+  display: inline-block;
+  animation: 5s linear 2s infinite normal none loading-dice-rot;
+}
+@keyframes loading-dice-X {
+  0% {transform: translateX(-1em); opacity: 0;}
+  5% {opacity: 1;}
+  80% {opacity: 1;}
+  85% {transform: translateX(+4em); opacity: 0;}
+  100% {transform: translateX(-1em); opacity: 0;}
+}
+@keyframes loading-dice-Y {
+  0% {transform: translateY(-10em);}
+  2.5% {transform: translateY(-9.5em);}
+  5% {transform: translateY(-8.5em);}
+  7.5% {transform: translateY(-7em);}
+  10% {transform: translateY(-5em);}
+  12.5% {transform: translateY(-2.5em);}
+  15% {transform: translateY(0em);}
+  17.5% {transform: translateY(-2.1em);}
+  20% {transform: translateY(-3.7em);}
+  22.5% {transform: translateY(-4.8em);}
+  25% {transform: translateY(-5.4em);}
+  27.5% {transform: translateY(-5.5em);}
+  30% {transform: translateY(-5.1em);}
+  32.5% {transform: translateY(-4.2em);}
+  35% {transform: translateY(-2.8em);}
+  37.5% {transform: translateY(-0.9em);}
+  40% {transform: translateY(0em);}
+  42.5% {transform: translateY(-1.74em);}
+  45% {transform: translateY(-2.98em);}
+  47.5% {transform: translateY(-3.72em);}
+  50% {transform: translateY(-3.96em);}
+  52.5% {transform: translateY(-3.7em);}
+  55% {transform: translateY(-2.94em);}
+  57.5% {transform: translateY(-1.68em);}
+  60% {transform: translateY(0em);}
+  62.5% {transform: translateY(-1.356em);}
+  65% {transform: translateY(-2.212em);}
+  67.5% {transform: translateY(-2.568em);}
+  70% {transform: translateY(-2.424em);}
+  72.5% {transform: translateY(-1.78em);}
+  75% {transform: translateY(-0.636em);}
+  77.5% {transform: translateY(1.008em);}
+  80% {transform: translateY(3.152em);}
+  82.5% {transform: translateY(5.796em);}
+  85% {transform: translateY(8.94em);}
+  87.5% {transform: translateY(12.584em);}
+}
+@keyframes loading-dice-rot {
+  0% {transform: rotate(0deg);}
+  15% {transform: rotate(+60deg);}
+  40% {transform: rotate(+960deg);}
+  60% {transform: rotate(+1410deg);}
+  75% {transform: rotate(+1635deg);}
+  90% {transform: rotate(+1747.5deg);}
+}
+
+/* SPECIFI CONTENT */
+table.titles .shortname {
+  text-decoration: underline dotted var(--color-cd-dark-green);
 }
