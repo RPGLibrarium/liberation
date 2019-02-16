@@ -1,8 +1,13 @@
+
+/*
+ * Axios, Rest API stuff, HTTP client
+ */
 const API = axios.create({
     baseURL: 'http://localhost:8080/v1/',
     timeout: 1000,
     responseType:'json',
 });
+
 // inject auth header if not already set and a token is available
 // API.interceptors.request.use (
 //   config => {
@@ -16,26 +21,26 @@ const API = axios.create({
 
 const TEMPLATES = {};
 
-// setup basic routing
+const WHOOSH_DURATION = 1000;
+
+/*
+ * Multiple page setup, page routing
+ */
 const ROUTER = new Navigo(null, true, '#');
 //ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', ()=>console.info('Startpage!'));
+  .on('librarium', loadTestpage)
+  .on('guilds', ()=>{console.warn("TÜDÜ: guilds")})
+  .on('mybooks', ()=>renderPage(loadRpgSystems,TEMPLATES.rpg_systems_list))
+  .on('aristocracy', ()=>{console.warn("TÜDÜ: aristocracy")})
+  .on('profile', ()=>{console.warn("TÜDÜ: profile")});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
 });
 
-// testing in progrss
-document.addEventListener("DOMContentLoaded", initPage);
-
-const initalLoadingPromise = loadTemplates().then(()=>loadStuff());
-
-function initPage(){
-  initalLoadingPromise.then(()=>ROUTER.resolve());
-  // loadStuff();
-}
+const initalLoadingPromise = loadTemplates();
 
 function loadTemplates(){
   const loadTpl = name => axios(`templates/${name}.mustache`)
@@ -50,7 +55,51 @@ function loadTemplates(){
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
 
-function loadStuff(){
+/*
+ * Resolve router after loading the initial page structure and templates
+ */
+document.addEventListener("DOMContentLoaded", ()=>{
+  initalLoadingPromise.then(()=>ROUTER.resolve())
+});
+
+const execAfter = setTimeout;
+
+function renderPage(loadData, template) {
+  const root = document.querySelector(':root');
+  //loadingScreen
+  root.classList.add('loading');
+  // query data
+  loadData().then(data => {
+    // render data to template
+    const rendered = Mustache.render(template, data);
+    // generate page element
+    let page = document.createElement('div');
+    page.classList.add('page');
+    page.innerHTML = rendered;
+    // store old pages
+    const oldPages = document.querySelectorAll('main > .page');
+    // ... add class "old" to these
+    oldPages.forEach(e => e.classList.add('old'));
+    // remove loading screen
+    root.classList.remove('loading');
+    // add new page to main element
+    document.querySelector('main').appendChild(page);
+    // remove old page elements after woosh animation
+    execAfter(()=>oldPages.forEach(e => e.remove()), WHOOSH_DURATION);
+  }).catch(e => {
+    console.error('we got errœr', e);
+    root.classList.remove('loading');
+  });
+}
+
+function loadRpgSystems() {
+  return API({
+      method: 'GET',
+      url: '/rpgsystems',
+  }).then(stuff => stuff.data);
+}
+
+function loadTestpage(){
   // rpg systems
   API({
       method: 'GET',
@@ -79,9 +128,3 @@ function loadStuff(){
       })
       .catch(err => console.error('we got error'));
 }
-
-// TODO: remove! just for demo purposes
-location.hash = '';
-ROUTER.on('aristocracy', ()=>{
-  document.querySelector(':root').classList.add('loading');
-})

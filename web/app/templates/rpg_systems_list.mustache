@@ -1,20 +1,22 @@
-<h1>Systemliste</h1>
-Lorem Ipsum dolor sit amet
-<table class="wushing fancytbl">
-  <thead>
-    <tr>
-      <th>System</th>
-      <th>Kürzel</th>
-      <th>Verfügbarkeit</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#rpgsystems}}
-      <tr data-rpgsystemId="{{id}}">
-        <td>{{name}}</td>
-        <td>{{shortname}}</td>
-        <td>42 / 1337</td>
+<section>
+  <h1>Systemliste</h1>
+  Lorem Ipsum dolor sit amet
+  <table class="wushing fancytbl">
+    <thead>
+      <tr>
+        <th>System</th>
+        <th>Kürzel</th>
+        <th>Verfügbarkeit</th>
       </tr>
-    {{/rpgsystems}}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {{#rpgsystems}}
+        <tr data-rpgsystemId="{{id}}">
+          <td>{{name}}</td>
+          <td>{{shortname}}</td>
+          <td>42 / 1337</td>
+        </tr>
+      {{/rpgsystems}}
+    </tbody>
+  </table>
+</section>

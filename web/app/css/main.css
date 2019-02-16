@@ -105,7 +105,7 @@ main {
   /* height: 100vh; */
 }
 
-main .content {
+main .content, main .page {
   /* keep content out of navbar */
   justify-content: top;
   margin-left: 10%;
