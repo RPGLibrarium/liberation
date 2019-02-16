@@ -120,18 +120,18 @@ main .page {
   /* position: relative; */
   transform: translateX(0);
   opacity: 1;
-  transition: all .5s linear;
-  animation: .5s linear 0s 1 normal none whoosh;
+  transition: all .35s linear;
+  animation: .35s linear 0s 1 normal none whoosh;
 }
 main .page.old {
   position: absolute;
   left: 0;
   right: 0;
-  transform: translateX(-100vw);
+  transform: translateX(-50vw);
   opacity: 0;
 }
 @keyframes whoosh {
-  0% {transform: translateX(+100vw); opacity: 0;}
+  0% {transform: translateX(+50vw); opacity: 0;}
   100% {transform: translateX(0); opacity: 1;}
 }
 
