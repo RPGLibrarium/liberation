@@ -109,6 +109,9 @@ function refreshToken() {
     });
 }
 
+// TODO delete!
+const UNLOATh = ()=>document.querySelector(':root').classList.remove('loading');
+
 /*
  * Multiple page setup, page routing
  */
@@ -116,11 +119,12 @@ const ROUTER = new Navigo(null, true, '#');
 //ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', loadTestpage)
-  .on('guilds', ()=>{console.warn("TÜDÜ: guilds")})
-  .on('mybooks', ()=>renderPage(loadRpgSystems,TEMPLATES.rpg_systems_list))
-  .on('aristocracy', ()=>{console.warn("TÜDÜ: aristocracy")})
-  .on('profile', ()=>{console.warn("TÜDÜ: profile")});
+  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),TEMPLATES.page_librarium))
+  .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
+  .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
+  .on('systems', ()=>renderPage(loadRpgSystems,TEMPLATES.rpg_systems_list))
+  .on('aristocracy', ()=>{console.warn("TÜDÜ: aristocracy"),UNLOATh()})
+  .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
@@ -137,6 +141,7 @@ function loadTemplates(){
   return axios.all([
     loadTpl('rpg_systems_list'),
     loadTpl('titles_list'),
+    loadTpl('page_librarium')
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }

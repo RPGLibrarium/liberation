@@ -34,6 +34,7 @@ Lighter Dark Grey: rgb(74, 70, 64)
   box-sizing: border-box;
   min-height: 100%;
   width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -103,6 +104,9 @@ main {
   /*display: flex;*/
   flex-direction: column;
   /* height: 100vh; */
+
+  max-width: 100vw;
+  overflow-x: visible;
 }
 
 main .content, main .page {
@@ -110,6 +114,25 @@ main .content, main .page {
   justify-content: top;
   margin-left: 10%;
   margin-right: 10%;
+}
+
+main .page {
+  /* position: relative; */
+  transform: translateX(0);
+  opacity: 1;
+  transition: all .5s linear;
+  animation: .5s linear 0s 1 normal none whoosh;
+}
+main .page.old {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transform: translateX(-100vw);
+  opacity: 0;
+}
+@keyframes whoosh {
+  0% {transform: translateX(+100vw); opacity: 0;}
+  100% {transform: translateX(0); opacity: 1;}
 }
 
 .breadcrumb ul {
