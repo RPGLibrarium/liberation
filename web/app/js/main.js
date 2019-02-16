@@ -123,7 +123,8 @@ ROUTER
   .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
   .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
   .on('systems', ()=>renderPage(loadRpgSystems,TEMPLATES.rpg_systems_list))
-  .on('aristocracy', ()=>{console.warn("TÜDÜ: aristocracy"),UNLOATh()})
+  .on('aristocracy', ()=>renderPage(
+    ()=>Promise.resolve({}),TEMPLATES.peaks_of_aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
@@ -141,7 +142,8 @@ function loadTemplates(){
   return axios.all([
     loadTpl('rpg_systems_list'),
     loadTpl('titles_list'),
-    loadTpl('page_librarium')
+    loadTpl('page_librarium'),
+    loadTpl('peaks_of_aristocracy')
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
