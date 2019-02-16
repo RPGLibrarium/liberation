@@ -223,7 +223,11 @@ footer a {
 
 /* overall page contents */
 #loading {
-  display: none;
+  /* display: none; */
+  display: flex;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .5s ease-in-out 0s;
   position: fixed;
   top: 0;
   bottom: 0;
@@ -244,7 +248,10 @@ footer a {
   overflow: hidden;
 }
 :root.loading #loading {
-  display: flex;
+  /* display: flex; */
+  opacity: 1;
+  transition-duration: 1s;
+  transition-delay: .25s;
 }
 
 #loading .loading-dice-container {
