@@ -264,7 +264,9 @@ footer a {
   0% {transform: translateX(-1em); opacity: 0;}
   5% {opacity: 1;}
   80% {opacity: 1;}
-  85% {transform: translateX(+4em); opacity: 0;}
+  85% {transform: translateX(+3.4em);}
+  90% {opacity: 1;}
+  99% {transform: translateX(+3.4em); opacity: 0;}
   100% {transform: translateX(-1em); opacity: 0;}
 }
 @keyframes loading-dice-Y {
@@ -299,11 +301,12 @@ footer a {
   70% {transform: translateY(-2.424em);}
   72.5% {transform: translateY(-1.78em);}
   75% {transform: translateY(-0.636em);}
-  77.5% {transform: translateY(1.008em);}
+  75% {transform: translateY(0em);}
+  /*77.5% {transform: translateY(1.008em);}
   80% {transform: translateY(3.152em);}
   82.5% {transform: translateY(5.796em);}
   85% {transform: translateY(8.94em);}
-  87.5% {transform: translateY(12.584em);}
+  87.5% {transform: translateY(12.584em);}*/
 }
 @keyframes loading-dice-rot {
   0% {transform: rotate(0deg);}
@@ -311,7 +314,8 @@ footer a {
   40% {transform: rotate(+960deg);}
   60% {transform: rotate(+1410deg);}
   75% {transform: rotate(+1635deg);}
-  90% {transform: rotate(+1747.5deg);}
+  100% {transform: rotate(+1635deg);}
+  /* 90% {transform: rotate(+1747.5deg);} */
 }
 
 /* SPECIFI CONTENT */

@@ -22,8 +22,7 @@ const ROUTER = new Navigo(null, true, '#');
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
   .on('librarium', ()=>console.info('Startpage!'));
-ROUTER.notFound((a,b,c,d,e)=>{
-  console.error(a,b,c,d,e);
+ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
 });
@@ -31,10 +30,10 @@ ROUTER.notFound((a,b,c,d,e)=>{
 // testing in progrss
 document.addEventListener("DOMContentLoaded", initPage);
 
+const initalLoadingPromise = loadTemplates().then(()=>loadStuff());
+
 function initPage(){
-  loadTemplates()
-    .then(()=>loadStuff())
-    .then(()=>ROUTER.resolve());
+  initalLoadingPromise.then(()=>ROUTER.resolve());
   // loadStuff();
 }
 
