@@ -31,6 +31,8 @@ pub enum Error {
     InvalidAuthenticationError,
     /// Missing a required claim -> 403
     YouShallNotPassError,
+    /// Not even logged in -> 401
+    SpeakFriendAndEnterError,
     ActixError(error::Error),
     ActixInternalError(error::InternalError<ParseIntError>),
     /// No item with given id found -> 404
@@ -107,6 +109,7 @@ impl ResponseError for Error {
                     format!("Bearer realm=\"{}\"", "liberation"), //TODO: Use config for realm name
                 ).finish(),
             Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
+            Error::SpeakFriendAndEnterError => HttpResponse::Unauthorized().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
             // Error::ActixError(err) => err.as_response_error().error_response(),
             // Error::ActixInternalError(err) => err.error_response(),

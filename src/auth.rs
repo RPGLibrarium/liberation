@@ -318,7 +318,7 @@ pub fn assert_roles(
                 }
                 Err(Error::YouShallNotPassError)
             }
-            None => Ok(claims),
+            None => Err(Error::SpeakFriendAndEnterError),
         },
     }
 }
