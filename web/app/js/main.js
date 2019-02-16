@@ -1,4 +1,11 @@
 /*
+ * Resolve router after loading the initial page structure and templates
+ */
+document.addEventListener("DOMContentLoaded", ()=>{
+  loadKeycloak();
+});
+
+/*
  * Axios, Rest API stuff, HTTP client
  */
 const API = axios.create({
@@ -34,6 +41,7 @@ let keycloakUpdateInterval = null;
 
 function loadKeycloak() {
   console.debug("Loading keycloak")
+  document.querySelector(':root').classList.add('loading');
   if(typeof Keycloak === 'undefined' || !Keycloak){
     axios.get(KC_CONF_LOCATION)
       .then(res => res.data)
@@ -68,7 +76,10 @@ function initKeycloak(){
   keycloak.init({
     onLoad: 'check-sso',
   })
-  .success(updateKeycloakState)
+  .success(()=>{
+    initalLoadingPromise.then(()=>ROUTER.resolve());
+    updateKeycloakState();
+  })
   .error(err => {
     console.error('failed initialising keycloak', err);
   })
@@ -129,14 +140,6 @@ function loadTemplates(){
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
-
-/*
- * Resolve router after loading the initial page structure and templates
- */
-document.addEventListener("DOMContentLoaded", ()=>{
-  loadKeycloak();
-  initalLoadingPromise.then(()=>ROUTER.resolve())
-});
 
 const execAfter = setTimeout;
 
