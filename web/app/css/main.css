@@ -80,19 +80,27 @@ header nav .nav-profile {
   text-decoration: none;
   font-size: 1.2em;
   letter-spacing: 1px;
-  border-bottom: 3px solid var(--color-cd-dark-ish);
+  /* border-bottom: 3px solid var(--color-cd-dark-ish); */
+  border: 0 none;
+  transition: background .25s linear;
+  --bg-border-pos: 0;
+  background-image: linear-gradient(to right, var(--color-cd-light-green) 0%, var(--color-cd-light-green) 100%);
+  background-size: calc( 100% * var(--bg-border-pos) ) .25em;
+  background-position: center bottom;
+  background-repeat: no-repeat;
 }
 
 .topnav a:hover {
   background-color: rgb(74, 70, 64);
   color: var(--color-cd-light-ish);
-  border-bottom: 3px solid var(--color-cd-light-green);
+  border-color: var(--color-cd-light-green);
+  --bg-border-pos: 1;
 }
 
 .topnav a.active {
   background-color: var(--color-cd-light-green);
   color: var(--color-cd-light-ish);
-  border-bottom: 3px solid var(--color-cd-light-green);
+  border-color: var(--color-cd-light-green);
 }
 
 .vflexing {
