@@ -135,7 +135,7 @@ ROUTER
   .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
   .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
   .on('systems', ()=>renderPage(loadRpgSystems,PAGES.systems))
-  .on('aristocracy', ()=>renderPage(loadRpgSystems,PAGES.aristocracy))
+  .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGES.aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
@@ -155,6 +155,7 @@ function loadTemplates(){
     loadTpl('rpg_systems_list'),
     loadTpl('titles_list'),
     loadTpl('page_librarium'),
+    loadTpl('peaks_of_aristocracy'),
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }

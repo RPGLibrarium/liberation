@@ -202,7 +202,7 @@ body table:first-of-type {
   position: relative;
 }
 body section:first-of-type table:first-of-type::before {
-  background-image: url("Biene.svg");
+  background-image: url("../images/Biene.svg");
   background-position: right bottom;
   background-size: contain;
   background-repeat: no-repeat;
