@@ -1,11 +1,4 @@
 /*
- * Resolve router after loading the initial page structure and templates
- */
-document.addEventListener("DOMContentLoaded", ()=>{
-  loadKeycloak();
-});
-
-/*
  * Axios, Rest API stuff, HTTP client
  */
 const API = axios.create({
@@ -26,6 +19,25 @@ API.interceptors.request.use (
 );
 
 const TEMPLATES = {};
+
+const PAGES = {};
+const _PAGE = (page, title, template, navActive=undefined)=>{
+  let obj = {page,title,template};
+  if(navActive !== undefined) obj.navActice = navActive;
+  PAGES[page] = obj;
+}
+_PAGE('librarium', 'Librarium', 'page_librarium');
+_PAGE('guilds', 'Gilden', undefined);
+_PAGE('mybooks', 'Meine Bücher', undefined);
+_PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
+_PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
+const NAV_BAR_PAGES = [
+  PAGES.librarium,
+  PAGES.guilds,
+  PAGES.mybooks,
+  PAGES.aristocracy,
+];
+let NAV_ACTIVE = 'librarium';
 
 const WHOOSH_DURATION = 1000;
 
@@ -119,11 +131,11 @@ const ROUTER = new Navigo(null, true, '#');
 //ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),TEMPLATES.page_librarium))
+  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),PAGES.librarium))
   .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
   .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
-  .on('systems', ()=>renderPage(loadRpgSystems,TEMPLATES.rpg_systems_list))
-  .on('aristocracy', ()=>{console.warn("TÜDÜ: aristocracy"),UNLOATh()})
+  .on('systems', ()=>renderPage(loadRpgSystems,PAGES.systems))
+  .on('aristocracy', ()=>renderPage(loadRpgSystems,PAGES.aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
@@ -139,27 +151,33 @@ function loadTemplates(){
       Mustache.parse(TEMPLATES[name]);
     });
   return axios.all([
+    loadTpl('nav_bar'),
     loadTpl('rpg_systems_list'),
     loadTpl('titles_list'),
-    loadTpl('page_librarium')
+    loadTpl('page_librarium'),
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
 
 const execAfter = setTimeout;
 
-function renderPage(loadData, template) {
+// #####################
+// UI VOODOO FUNCTIONS #
+// #####################
+
+function renderPage(loadData, page) {
+  const activePage = page.navActice !== undefined ? page.navActice : page.page;
   const root = document.querySelector(':root');
   //loadingScreen
   root.classList.add('loading');
   // query data
   loadData().then(data => {
     // render data to template
-    const rendered = Mustache.render(template, data);
+    const rendered = Mustache.render(TEMPLATES[page.template], data);
     // generate page element
-    let page = document.createElement('div');
-    page.classList.add('page');
-    page.innerHTML = rendered;
+    let pageElement = document.createElement('div');
+    pageElement.classList.add('page');
+    pageElement.innerHTML = rendered;
     // store old pages
     const oldPages = document.querySelectorAll('main > .page');
     // ... add class "old" to these
@@ -167,7 +185,10 @@ function renderPage(loadData, template) {
     // remove loading screen
     root.classList.remove('loading');
     // add new page to main element
-    document.querySelector('main').appendChild(page);
+    document.querySelector('main').appendChild(pageElement);
+    // update navigation bar (maybe a new item is active now‽)
+    NAV_ACTIVE = activePage;
+    updateNavBar();
     // remove old page elements after woosh animation
     execAfter(()=>oldPages.forEach(e => e.remove()), WHOOSH_DURATION);
   }).catch(e => {
@@ -175,6 +196,24 @@ function renderPage(loadData, template) {
     root.classList.remove('loading');
   });
 }
+
+function updateNavBar() {
+  const newHtml = Mustache.render(TEMPLATES.nav_bar, {
+    pages: NAV_ACTIVE ? NAV_BAR_PAGES.map(p => {
+      if (p.page === NAV_ACTIVE) {
+        return {...p, class:['active']};
+      }
+      return p;
+    }) : NAV_BAR_PAGES,
+    auth: keycloak.authenticated,
+  });
+  document.querySelector('nav.topnav').outerHTML = newHtml;
+}
+
+
+// ##########################
+// DATA RETRIEVAL FUNCTIONS #
+// ##########################
 
 function loadRpgSystems() {
   return API({
@@ -212,3 +251,23 @@ function loadTestpage(){
       })
       .catch(err => console.error('we got error'));
 }
+
+
+// #####################
+// ADD EVENT LISTENERS #
+// #####################
+
+/*
+ * Resolve router after loading the initial page structure and templates
+ */
+document.addEventListener("DOMContentLoaded", ()=>{
+  loadKeycloak();
+});
+
+document.querySelector(':root').addEventListener('click', e=>{
+  if(e.target.id === 'navLogin'){
+    e.preventDefault();
+    console.info('You pretend to belong to us? Prove it!');
+    keycloak.login();
+  }
+});
