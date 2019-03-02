@@ -1,0 +1,11 @@
+<nav class="topnav">
+  {{#pages}}
+    <a class="{{#class}}{{.}} {{/class}}" href="#{{page}}">{{title}}</a>
+  {{/pages}}
+  {{#auth}}
+    <a class="nav-profile" href="#profile">Mein Profil</a>
+  {{/auth}}
+  {{^auth}}
+    <a class="nav-profile" href="#login" id="navLogin">Login</a>
+  {{/auth}}
+</nav>
