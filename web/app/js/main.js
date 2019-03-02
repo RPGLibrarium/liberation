@@ -31,6 +31,7 @@ _PAGE('guilds', 'Gilden', undefined);
 _PAGE('mybooks', 'Meine Bücher', undefined);
 _PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
 _PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
+_PAGE('titles', 'Titel', 'titles_list', 'librarium');
 const NAV_BAR_PAGES = [
   PAGES.librarium,
   PAGES.guilds,
@@ -135,6 +136,7 @@ ROUTER
   .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
   .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
   .on('systems', ()=>renderPage(loadRpgSystems,PAGES.systems))
+  .on('titles', ()=>renderPage(loadTitles,PAGES.titles))
   .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGES.aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
@@ -220,6 +222,13 @@ function loadRpgSystems() {
   return API({
       method: 'GET',
       url: '/rpgsystems',
+  }).then(stuff => stuff.data);
+}
+
+function loadTitles() {
+  return API({
+      method: 'GET',
+      url: '/titles',
   }).then(stuff => stuff.data);
 }
 
