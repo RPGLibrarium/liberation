@@ -32,6 +32,7 @@ _PAGE('mybooks', 'Meine Bücher', undefined);
 _PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
 _PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
 _PAGE('titles', 'Titel', 'titles_list', 'librarium');
+_PAGE('system', 'System', 'rpg_system', 'librarium');
 const NAV_BAR_PAGES = [
   PAGES.librarium,
   PAGES.guilds,
@@ -138,7 +139,8 @@ ROUTER
   .on('systems', ()=>renderPage(loadRpgSystems,PAGES.systems))
   .on('titles', ()=>renderPage(loadTitles,PAGES.titles))
   .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGES.aristocracy))
-  .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
+  .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()})
+  .on('systems/:id', args=>renderPage(loadRpgSystem,PAGES.system, args));
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
@@ -158,6 +160,7 @@ function loadTemplates(){
     loadTpl('titles_list'),
     loadTpl('page_librarium'),
     loadTpl('peaks_of_aristocracy'),
+    loadTpl('rpg_system'),
   ])
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
@@ -168,13 +171,13 @@ const execAfter = setTimeout;
 // UI VOODOO FUNCTIONS #
 // #####################
 
-function renderPage(loadData, page) {
+function renderPage(loadData, page, args={}) {
   const activePage = page.navActice !== undefined ? page.navActice : page.page;
   const root = document.querySelector(':root');
   //loadingScreen
   root.classList.add('loading');
   // query data
-  loadData().then(data => {
+  loadData(args).then(data => {
     // render data to template
     const rendered = Mustache.render(TEMPLATES[page.template], data);
     // generate page element
@@ -224,7 +227,12 @@ function loadRpgSystems() {
       url: '/rpgsystems',
   }).then(stuff => stuff.data);
 }
-
+function loadRpgSystem(args) {
+  return API({
+      method: 'GET',
+      url: '/rpgsystems/' + encodeURIComponent(args.id),
+  }).then(stuff => stuff.data);
+}
 function loadTitles() {
   return API({
       method: 'GET',
@@ -279,5 +287,15 @@ document.querySelector(':root').addEventListener('click', e=>{
     e.preventDefault();
     console.info('You pretend to belong to us? Prove it!');
     keycloak.login();
+    return;
+  }
+  if(e.target.matches('.systems tr[data-rpgsystemid] td *, .systems tr[data-rpgsystemid] td')){
+    let node = e.target;
+    while(!node.hasAttribute('data-rpgsystemid')){
+      node = node.parentNode;
+    }
+    let systemid = node.getAttribute('data-rpgsystemid');
+    ROUTER.navigate('systems/' + encodeURIComponent(systemid));
+    return;
   }
 });

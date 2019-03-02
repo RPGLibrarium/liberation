@@ -361,6 +361,9 @@ footer a {
 }
 
 /* SPECIFI CONTENT */
+table.systems tr[data-rpgsystemid] {
+  cursor: pointer;
+}
 table.titles .shortname {
   text-decoration: underline dotted var(--color-cd-dark-green);
 }
