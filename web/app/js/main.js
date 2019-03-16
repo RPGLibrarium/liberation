@@ -1,3 +1,6 @@
+// 'use strict';
+import PAGE from './pages_base.js';
+
 /*
  * Axios, Rest API stuff, HTTP client
  */
@@ -20,24 +23,18 @@ API.interceptors.request.use (
 
 const TEMPLATES = {};
 
-const PAGES = {};
-const _PAGE = (page, title, template, navActive=undefined)=>{
-  let obj = {page,title,template};
-  if(navActive !== undefined) obj.navActice = navActive;
-  PAGES[page] = obj;
-}
-_PAGE('librarium', 'Librarium', 'page_librarium');
-_PAGE('guilds', 'Gilden', undefined);
-_PAGE('mybooks', 'Meine Bücher', undefined);
-_PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
-_PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
-_PAGE('titles', 'Titel', 'titles_list', 'librarium');
-_PAGE('system', 'System', 'rpg_system', 'librarium');
+PAGE('librarium', 'Librarium', 'page_librarium');
+PAGE('guilds', 'Gilden', undefined);
+PAGE('mybooks', 'Meine Bücher', undefined);
+PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
+PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
+PAGE('titles', 'Titel', 'titles_list', 'librarium');
+PAGE('system', 'System', 'rpg_system', 'librarium');
 const NAV_BAR_PAGES = [
-  PAGES.librarium,
-  PAGES.guilds,
-  PAGES.mybooks,
-  PAGES.aristocracy,
+  PAGE.librarium,
+  PAGE.guilds,
+  PAGE.mybooks,
+  PAGE.aristocracy,
 ];
 let NAV_ACTIVE = 'librarium';
 
@@ -133,14 +130,14 @@ const ROUTER = new Navigo(null, true, '#');
 //ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),PAGES.librarium))
+  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),PAGE.librarium))
   .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
   .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
-  .on('systems', ()=>renderPage(loadRpgSystems,PAGES.systems))
-  .on('titles', ()=>renderPage(loadTitles,PAGES.titles))
-  .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGES.aristocracy))
+  .on('systems', ()=>renderPage(loadRpgSystems,PAGE.systems))
+  .on('titles', ()=>renderPage(loadTitles,PAGE.titles))
+  .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGE.aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()})
-  .on('systems/:id', args=>renderPage(loadRpgSystem,PAGES.system, args));
+  .on('systems/:id', args=>renderPage(loadRpgSystem,PAGE.system, args));
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
