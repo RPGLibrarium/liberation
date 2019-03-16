@@ -1,20 +1,13 @@
 // 'use strict';
-import {API, PAGE, keycloak, MAGIC, ROUTER, TEMPLATES, SETUP_NAVBAR} from './base.js';
+import {API, PAGE, keycloak, MAGIC, ROUTER, TEMPLATES} from './base.js';
 import './rpgsystems.js';
 import './titles.js';
 window._PAGE = PAGE;
 
-PAGE('librarium', 'Librarium', 'page_librarium');
-PAGE('guilds', 'Gilden', undefined);
-PAGE('mybooks', 'Meine Bücher', undefined);
-PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
-
-SETUP_NAVBAR([
-  PAGE.librarium,
-  PAGE.guilds,
-  PAGE.mybooks,
-  PAGE.aristocracy,
-]);
+PAGE('librarium', 'Librarium', 'page_librarium', 0);
+PAGE('guilds', 'Gilden', undefined, 3);
+PAGE('mybooks', 'Meine Bücher', undefined, 9);
+PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy', 42);
 
 /*
  * Authentication

@@ -6,20 +6,34 @@ const execAfter = setTimeout;
 // #######
 export const TEMPLATES = {};
 let PAGES = {};
-export const PAGE = (page, title, template, navActive=undefined)=>{
-  let obj = {page,title,template};
-  if(navActive !== undefined) obj.navActice = navActive;
-  PAGES[page] = obj;
-};
-PAGES = PAGE;
-let NAV_ACTIVE = 'librarium';
+const ALL_PAGES = [];
 let NAV_BAR_PAGES = [
   // PAGE.librarium,
   // PAGE.guilds,
   // PAGE.mybooks,
   // PAGE.aristocracy,
 ];
-export const SETUP_NAVBAR = stuff=>{NAV_BAR_PAGES = stuff};
+export const PAGE = (page, title, template, nav=undefined)=>{
+  if(PAGES[page]) return;
+  let obj = {page,title,template};
+  switch (typeof nav){
+    case 'number': // position in navigation bar -> this is a MASTER PAGE!
+      if(!Number.isSafeInteger(nav)) console.warn(`oh no! nav looks like a number, but is evil!`, nav);
+      else obj.navPos = nav;
+      break;
+    case 'string': obj.navActive = nav; break; // associated MASTER PAGE to highlight in nav bar for the current sub page
+    case 'undefined': break; // TODO remove maybe ...
+    default: console.warn(`welp, we've got problems. nav has bad type '${typeof nav}' ... `, nav);
+  }
+  console.debug(obj);
+  PAGES[page] = obj;
+  ALL_PAGES.push(obj); // pushing hard
+  NAV_BAR_PAGES = ALL_PAGES
+    .filter(p => p.navPos !== undefined)
+    .sort((b,a) => b.navPos - a.navPos);
+};
+PAGES = PAGE;
+let NAV_ACTIVE = 'librarium';
 
 
 // ########
@@ -148,7 +162,7 @@ API.interceptors.request.use (
 // UI VOODOO FUNCTIONS #
 // #####################
 function renderPage(loadData, page, args={}) {
-  const navPageActive = page.navActice !== undefined ? page.navActice : page.page;
+  const navPageActive = page.navActive !== undefined ? page.navActive : page.page;
   const root = document.querySelector(':root');
   //loadingScreen
   root.classList.add('loading');
