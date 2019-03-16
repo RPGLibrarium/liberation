@@ -37,14 +37,9 @@ PAGES._CONDITIONALS = {
 // ROUTER #
 // ########
 export const ROUTER = new Navigo(null, true, '#');
-//ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
-
-// TODO delete!
-const UNLOATh = ()=>document.querySelector(':root').classList.remove('loading');
 
 ROUTER
-  .on(()=>ROUTER.navigate('librarium'))
-  .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
+  .on(()=>ROUTER.navigate('librarium')); //Set landing page here!
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
   console.error('Whoopsie! Looks like 404 to me ...', page);
@@ -158,7 +153,7 @@ API.interceptors.request.use (
 // UI VOODOO FUNCTIONS #
 // #####################
 function renderPage(loadData, page, args={}) {
-  if (!page.template) return;
+  if (!page.template) return ROUTER.navigate('librarium');
   const navPageActive = page.navActive !== undefined ? page.navActive : page.page;
   const root = document.querySelector(':root');
   //loadingScreen
