@@ -1,20 +1,12 @@
 // 'use strict';
 import {API, PAGE, keycloak, MAGIC, ROUTER, TEMPLATES} from './base.js';
+import './librarium.js';
 import './rpgsystems.js';
+import './guilds.js';
 import './titles.js';
-window._PAGE = PAGE;
-
-PAGE('librarium', 'Librarium', 'page_librarium', 0);
-PAGE('guilds', 'Gilden', undefined, 3);
-PAGE('mybooks', 'Meine Bücher', undefined, 9);
-PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy', 42);
-
-/*
- * Authentication
- */
-const KC_CONF_LOCATION = '../keycloak.json';
-const KC_REFRESH_INTERVAL = 5; // seconds -> how often it is checked
-const KC_REFRESH_THRESHOLD = 10; // seconds -> remaining time which causes refresh
+import './books.js';
+import './aristocracy.js';
+import './profile.js';
 
 const initialLoadingPromise = loadTemplates();
 
@@ -84,10 +76,16 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 
 document.querySelector(':root').addEventListener('click', e=>{
-  if(e.target.id === 'navLogin'){
+  if(e.target.matches('nav a[data-pageId=login]')){
     e.preventDefault();
     console.info('You pretend to belong to us? Prove it!');
     keycloak.login();
+    return;
+  }
+  if(e.target.matches('nav a[data-pageId=logout]')){
+    e.preventDefault();
+    console.info('You don\'t like us anymore? Then let us alone!');
+    keycloak.logout();
     return;
   }
   if(e.target.matches('.systems tr[data-rpgsystemid] td *, .systems tr[data-rpgsystemid] td')){

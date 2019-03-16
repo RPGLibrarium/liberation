@@ -7,15 +7,11 @@ const execAfter = setTimeout;
 export const TEMPLATES = {};
 let PAGES = {};
 const ALL_PAGES = [];
-let NAV_BAR_PAGES = [
-  // PAGE.librarium,
-  // PAGE.guilds,
-  // PAGE.mybooks,
-  // PAGE.aristocracy,
-];
-export const PAGE = (page, title, template, nav=undefined)=>{
+export const PAGE = (page, title, template, nav=undefined, conditional=undefined)=>{
   if(PAGES[page]) return;
-  let obj = {page,title,template};
+  conditional = conditional || (()=>true);
+
+  let obj = {page,title,template,conditional};
   switch (typeof nav){
     case 'number': // position in navigation bar -> this is a MASTER PAGE!
       if(!Number.isSafeInteger(nav)) console.warn(`oh no! nav looks like a number, but is evil!`, nav);
@@ -28,14 +24,15 @@ export const PAGE = (page, title, template, nav=undefined)=>{
   console.debug(obj);
   PAGES[page] = obj;
   ALL_PAGES.push(obj); // pushing hard
-  NAV_BAR_PAGES = ALL_PAGES
-    .filter(p => p.navPos !== undefined)
-    .sort((b,a) => b.navPos - a.navPos);
 };
 PAGES = PAGE;
-let NAV_ACTIVE = 'librarium';
-
-
+let NAV_ACTIVE = 'librarium'; //Sane default value, is overwritten later on
+PAGES._CONDITIONALS = {
+  onAuthenticated: ()=>keycloak && keycloak.authenticated,
+  onNotAuthenticated: ()=> keycloak && !keycloak.authenticated,
+  onAristocrat: ()=>checkRoles('aristocrat'),
+  onLibrarian: ()=>checkRoles('librarian'),
+}
 // ########
 // ROUTER #
 // ########
@@ -47,10 +44,6 @@ const UNLOATh = ()=>document.querySelector(':root').classList.remove('loading');
 
 ROUTER
   .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),PAGE.librarium))
-  .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
-  .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
-  .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGE.aristocracy))
   .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()});
 ROUTER.notFound(()=>{
   const page = ROUTER._lastRouteResolved;
@@ -91,7 +84,6 @@ function loadKeycloak(waitForStuff, thenDoStuff) {
         console.error('Fetching Keycloak configuration failed!', err);
       })
   }
-
 }
 
 function initKeycloak(waitForStuff, thenDoStuff){
@@ -137,6 +129,10 @@ function refreshToken() {
     });
 }
 
+function checkRoles(role) {
+  return keycloak && keycloak.authenticated && (keycloak.tokenParsed.roles.includes(role) || keycloak.tokenParsed.roles.includes('admin'));
+}
+
 
 // #####
 // API #
@@ -162,6 +158,7 @@ API.interceptors.request.use (
 // UI VOODOO FUNCTIONS #
 // #####################
 function renderPage(loadData, page, args={}) {
+  if (!page.template) return;
   const navPageActive = page.navActive !== undefined ? page.navActive : page.page;
   const root = document.querySelector(':root');
   //loadingScreen
@@ -195,14 +192,28 @@ function renderPage(loadData, page, args={}) {
 PAGE._RENDER = renderPage;
 
 function updateNavBar() {
+  let navBarPagesTmp = ALL_PAGES
+    .filter(p => p.navPos !== undefined)
+    .filter(p => p.conditional())
+    .sort((b,a) => b.navPos - a.navPos);
+  let navBarPagesLeft = navBarPagesTmp
+    .filter(p => p.navPos>=0);
+  let navBarPageRight = navBarPagesTmp
+    .filter(p => p.navPos<0);
+
   const newHtml = Mustache.render(TEMPLATES.nav_bar, {
-    pages: NAV_ACTIVE ? NAV_BAR_PAGES.map(p => {
+    pagesLeft: NAV_ACTIVE ? navBarPagesLeft.map(p => {
       if (p.page === NAV_ACTIVE) {
         return {...p, class:['active']};
       }
       return p;
-    }) : NAV_BAR_PAGES,
-    auth: keycloak.authenticated,
+    }) : navBarPagesLeft,
+    pagesRight: NAV_ACTIVE ? navBarPageRight.map(p => {
+      if (p.page === NAV_ACTIVE) {
+        return {...p, class:['active']};
+      }
+      return p;
+    }) : navBarPageRight,
   });
   document.querySelector('nav.topnav').outerHTML = newHtml;
 }

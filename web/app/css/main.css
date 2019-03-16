@@ -71,6 +71,9 @@ header nav .nav-profile {
   margin-left: auto;
 }
 
+header nav .nav-filler {
+  flex-grow: 1
+}
 .topnav a {
   display: inline-block;
   color: var(--color-cd-light-ish);
