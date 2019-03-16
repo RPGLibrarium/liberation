@@ -2,7 +2,7 @@
   "realm": "Liberation",
   "auth-server-url": "http://localhost:8081/auth",
   "ssl-required": "external",
-  "resource": "liberation-docker",
+  "resource": "liberation-frontend",
   "public-client": true,
   "confidential-port": 0
 }

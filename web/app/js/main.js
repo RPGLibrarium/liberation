@@ -8,6 +8,8 @@ import './books.js';
 import './aristocracy.js';
 import './profile.js';
 
+window.keycloak = () => keycloak;
+
 const initialLoadingPromise = loadTemplates();
 
 function loadTemplates(){
