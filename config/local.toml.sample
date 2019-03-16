@@ -10,5 +10,5 @@ database = "liberation"
 [keycloak]
 url = "http://localhost:8081/auth/"
 realm = "liberation"
-clientid = "liberation-core"
+clientid = "liberation-backend"
 clientsecret = "CLIENTSECRET"
