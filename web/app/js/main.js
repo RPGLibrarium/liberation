@@ -1,44 +1,20 @@
 // 'use strict';
-import PAGE from './pages_base.js';
-
-/*
- * Axios, Rest API stuff, HTTP client
- */
-const API = axios.create({
-    baseURL: 'http://localhost:8080/v1/',
-    timeout: 1000,
-    responseType:'json',
-});
-
-//inject auth header if not already set and a token is available
-API.interceptors.request.use (
-  config => {
-    if(!config.headers.Authorization && keycloak && keycloak.authenticated){
-      config.headers.Authorization = `Bearer ${keycloak.token}`;
-    }
-    return config;
-  },
-  error => Promise.reject(error)
-);
-
-const TEMPLATES = {};
+import {API, PAGE, keycloak, MAGIC, ROUTER, TEMPLATES, SETUP_NAVBAR} from './base.js';
+import './rpgsystems.js';
+import './titles.js';
+window._PAGE = PAGE;
 
 PAGE('librarium', 'Librarium', 'page_librarium');
 PAGE('guilds', 'Gilden', undefined);
 PAGE('mybooks', 'Meine Bücher', undefined);
 PAGE('aristocracy', 'Aristokratie', 'peaks_of_aristocracy');
-PAGE('systems', 'Systeme', 'rpg_systems_list', 'librarium');
-PAGE('titles', 'Titel', 'titles_list', 'librarium');
-PAGE('system', 'System', 'rpg_system', 'librarium');
-const NAV_BAR_PAGES = [
+
+SETUP_NAVBAR([
   PAGE.librarium,
   PAGE.guilds,
   PAGE.mybooks,
   PAGE.aristocracy,
-];
-let NAV_ACTIVE = 'librarium';
-
-const WHOOSH_DURATION = 1000;
+]);
 
 /*
  * Authentication
@@ -47,103 +23,7 @@ const KC_CONF_LOCATION = '../keycloak.json';
 const KC_REFRESH_INTERVAL = 5; // seconds -> how often it is checked
 const KC_REFRESH_THRESHOLD = 10; // seconds -> remaining time which causes refresh
 
-let keycloak = null;
-let keycloakUpdateInterval = null;
-
-function loadKeycloak() {
-  console.debug("Loading keycloak")
-  document.querySelector(':root').classList.add('loading');
-  if(typeof Keycloak === 'undefined' || !Keycloak){
-    axios.get(KC_CONF_LOCATION)
-      .then(res => res.data)
-      .then(conf => {
-        let scriptLocation = `${conf['auth-server-url']}/js/keycloak.js`;
-        let scriptNode = document.createElement('script');
-        scriptNode.addEventListener('error', errorEvt => {
-          console.error('error loading keycloak script', errorEvt)
-        });
-        scriptNode.addEventListener('load', loadEvt => {
-          console.debug('keycloak script loaded!');
-          initKeycloak();
-        });
-        scriptNode.src = scriptLocation;
-        scriptNode.async = true;
-        document.querySelector('head').appendChild(scriptNode);
-      })
-      .catch(err => {
-        console.error('Fetching Keycloak configuration failed!', err);
-      })
-  }
-
-}
-
-function initKeycloak(){
-  if(!keycloak){
-    console.debug("Init keycloak")
-    // TODO the following seems to be easier than passing the conf object o_O ... we should be able to reuse it!
-    keycloak = new Keycloak(KC_CONF_LOCATION);
-  }
-
-  keycloak.init({
-    onLoad: 'check-sso',
-  })
-  .success(()=>{
-    initalLoadingPromise.then(()=>ROUTER.resolve());
-    updateKeycloakState();
-  })
-  .error(err => {
-    console.error('failed initialising keycloak', err);
-  })
-}
-
-function updateKeycloakState(){
-  if(keycloak && keycloak.authenticated && keycloakUpdateInterval === null){
-    keycloakUpdateInterval = setInterval(refreshToken, KC_REFRESH_INTERVAL * 1000)
-  } else if(!(keycloak && keycloak.authenticated) && keycloakUpdateInterval !== null){
-    clearInterval(keycloakUpdateInterval);
-    keycloakUpdateInterval = null;
-  }
-}
-
-function refreshToken() {
-  if(!keycloak) return console.warn("Keycloak, not set");
-  keycloak.updateToken(KC_REFRESH_THRESHOLD)
-    .success(refreshed => {
-      if(refreshed){
-        console.debug('keycloak token refreshed');
-        updateKeycloakState();
-      }
-    })
-    .error(err => {
-        console.err('refreshing token failed:', err);
-        updateKeycloakState();
-    });
-}
-
-// TODO delete!
-const UNLOATh = ()=>document.querySelector(':root').classList.remove('loading');
-
-/*
- * Multiple page setup, page routing
- */
-const ROUTER = new Navigo(null, true, '#');
-//ROUTER.on('*', (a,b,c)=>console.debug(a,b,c)).resolve();
-ROUTER
-  .on(()=>ROUTER.navigate('librarium'))
-  .on('librarium', ()=>renderPage(()=>Promise.resolve({}),PAGE.librarium))
-  .on('guilds', ()=>{console.warn("TÜDÜ: guilds"),UNLOATh()})
-  .on('mybooks', ()=>{console.warn("TÜDÜ: mybooks"),UNLOATh()})
-  .on('systems', ()=>renderPage(loadRpgSystems,PAGE.systems))
-  .on('titles', ()=>renderPage(loadTitles,PAGE.titles))
-  .on('aristocracy', ()=>renderPage(()=>Promise.resolve({}),PAGE.aristocracy))
-  .on('profile', ()=>{console.warn("TÜDÜ: profile"),UNLOATh()})
-  .on('systems/:id', args=>renderPage(loadRpgSystem,PAGE.system, args));
-ROUTER.notFound(()=>{
-  const page = ROUTER._lastRouteResolved;
-  console.error('Whoopsie! Looks like 404 to me ...', page);
-});
-
-const initalLoadingPromise = loadTemplates();
+const initialLoadingPromise = loadTemplates();
 
 function loadTemplates(){
   const loadTpl = name => axios(`templates/${name}.mustache`)
@@ -162,80 +42,10 @@ function loadTemplates(){
     .catch(err => console.error('something went wrong (fetching templates)', err));
 }
 
-const execAfter = setTimeout;
-
-// #####################
-// UI VOODOO FUNCTIONS #
-// #####################
-
-function renderPage(loadData, page, args={}) {
-  const activePage = page.navActice !== undefined ? page.navActice : page.page;
-  const root = document.querySelector(':root');
-  //loadingScreen
-  root.classList.add('loading');
-  // query data
-  loadData(args).then(data => {
-    // render data to template
-    const rendered = Mustache.render(TEMPLATES[page.template], data);
-    // generate page element
-    let pageElement = document.createElement('div');
-    pageElement.classList.add('page');
-    pageElement.innerHTML = rendered;
-    // store old pages
-    const oldPages = document.querySelectorAll('main > .page');
-    // ... add class "old" to these
-    oldPages.forEach(e => e.classList.add('old'));
-    // remove loading screen
-    root.classList.remove('loading');
-    // add new page to main element
-    document.querySelector('main').appendChild(pageElement);
-    // update navigation bar (maybe a new item is active now‽)
-    NAV_ACTIVE = activePage;
-    updateNavBar();
-    // remove old page elements after woosh animation
-    execAfter(()=>oldPages.forEach(e => e.remove()), WHOOSH_DURATION);
-  }).catch(e => {
-    console.error('we got errœr', e);
-    root.classList.remove('loading');
-  });
-}
-
-function updateNavBar() {
-  const newHtml = Mustache.render(TEMPLATES.nav_bar, {
-    pages: NAV_ACTIVE ? NAV_BAR_PAGES.map(p => {
-      if (p.page === NAV_ACTIVE) {
-        return {...p, class:['active']};
-      }
-      return p;
-    }) : NAV_BAR_PAGES,
-    auth: keycloak.authenticated,
-  });
-  document.querySelector('nav.topnav').outerHTML = newHtml;
-}
-
-
 // ##########################
 // DATA RETRIEVAL FUNCTIONS #
 // ##########################
 
-function loadRpgSystems() {
-  return API({
-      method: 'GET',
-      url: '/rpgsystems',
-  }).then(stuff => stuff.data);
-}
-function loadRpgSystem(args) {
-  return API({
-      method: 'GET',
-      url: '/rpgsystems/' + encodeURIComponent(args.id),
-  }).then(stuff => stuff.data);
-}
-function loadTitles() {
-  return API({
-      method: 'GET',
-      url: '/titles',
-  }).then(stuff => stuff.data);
-}
 
 function loadTestpage(){
   // rpg systems
@@ -276,7 +86,8 @@ function loadTestpage(){
  * Resolve router after loading the initial page structure and templates
  */
 document.addEventListener("DOMContentLoaded", ()=>{
-  loadKeycloak();
+  // loadKeycloak();
+  MAGIC(initialLoadingPromise, ()=>ROUTER.resolve());
 });
 
 document.querySelector(':root').addEventListener('click', e=>{
