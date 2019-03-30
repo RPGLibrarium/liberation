@@ -56,7 +56,13 @@ fn main() {
     let sys = System::new("server");
     kc_actor.start();
 
-    server::new(move || vec![api::get_v1(state.clone()), api::get_static()])
+    server::new(move || {
+        let mut api_components = vec![api::get_v1(state.clone())];
+        if(settings.serve_static_files){
+            api_components.push(api::get_static());
+        }
+        api_components
+    })
         .bind("127.0.0.1:8080")
         .unwrap()
         .start();

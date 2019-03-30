@@ -1,4 +1,5 @@
 debug = false
+serve_static_files = true
 
 [keycloak]
 token = "<Accesstoken from Keycloak>"

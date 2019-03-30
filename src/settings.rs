@@ -2,7 +2,7 @@ use config::{Config, ConfigError, Environment, File};
 use url::Url;
 use url_serde;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Database {
     pub hostname: Option<String>, //default 127.0.0.1 by mysql
     pub port: Option<u16>,
@@ -11,7 +11,7 @@ pub struct Database {
     pub database: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Keycloak {
     #[serde(with = "url_serde")]
     pub url: Url,
@@ -20,9 +20,10 @@ pub struct Keycloak {
     pub clientsecret: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub debug: bool,
+    pub serve_static_files: bool,
     pub database: Database,
     pub keycloak: Keycloak,
 }
