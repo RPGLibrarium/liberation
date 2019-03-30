@@ -5,7 +5,7 @@ use error::Error;
 use std::collections::HashMap;
 
 /// Get all RPG systems from database
-pub fn get_rpgsystems(db: &Database, kc: &KeycloakCache) -> Result<GetRpgSystems, Error> {
+pub fn get_rpgsystems(db: &Database) -> Result<GetRpgSystems, Error> {
     match db.get_all::<RpgSystem>() {
         Ok(rpgsystems) => Ok(GetRpgSystems { rpgsystems }),
         Err(e) => Err(e),
@@ -13,10 +13,18 @@ pub fn get_rpgsystems(db: &Database, kc: &KeycloakCache) -> Result<GetRpgSystems
 }
 
 /// Get an RPG system with given id from database
-pub fn get_rpgsystem(db: &Database, system_id: RpgSystemId) -> Result<GetRpgSystem, Error> {
+/// Fills the stock and availability infos when user is logged in.
+pub fn get_rpgsystem(db: &Database, claims: Option<Claims>, system_id: RpgSystemId) -> Result<GetRpgSystem, Error> {
+
     let titles = db.get_titles_by_rpg_system(system_id)?;
+
+    let include_stock = match(claims) {
+        Some(_) => true,
+        _ => false
+    };
+
     match db.get::<RpgSystem>(system_id) {
-        Ok(Some(rpgsystem)) => Ok(GetRpgSystem::new(rpgsystem, titles)),
+        Ok(Some(rpgsystem)) => Ok(GetRpgSystem::new(rpgsystem, titles, include_stock)),
         _ => Err(Error::ItemNotFound),
     }
 }

@@ -129,11 +129,16 @@ impl Database {
         T::delete(self, id)
     }
 
-    /// Gets all Titles associated with the given RpgSystem
-    pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<Title>, Error> {
+    pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<(Title, u32, u32)>, Error> {
         let results = self.pool
         .prep_exec(
-            "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles where rpg_system_by_id=:system_id;",
+            "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage, count(b.book_id) as stock, ifnull(sum(b.available),0)
+                from titles left join (
+                    select *, if(exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()), 0, 1 ) as available
+                    from books
+                    ) b on titles.title_id = b.title_by_id
+                where titles.rpg_system_by_id = :system_id
+                group by book_id;",
             params!{
                 "system_id" => system_id,
             },
@@ -141,17 +146,21 @@ impl Database {
         .map_err(|err| Error::DatabaseError(err))
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
-                let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
-                Title {
-                    id: id,
-                    name: name,
-                    system: system,
-                    language: language,
-                    publisher: publisher,
-                    year: year,
-                    coverimage: coverimage,
-                }
-            }).collect::<Vec<Title>>()
+                let (id, name, system, language, publisher, year, coverimage, stock, available) = mysql::from_row(row);
+                (
+                    Title {
+                        id: id,
+                        name: name,
+                        system: system,
+                        language: language,
+                        publisher: publisher,
+                        year: year,
+                        coverimage: coverimage,
+                    },
+                    stock,
+                    available
+                )
+            }).collect::<Vec<(Title, u32, u32)>>()
         });
         return results;
     }

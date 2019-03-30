@@ -83,26 +83,23 @@ pub fn get_v1(state: AppState) -> Box<dyn server::HttpHandler<Task = Box<HttpHan
 // - Json<T>
 // https://actix.rs/actix-web/actix_web/trait.Responder.html
 
-/// Get all RpgSystems (if authentification is successful)
 fn get_rpg_systems(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     assert_roles(&_req, vec![])?;
 
-    return bus::get_rpgsystems(&_req.state().db, &_req.state().kc)
+    return bus::get_rpgsystems(&_req.state().db)
         .and_then(|systems| Ok(Json(systems)));
     // This works because of reasons:
     // Response<Json<T>, Into<Error>> = impl Response
 }
 
-/// Get a requested RpgSystem (if authentification is successful)
 fn get_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
-    assert_roles(&_req, vec![])?;
+    let claims: Option<Claims> = assert_roles(&_req, vec![])?;
 
     let id: RpgSystemId = _req.match_info().query("systemid")?;
 
-    bus::get_rpgsystem(&_req.state().db, id).and_then(|system| Ok(Json(system)))
+    bus::get_rpgsystem(&_req.state().db, claims, id).and_then(|system| Ok(Json(system)))
 }
 
-/// Insert a new RpgSystem (if authentification is successful)
 fn post_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims: Option<Claims> =
         assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
@@ -120,7 +117,6 @@ fn post_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error>
         }).responder())
 }
 
-/// Update an existing RpgSystem (if authentification is successful)
 fn put_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
@@ -138,7 +134,6 @@ fn put_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> 
         .responder())
 }
 
-/// Delete a given RpgSystem (if authentification is successful)
 fn delete_rpg_system(_req: HttpRequest<AppState>) -> Result<impl Responder, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
