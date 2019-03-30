@@ -30,7 +30,9 @@ GET /v1/rpgsystems
   "rpgsystems": [
     {
       "id": 123829,
-      "name": "DSA 4.1",
+      "name": "Das Schwarze Auge 4.1",
+      "shortname": "DSA 4.1",
+      "count": 42
     }
   ]
 }
