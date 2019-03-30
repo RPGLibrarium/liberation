@@ -6,7 +6,9 @@
       <tr>
         <th>System</th>
         <th>Kürzel</th>
-        <th>Verfügbarkeit</th>
+        {{#_AUTHENTICATED}}
+          <th>Verfügbarkeit</th>
+        {{/_AUTHENTICATED}}
       </tr>
     </thead>
     <tbody>
@@ -14,7 +16,9 @@
         <tr data-rpgsystemId="{{id}}">
           <td>{{name}}</td>
           <td>{{shortname}}</td>
-          <td>42 / 1337</td>
+          {{#_AUTHENTICATED}}
+            <td>42 / 1337</td>
+          {{/_AUTHENTICATED}}
         </tr>
       {{/rpgsystems}}
     </tbody>

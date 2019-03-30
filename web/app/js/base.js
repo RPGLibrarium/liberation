@@ -161,6 +161,10 @@ function renderPage(loadData, page, args={}) {
   root.classList.add('loading');
   // query data
   loadData(args).then(data => {
+    data = {
+      _AUTHENTICATED: (keycloak || {}).authenticated || false,
+      ...data,
+    };
     // render data to template
     const rendered = Mustache.render(TEMPLATES[page.template], data);
     // generate page element
