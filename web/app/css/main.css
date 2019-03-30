@@ -384,7 +384,7 @@ dl.profileDetails dd ul {
   margin-left: 0;
 }
 dl.profileDetails dd ul > li::before {
-  content: '- ';
+  content: '📜 ';
   font-weight: bold;
 }
 dl.profileDetails dt::after {
