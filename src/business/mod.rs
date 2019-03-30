@@ -184,6 +184,7 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                     id: book.id.expect("book id shall not be empty"),
                     quality: book.quality,
                     available: available,
+                    external_inventory_id: book.external_inventory_id,
                     rental: match rental {
                         None => None,
                         Some(r) => Some(RentalWithRentee {

@@ -245,6 +245,7 @@ pub struct BookWithOwnerWithRental {
     pub owner: Entity,
     pub quality: String,
     pub available: bool,
+    pub external_inventory_id: db::ExternalInventoryId,
     pub rental: RentalWithRentee,
 }
 
@@ -289,6 +290,7 @@ pub struct BookWithTitleWithOwnerWithRental {
     pub owner: Entity,
     pub quality: String,
     pub available: bool,
+    pub external_inventory_id: db::ExternalInventoryId,
     pub rental: Option<RentalWithRentee>,
 }
 
