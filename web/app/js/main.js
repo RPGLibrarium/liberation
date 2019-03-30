@@ -20,6 +20,7 @@ function loadTemplates(){
     });
   return axios.all([
     loadTpl('nav_bar'),
+    loadTpl('profile_details'),
     loadTpl('rpg_systems_list'),
     loadTpl('titles_list'),
     loadTpl('page_librarium'),

@@ -1,0 +1,32 @@
+<section>
+  {{#authenticated}}
+    <h1>{{name}}</h1>
+    <dl class="profileDetails vTab">
+      <div class="row">
+        <dt>e-Mail</dt>
+        <dd>{{email}}</dd>
+      </div>
+      <div class="row">
+        <dt>Nutername</dt>
+        <dd>{{user}}</dd>
+      </div>
+      <div class="row">
+        <dt>Rollen</dt>
+        <dd>
+          <ul>
+            {{#roles}}
+            <li>{{.}}</li>
+            {{/roles}}
+          </ul>
+        </dd>
+      </div>
+      <div class="row">
+        <dt>UID</dt>
+        <dd>{{uid}}</dd>
+      </div>
+    </dl>
+  {{/authenticated}}
+  {{^authenticated}}
+    <h1>You shall not pass!</h1>
+  {{/authenticated}}
+</section>

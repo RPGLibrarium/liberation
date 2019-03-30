@@ -370,3 +370,33 @@ table.systems tr[data-rpgsystemid] {
 table.titles .shortname {
   text-decoration: underline dotted var(--color-cd-dark-green);
 }
+
+dl.profileDetails dt {
+  font-weight: bold;
+  text-align: right;
+}
+dl.profileDetails dd {
+  padding-left: .5em;
+}
+dl.profileDetails dd ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+dl.profileDetails dd ul > li::before {
+  content: '- ';
+  font-weight: bold;
+}
+dl.profileDetails dt::after {
+  content: ':';
+}
+
+dl.profileDetails.vTab {
+  display: table;
+}
+dl.profileDetails.vTab > .row {
+  display: table-row;
+}
+dl.profileDetails.vTab > .row > * {
+  display: table-cell;
+}
