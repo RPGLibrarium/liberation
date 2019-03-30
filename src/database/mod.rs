@@ -37,7 +37,7 @@ pub use self::rental::Rental;
 pub use self::rpgsystem::RpgSystem;
 pub use self::title::Title;
 
-pub use self::book::BookId;
+pub use self::book::{BookId, ExternalInventoryId};
 pub use self::entity::EntityId;
 pub use self::guild::GuildId;
 pub use self::member::ExternalId;
@@ -257,7 +257,7 @@ impl Database {
         return self.pool
             .prep_exec(
                 "select
-                    books.book_id, books.owner_type, books.quality, books.title_by_id, \
+                    books.book_id, books.owner_type, books.quality, books.external_inventory_id, books.title_by_id, \
                     if(books.owner_type = 'member', o_members.member_id, o_guilds.guild_id) as owner_id, \
                     rentals.rental_id, rentals.from_date, rentals.to_date, rentals.rentee_type, \
                     if(rentals.rentee_type = 'member', r_members.member_id, r_guilds.guild_id) as rentee_id, \
@@ -273,8 +273,8 @@ impl Database {
             .map_err(|err| Error::DatabaseError(err))
             .map(|result| {
                 result.map(|x| x.unwrap()).map(|row| {
-                    let (book_id, owner_type, quality, title_id, owner_id, rental_id, rental_from, rental_to, rentee_type, rentee_id, available)
-                    : (BookId, String, String, TitleId, EntityId, Option<RentalId>, Option<NaiveDate>, Option<NaiveDate>, Option<String>, Option<EntityId>, bool) = mysql::from_row(row);
+                    let (book_id, owner_type, quality, external_inventory_id, title_id, owner_id, rental_id, rental_from, rental_to, rentee_type, rentee_id, available)
+                    : (BookId, String, String, ExternalInventoryId, TitleId, EntityId, Option<RentalId>, Option<NaiveDate>, Option<NaiveDate>, Option<String>, Option<EntityId>, bool) = mysql::from_row(row);
                     (
                         Book {
                             id: Some(book_id),
@@ -282,6 +282,7 @@ impl Database {
                             owner_type: EntityType::from_str(owner_type.as_str()).expect("Bad owner type"),
                             owner: owner_id,
                             quality: quality,
+                            external_inventory_id,
                         },
                         rental_id.map_or_else(|| None, |id| Some(Rental {
                             id: Some(id),
@@ -420,6 +421,7 @@ mod test_util {
                     member_id,
                     EntityType::Member,
                     _s("vähri guhd!"),
+                    42,
                 );
                 db.insert(&mut book).and_then(|id| Ok((id, book)))
             });

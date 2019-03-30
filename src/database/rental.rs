@@ -327,6 +327,7 @@ mod tests {
                     guild_id,
                     EntityType::Guild,
                     _s("impressive"),
+                    21,
                 )).and_then(|book_id| Ok((rental_id, orig_rental, book_id, guild_id)))
             }).and_then(|(rental_id, mut orig_rental, book_id, guild_id)| {
                 let rental_update = Rental {

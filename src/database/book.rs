@@ -2,6 +2,7 @@ use super::*;
 
 /// Id type for Book
 pub type BookId = Id;
+pub type ExternalInventoryId = u64;
 
 /// Book describes a specific (physical) book
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -16,6 +17,8 @@ pub struct Book {
     pub owner: EntityId,
     /// Condition of book
     pub quality: String,
+    /// External id written onto a book and in guild inventory lists
+    pub external_inventory_id: ExternalInventoryId,
 }
 
 impl Book {
@@ -26,6 +29,7 @@ impl Book {
         owner: EntityId,
         owner_type: EntityType,
         quality: String,
+        external_inventory_id: ExternalInventoryId,
     ) -> Book {
         return Book {
             id: id,
@@ -33,6 +37,7 @@ impl Book {
             owner_type: owner_type,
             owner: owner,
             quality: quality,
+            external_inventory_id: external_inventory_id,
         };
     }
 
@@ -44,6 +49,7 @@ impl Book {
         owner_guild: Option<GuildId>,
         owner_type: String,
         quality: String,
+        external_inventory_id: ExternalInventoryId,
     ) -> Result<Book, String> {
         let owner_type = match EntityType::from_str(owner_type.as_str()) {
             Ok(x) => x,
@@ -60,7 +66,7 @@ impl Book {
                     "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
                 )),
             };
-        Ok(Book::new(Some(id), title, owner, owner_type, quality))
+        Ok(Book::new(Some(id), title, owner, owner_type, quality, external_inventory_id))
     }
 }
 
@@ -68,12 +74,12 @@ impl DMO for Book {
     type Id = BookId;
 
     fn get_all(db: &Database) -> Result<Vec<Book>, Error> {
-        Ok(db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality from books;",())
+        Ok(db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id from books;",())
     .map(|result| {
         result.map(|x| x.unwrap()).map(|row| {
-            let (id, title, owner_member, owner_guild, owner_type, quality) = mysql::from_row(row);
+            let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
             //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
-            Book::from_db(id, title, owner_member, owner_guild, owner_type, quality).unwrap()
+            Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
         }).collect()
     })?)
     }
@@ -81,16 +87,16 @@ impl DMO for Book {
     fn get(db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
         let mut results = db.pool
         .prep_exec(
-            "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality from books where book_id=:book_id;",
+            "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id from books where book_id=:book_id;",
             params!{
                 "book_id" => book_id,
             },
         )
         .map(|result| {
             result.map(|x| x.unwrap()).map(|row| {
-                let (id, title, owner_member, owner_guild, owner_type, quality) = mysql::from_row(row);
+                let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
                 //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.possessor
-                Book::from_db(id, title, owner_member, owner_guild, owner_type, quality).unwrap()
+                Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
             }).collect::<Vec<Book>>()
         })?;
         return Ok(results.pop());
@@ -98,7 +104,7 @@ impl DMO for Book {
 
     fn insert(db: &Database, inp: &Book) -> Result<BookId, Error> {
         check_varchar_length!(inp.quality);
-        Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality) values (:title, :owner_member, :owner_guild, :quality)",
+        Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality, external_inventory_id) values (:title, :owner_member, :owner_guild, :quality, :external_inventory_id)",
         params!{
             "title" => inp.title,
             "owner_member" => match inp.owner_type {
@@ -110,6 +116,7 @@ impl DMO for Book {
                 EntityType::Guild => Some(inp.owner),
             },
             "quality" => inp.quality.clone(),
+            "external_inventory_id" => inp.external_inventory_id,
         }).map(|result| {
                 result.last_insert_id()
         })?)
@@ -117,7 +124,7 @@ impl DMO for Book {
 
     fn update(db: &Database, book: &Book) -> Result<(), Error> {
         check_varchar_length!(book.quality);
-        Ok(db.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality where book_id=:id;",
+        Ok(db.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality, external_inventory_id=:external_inventory_id where book_id=:id;",
         params!{
             "title" => book.title,
             "owner_member" => match book.owner_type {
@@ -129,6 +136,7 @@ impl DMO for Book {
                 EntityType::Guild => Some(book.owner),
             },
             "quality" => book.quality.clone(),
+            "external_inventory_id" => book.external_inventory_id,
             "id" => book.id,
         }).and(Ok(()))?)
     }
@@ -213,6 +221,7 @@ mod tests {
                     member_id,
                     EntityType::Member,
                     _s(TOO_LONG_STRING),
+                    42,
                 ))
             });
 
@@ -240,6 +249,7 @@ mod tests {
                     member_id,
                     EntityType::Member,
                     _s("quite good"),
+                    42
                 ))
             });
         teardown(settings);
@@ -272,6 +282,7 @@ mod tests {
                     012481632,
                     EntityType::Member,
                     _s("quite good"),
+                    42,
                 ))
             });
 
@@ -305,6 +316,7 @@ mod tests {
                     012481632,
                     EntityType::Guild,
                     _s("quite good"),
+                    42,
                 ))
             });
         teardown(settings);
@@ -352,6 +364,7 @@ mod tests {
                     owner: guild_id,
                     owner_type: EntityType::Guild,
                     quality: _s("bad"),
+                    external_inventory_id: 21,
                     ..orig_book
                 };
                 db.update(&book_update)

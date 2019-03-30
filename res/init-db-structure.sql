@@ -43,7 +43,8 @@ create table if not exists books (
   owner_guild_by_id     int null,
   owner_type      enum('guild', 'member')
       as (if(owner_guild_by_id is not null, 'guild', 'member')) STORED,
-  quality         text not null,
+  quality               text not null,
+  external_inventory_id int not null unique,
   foreign key (title_by_id) references titles (title_id),
   foreign key (owner_member_by_id) references members (member_id),
   foreign key (owner_guild_by_id) references guilds (guild_id),
