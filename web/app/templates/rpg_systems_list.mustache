@@ -1,14 +1,10 @@
 <section>
   <h1>Systemliste</h1>
-  Lorem Ipsum dolor sit amet
   <table class="wushing fancytbl systems">
     <thead>
       <tr>
         <th>System</th>
         <th>Kürzel</th>
-        {{#_AUTHENTICATED}}
-          <th>Verfügbarkeit</th>
-        {{/_AUTHENTICATED}}
       </tr>
     </thead>
     <tbody>
@@ -16,9 +12,6 @@
         <tr data-rpgsystemId="{{id}}">
           <td>{{name}}</td>
           <td>{{shortname}}</td>
-          {{#_AUTHENTICATED}}
-            <td>42 / 1337</td>
-          {{/_AUTHENTICATED}}
         </tr>
       {{/rpgsystems}}
     </tbody>

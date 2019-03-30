@@ -8,9 +8,6 @@ Your advertisement here!
       <th>Sprache</th>
       <th>Verlach</th>
       <th>Jahr</th>
-      {{#_AUTHENTICATED}}
-        <th>Verfügbarkeit</th>
-      {{/_AUTHENTICATED}}
     </tr>
   </thead>
   <tbody>
@@ -24,9 +21,6 @@ Your advertisement here!
         <td>{{language}}</td>
         <td>{{publisher}}</td>
         <td>{{year}}</td>
-        {{#_AUTHENTICATED}}
-          <td>{{available}} / {{stock}}</td>
-        {{/_AUTHENTICATED}}
       </tr>
     {{/titles}}
   </tbody>
