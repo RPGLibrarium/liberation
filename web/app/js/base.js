@@ -31,6 +31,7 @@ PAGES._CONDITIONALS = {
   onAuthenticated: ()=>keycloak && keycloak.authenticated,
   onNotAuthenticated: ()=> keycloak && !keycloak.authenticated,
   onAristocrat: ()=>checkRoles('aristocrat'),
+  onDev: ()=>checkRoles('developer'),
   onLibrarian: ()=>checkRoles('librarian'),
 }
 // ########
