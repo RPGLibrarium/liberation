@@ -1,0 +1,11 @@
+version: '3.6'
+
+services:
+  webhooks:
+    build: "."
+    volumes:
+      - ./webhook:/etc/webhook
+      - ./build:/target/
+    tmpfs: /tmp/build
+    ports:
+      - 127.0.0.1:9001:9000
