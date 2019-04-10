@@ -6,3 +6,6 @@ config/test.toml
 **/*.rs.bk
 
 !Cargo.lock
+
+/webhooks-cargo/build/
+/webhooks-cargo/webhook/secret
