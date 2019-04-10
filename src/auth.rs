@@ -203,7 +203,7 @@ impl Keycloak {
                 .and_then(|response| {
                     debug!("response: {:?}", response);
                     response.json().map_err(|err| Error::JsonPayloadError(err))
-                }).map_err(|err| panic!("Unexpected KeycloakError {}", err))
+                }).map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
                 .and_then(|users: Vec<KeycloakUser>| {
                     //info!("users: {:?}", users);
                     users.into_iter().for_each(move |user| {
