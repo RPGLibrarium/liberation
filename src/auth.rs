@@ -191,11 +191,11 @@ impl Keycloak {
 
         Arbiter::spawn(
             client::get(user_url) // <- Create request builder
-                .no_default_headers()
+                // .no_default_headers()
                 .header(
                     "Authorization",
                     format!("Bearer {}", token_result.access_token().secret()),
-                ).header("host", "localhost:8081")
+                ) // .header("host", "localhost:8081")
                 .finish()
                 .unwrap()
                 .send() // <- Send http request
@@ -228,8 +228,8 @@ impl Keycloak {
 
         Arbiter::spawn(
             client::get(key_url) // <- Create request builder
-                .no_default_headers()
-                .header("host", "localhost:8081")
+                // .no_default_headers()
+                // .header("host", "localhost:8081")
                 .finish()
                 .unwrap()
                 .send() // <- Send http request
