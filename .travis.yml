@@ -17,6 +17,9 @@ sudo: false
 addons:
   mariadb: '10.2'
 
+before_install:
+  - sudo apt-get install -y pkg-config libssl-dev
+
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
