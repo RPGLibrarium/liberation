@@ -6,6 +6,8 @@ use mysql::Error as MySqlError;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::RequestTokenError;
 use std::fmt;
+//use std::option::NoneError;
+
 type Field = String;
 
 #[derive(Debug)]
@@ -33,8 +35,10 @@ pub enum Error {
     YouShallNotPassError,
     /// Not even logged in -> 401
     SpeakFriendAndEnterError,
+    /// Missing parameter in URL -> 400
+    BadRequestFormat,
+    ///
     ActixError(error::Error),
-    ActixInternalError(error::InternalError<ParseIntError>),
     /// No item with given id found -> 404
     ItemNotFound,
 }
@@ -49,6 +53,18 @@ impl From<MySqlError> for Error {
             },*/
             _ => Error::DatabaseError(error),
         }
+    }
+}
+
+//impl From<NoneError> for Error {
+//    fn from(error: NoneError) -> Self {
+//        Error::BadRequestFormat
+//    }
+//}
+
+impl From<ParseIntError> for Error {
+    fn from(error: ParseIntError) -> Self {
+        Error::BadRequestFormat
     }
 }
 
@@ -95,7 +111,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl Fail for Error {}
+//impl Fail for Error {}
 
 impl ResponseError for Error {
     fn error_response(&self) -> HttpResponse {
@@ -107,7 +123,8 @@ impl ResponseError for Error {
                 .header(
                     "WWW-Authenticate",
                     format!("Bearer realm=\"{}\"", "liberation"), //TODO: Use config for realm name
-                ).finish(),
+                )
+                .finish(),
             Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
             Error::SpeakFriendAndEnterError => HttpResponse::Unauthorized().finish(),
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option

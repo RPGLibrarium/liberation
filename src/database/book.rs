@@ -66,7 +66,14 @@ impl Book {
                     "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
                 )),
             };
-        Ok(Book::new(Some(id), title, owner, owner_type, quality, external_inventory_id))
+        Ok(Book::new(
+            Some(id),
+            title,
+            owner,
+            owner_type,
+            quality,
+            external_inventory_id,
+        ))
     }
 }
 
@@ -146,10 +153,11 @@ impl DMO for Book {
             .pool
             .prep_exec(
                 "delete from books where book_id=:id",
-                params!{
+                params! {
                     "id" => id,
                 },
-            ).map_err(|err| Error::DatabaseError(err))
+            )
+            .map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -179,7 +187,8 @@ mod tests {
                         rec_book,
                     ))
                 })
-            }).and_then(|(book, rec_book)| {
+            })
+            .and_then(|(book, rec_book)| {
                 Ok(rec_book.map_or(false, |fetched_book| book == fetched_book))
             });
         teardown(settings);
@@ -209,12 +218,15 @@ mod tests {
                     2031,
                     None,
                 ))
-            }).and_then(|title_id| {
+            })
+            .and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("uiii-a-uuid-or-sth-similar-2481632"),
-                )).and_then(|member_id| Ok((title_id, member_id)))
-            }).and_then(|(title_id, member_id)| {
+                ))
+                .and_then(|member_id| Ok((title_id, member_id)))
+            })
+            .and_then(|(title_id, member_id)| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -242,14 +254,15 @@ mod tests {
             .insert(&mut Member::new(
                 None,
                 _s("uiii-a-uuid-or-sth-similar-2481632"),
-            )).and_then(|member_id| {
+            ))
+            .and_then(|member_id| {
                 db.insert(&mut Book::new(
                     None,
                     01248163264,
                     member_id,
                     EntityType::Member,
                     _s("quite good"),
-                    42
+                    42,
                 ))
             });
         teardown(settings);
@@ -275,7 +288,8 @@ mod tests {
                     2031,
                     None,
                 ))
-            }).and_then(|title_id| {
+            })
+            .and_then(|title_id| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -309,7 +323,8 @@ mod tests {
                     2031,
                     None,
                 ))
-            }).and_then(|title_id| {
+            })
+            .and_then(|title_id| {
                 db.insert(&mut Book::new(
                     None,
                     title_id,
@@ -342,22 +357,28 @@ mod tests {
                     2066,
                     None,
                 ))
-            }).and_then(|title_id| {
+            })
+            .and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("annother-uuuuuiiii-iiiiddd-123443214"),
-                )).and_then(|member_id| Ok((title_id, member_id)))
-            }).and_then(|(title_id, member_id)| {
+                ))
+                .and_then(|member_id| Ok((title_id, member_id)))
+            })
+            .and_then(|(title_id, member_id)| {
                 db.insert(&mut Guild::new(
                     None,
                     _s("Ravenclaw"),
                     _s("Sesame Street 123"),
                     member_id,
-                )).and_then(|guild_id| Ok((title_id, guild_id)))
-            }).and_then(|(title_id, guild_id)| {
+                ))
+                .and_then(|guild_id| Ok((title_id, guild_id)))
+            })
+            .and_then(|(title_id, guild_id)| {
                 insert_book_default(&db)
                     .and_then(|(book_id, orig_book)| Ok((orig_book, book_id, title_id, guild_id)))
-            }).and_then(|(orig_book, book_id, title_id, guild_id)| {
+            })
+            .and_then(|(orig_book, book_id, title_id, guild_id)| {
                 let book_update = Book {
                     id: Some(book_id),
                     title: title_id,
@@ -369,7 +390,8 @@ mod tests {
                 };
                 db.update(&book_update)
                     .and_then(|_| Ok((book_update, book_id)))
-            }).and_then(|(book_update, book_id)| {
+            })
+            .and_then(|(book_update, book_id)| {
                 db.get(book_id).and_then(|rec_book| {
                     Ok(rec_book.map_or(false, |fetched_book| book_update == fetched_book))
                 })
@@ -390,7 +412,7 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
-            let book_update = Book{
+            let book_update = Book {
                 id: Some(book_id),
                 title: 012481642,
                 ..orig_book
@@ -409,7 +431,7 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
-            let book_update = Book{
+            let book_update = Book {
                 id: Some(book_id),
                 owner: 012481642,
                 ..orig_book
@@ -428,7 +450,7 @@ mod tests {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
         let result = insert_book_default(&db).and_then(|(book_id, orig_book)| {
-            let book_update = Book{
+            let book_update = Book {
                 id: Some(book_id),
                 owner_type: EntityType::Guild,
                 ..orig_book

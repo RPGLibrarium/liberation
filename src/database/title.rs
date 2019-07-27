@@ -126,10 +126,11 @@ impl DMO for Title {
             .pool
             .prep_exec(
                 "delete from titles where title_id=:id",
-                params!{
+                params! {
                     "id" => id,
                 },
-            ).map_err(|err| Error::DatabaseError(err))
+            )
+            .map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -231,12 +232,12 @@ mod tests {
                     2031,
                     None,
                 );
-                db.insert(&mut orig_title)
-                    .and_then(|title_id| {
-                        orig_title.id = Some(title_id);
-                        Ok((title_id, orig_title))
-                    })
-            }).and_then(|(title_id, orig_title)| {
+                db.insert(&mut orig_title).and_then(|title_id| {
+                    orig_title.id = Some(title_id);
+                    Ok((title_id, orig_title))
+                })
+            })
+            .and_then(|(title_id, orig_title)| {
                 db.get(title_id).and_then(|rec_title| {
                     Ok(rec_title.map_or(false, |fetched_title| orig_title == fetched_title))
                 })
@@ -269,7 +270,8 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            }).and_then(|mut orig_title| {
+            })
+            .and_then(|mut orig_title| {
                 orig_title.name = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -297,7 +299,8 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            }).and_then(|mut orig_title| {
+            })
+            .and_then(|mut orig_title| {
                 orig_title.language = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -325,7 +328,8 @@ mod tests {
                     None,
                 );
                 db.insert(&mut orig_title).and_then(|_| Ok(orig_title))
-            }).and_then(|mut orig_title| {
+            })
+            .and_then(|mut orig_title| {
                 orig_title.publisher = _s(TOO_LONG_STRING);
                 return db.update(&orig_title);
             });
@@ -354,7 +358,8 @@ mod tests {
                 );
                 db.insert(&mut orig_title)
                     .and_then(|title_id| Ok((title_id, orig_title)))
-            }).and_then(|(title_id, mut orig_title)| {
+            })
+            .and_then(|(title_id, mut orig_title)| {
                 orig_title.id = Some(title_id);
                 orig_title.name = _s("new name");
                 orig_title.year = 1999;

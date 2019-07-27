@@ -35,7 +35,8 @@ impl DMO for Member {
                 params! {
                     "external_id" => inp.external_id.clone(),
                 },
-            ).map(|result| result.last_insert_id())?)
+            )
+            .map(|result| result.last_insert_id())?)
     }
 
     fn get(db: &Database, member_id: MemberId) -> Result<Option<Member>, Error> {
@@ -46,7 +47,8 @@ impl DMO for Member {
                 params! {
                     "member_id" => member_id,
                 },
-            ).map(|result| {
+            )
+            .map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
@@ -55,7 +57,8 @@ impl DMO for Member {
                             id: id,
                             external_id: external_id,
                         }
-                    }).collect::<Vec<Member>>()
+                    })
+                    .collect::<Vec<Member>>()
             })?;
         return Ok(results.pop());
     }
@@ -73,7 +76,8 @@ impl DMO for Member {
                             id: id,
                             external_id: external_id,
                         }
-                    }).collect()
+                    })
+                    .collect()
             })?)
     }
 
@@ -87,7 +91,8 @@ impl DMO for Member {
                     "external_id" => member.external_id.clone(),
                     "id" => member.id,
                 },
-            ).and(Ok(()))?)
+            )
+            .and(Ok(()))?)
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
@@ -98,7 +103,8 @@ impl DMO for Member {
                 params! {
                     "id" => id,
                 },
-            ).map_err(|err| Error::DatabaseError(err))
+            )
+            .map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),

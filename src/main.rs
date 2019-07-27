@@ -6,6 +6,8 @@ extern crate mysql;
 #[macro_use]
 extern crate serde_derive;
 extern crate actix;
+extern crate actix_files;
+#[macro_use]
 extern crate actix_web;
 extern crate base64;
 extern crate chrono;
@@ -22,6 +24,7 @@ extern crate serde_json;
 extern crate tokio;
 extern crate url;
 extern crate url_serde;
+extern crate actix_service;
 
 mod api;
 mod auth;
@@ -32,9 +35,10 @@ mod serde_formats;
 mod settings;
 
 use actix::{Actor, System};
-use actix_web::server;
+use actix_web::{HttpServer, App, web};
 use auth::KeycloakCache;
 use settings::Settings;
+use api::{get_v1, get_static};
 
 fn main() {
     env_logger::init();
@@ -48,24 +52,26 @@ fn main() {
     let kc: KeycloakCache = KeycloakCache::new();
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
-    let state = api::AppState {
+    let state = web::Data(api::AppState {
         db: db,
         kc: kc.clone(),
-    };
+    });
 
     let sys = System::new("server");
     kc_actor.start();
 
-    server::new(move || {
-        let mut api_components = vec![api::get_v1(state.clone())];
-        if(settings.serve_static_files){
-            api_components.push(api::get_static());
-        }
-        api_components
+    HttpServer::new(move || {
+        let app = App::new()
+            .register_data(state)
+            .service(get_v1());
+            if settings.serve_static_files {
+                app.service(get_static());
+            }
+        app
     })
-        .bind("0.0.0.0:8080")
-        .unwrap()
-        .start();
+    .bind("0.0.0.0:8080")
+    .unwrap()
+    .start();
 
     sys.run();
 }

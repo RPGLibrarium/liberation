@@ -4,26 +4,28 @@ version = "0.1.0"
 authors = ["Yoann Kehler <privat@yoann.de>"]
 
 [dependencies]
-rand = "~0.5"
+rand = "^0.7"
 serde = "^1.0"
 serde_derive = "^1.0"
 serde_json = "^1.0"
-chrono = "~0.4"
+chrono = "^0.4"
 #actix-web = {git = "https://github.com/actix/actix-web", branch="master"}
-actix-web = { version="~0.7.19", features=["ssl"] }
+actix-web = { version="^1", features=["ssl"] }
+actix-service = "*"
+actix-files = "*"
 actix = "*"
 failure = "*"
 futures = "*"
-config = "0.9"
-oauth2 = "2.0.0-alpha.2"
+config = "^0.9"
+oauth2 = "2.0.0-beta.3"
 url = "*"
 url_serde="*"
 tokio="*"
-jsonwebtoken = "5.0.0"
+jsonwebtoken = "^6"
 log = "*"
 env_logger = "*"
 base64 = "*"
-openssl = "~0.10.23"
+openssl = "^0.10"
 
 [dependencies.mysql]
 version = "*"

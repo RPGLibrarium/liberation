@@ -129,7 +129,10 @@ impl Database {
         T::delete(self, id)
     }
 
-    pub fn get_titles_by_rpg_system(&self, system_id: RpgSystemId) -> Result<Vec<(Title, u32, u32)>, Error> {
+    pub fn get_titles_by_rpg_system(
+        &self,
+        system_id: RpgSystemId,
+    ) -> Result<Vec<(Title, u32, u32)>, Error> {
         let results = self.pool
         .prep_exec(
             "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage, count(b.book_id) as stock, ifnull(sum(b.available),0)
@@ -315,10 +318,7 @@ pub trait DMO<T = Self> {
     fn delete(&Database, Self::Id) -> Result<bool, Error>;
 }
 
-#[deprecated(
-    since = "0.0.0",
-    note = "this is a stub for later oauth roles"
-)]
+#[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Role {
     pub identifier: String,
@@ -409,12 +409,15 @@ mod test_util {
                     2031,
                     None,
                 ))
-            }).and_then(|title_id| {
+            })
+            .and_then(|title_id| {
                 db.insert(&mut Member::new(
                     None,
                     _s("uiii-a-uuid-or-sth-similar-2481632"),
-                )).and_then(|member_id| Ok((title_id, member_id)))
-            }).and_then(|(title_id, member_id)| {
+                ))
+                .and_then(|member_id| Ok((title_id, member_id)))
+            })
+            .and_then(|(title_id, member_id)| {
                 let mut book = Book::new(
                     None,
                     title_id,

@@ -34,11 +34,12 @@ impl DMO for RpgSystem {
             .pool
             .prep_exec(
                 "insert into rpg_systems (name, shortname) values (:name, :shortname)",
-                params!{
+                params! {
                     "name" => inp.name.clone(),
                     "shortname" => inp.shortname.clone()
                 },
-            ).map(|result| result.last_insert_id())?)
+            )
+            .map(|result| result.last_insert_id())?)
     }
 
     fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {
@@ -47,21 +48,20 @@ impl DMO for RpgSystem {
             .prep_exec(
                 "select rpg_system_id, name, shortname from rpg_systems;",
                 (),
-            ).map(|result| {
+            )
+            .map(|result| {
                 result
                     .map(|x| x.unwrap())
                     .map(|row| {
-                        let (id, name, short): (
-                            Option<RpgSystemId>,
-                            String,
-                            Option<String>,
-                        ) = mysql::from_row(row);
+                        let (id, name, short): (Option<RpgSystemId>, String, Option<String>) =
+                            mysql::from_row(row);
                         RpgSystem {
                             id: id,
                             name: name,
                             shortname: short,
                         }
-                    }).collect()
+                    })
+                    .collect()
             })?)
     }
 
@@ -97,12 +97,13 @@ impl DMO for RpgSystem {
             .pool
             .prep_exec(
                 "update rpg_systems set name=:name, shortname=:short where rpg_system_id=:id;",
-                params!{
+                params! {
                     "name" => rpgsystem.name.clone(),
                     "short" => rpgsystem.shortname.clone(),
                     "id" => rpgsystem.id,
                 },
-            ).map(|_| ())?)
+            )
+            .map(|_| ())?)
     }
 
     fn delete(db: &Database, id: Id) -> Result<bool, Error> {
@@ -110,10 +111,11 @@ impl DMO for RpgSystem {
             .pool
             .prep_exec(
                 "delete from rpg_systems where rpg_system_id=:id",
-                params!{
+                params! {
                     "id" => id,
                 },
-            ).map_err(|err| Error::DatabaseError(err))
+            )
+            .map_err(|err| Error::DatabaseError(err))
             .and_then(|result| match result.affected_rows() {
                 1 => Ok(true),
                 0 => Ok(false),
@@ -134,9 +136,9 @@ mod tests {
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), Some(_s("SR5👿")));
 
-        let result = db.insert(&system_in).and_then(|id|
-            Ok((id,db.get::<RpgSystem>(id)?))
-        );
+        let result = db
+            .insert(&system_in)
+            .and_then(|id| Ok((id, db.get::<RpgSystem>(id)?)));
 
         teardown(settings);
         let (new_id, system_out) = result.unwrap();
@@ -150,9 +152,9 @@ mod tests {
         let db = Database::from_settings(&settings).unwrap();
         let mut system_in = RpgSystem::new(None, _s("Shadowrun 5"), None);
 
-        let result = db.insert(&system_in).and_then(|id|
-            Ok((id,db.get::<RpgSystem>(id)?))
-        );
+        let result = db
+            .insert(&system_in)
+            .and_then(|id| Ok((id, db.get::<RpgSystem>(id)?)));
 
         teardown(settings);
         let (new_id, system_out) = result.unwrap();

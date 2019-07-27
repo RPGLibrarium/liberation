@@ -14,13 +14,16 @@ pub fn get_rpgsystems(db: &Database) -> Result<GetRpgSystems, Error> {
 
 /// Get an RPG system with given id from database
 /// Fills the stock and availability infos when user is logged in.
-pub fn get_rpgsystem(db: &Database, claims: Option<Claims>, system_id: RpgSystemId) -> Result<GetRpgSystem, Error> {
-
+pub fn get_rpgsystem(
+    db: &Database,
+    claims: Option<Claims>,
+    system_id: RpgSystemId,
+) -> Result<GetRpgSystem, Error> {
     let titles = db.get_titles_by_rpg_system(system_id)?;
 
-    let include_stock = match(claims) {
+    let include_stock = match (claims) {
         Some(_) => true,
-        _ => false
+        _ => false,
     };
 
     match db.get::<RpgSystem>(system_id) {
@@ -33,11 +36,11 @@ pub fn get_rpgsystem(db: &Database, claims: Option<Claims>, system_id: RpgSystem
 pub fn post_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
-    system: &mut PutPostRpgSystem,
+    system: PutPostRpgSystem,
 ) -> Result<RpgSystemId, Error> {
     //TODO: Error handling
     //TODO: Assert Id is unset
-    Ok(db.insert::<RpgSystem>(&mut system.rpgsystem)?)
+    Ok(db.insert::<RpgSystem>(&system.rpgsystem)?)
 }
 
 /// Update a specific system in database
@@ -75,7 +78,8 @@ pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
             .into_iter()
             .map(|(title, system, stock, available)| {
                 TitleWithSystem::new(title, system, stock, available)
-            }).collect(),
+            })
+            .collect(),
     })
 }
 
@@ -221,7 +225,8 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                         },
                     },
                 }
-            }).collect(),
+            })
+            .collect(),
     })
 }
 

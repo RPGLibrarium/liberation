@@ -21,28 +21,35 @@ pub struct GetRpgSystem {
 }
 
 impl GetRpgSystem {
-    pub fn new(rpg_system: db::RpgSystem, titles: Vec<(db::Title, u32, u32)>, include_stock: bool) -> GetRpgSystem {
+    pub fn new(
+        rpg_system: db::RpgSystem,
+        titles: Vec<(db::Title, u32, u32)>,
+        include_stock: bool,
+    ) -> GetRpgSystem {
         return GetRpgSystem {
             rpgsystem: RpgSystemWithTitles {
                 id: rpg_system.id.expect("RpgSystem must contain an Id"),
                 name: rpg_system.name,
-                titles: titles.into_iter().map(|(title, stock, available)| TitleWithStock {
-                    id: title.id,
-                    name: title.name,
-                    system: title.system,
-                    language: title.language,
-                    publisher: title.publisher,
-                    year: title.year,
-                    coverimage: title.coverimage,
-                    stock: match(include_stock) {
-                        true => Some(stock),
-                        _ => None
-                    },
-                    available: match(include_stock) {
-                        true => Some(available),
-                        _ => None
-                    }
-                }).collect()
+                titles: titles
+                    .into_iter()
+                    .map(|(title, stock, available)| TitleWithStock {
+                        id: title.id,
+                        name: title.name,
+                        system: title.system,
+                        language: title.language,
+                        publisher: title.publisher,
+                        year: title.year,
+                        coverimage: title.coverimage,
+                        stock: match (include_stock) {
+                            true => Some(stock),
+                            _ => None,
+                        },
+                        available: match (include_stock) {
+                            true => Some(available),
+                            _ => None,
+                        },
+                    })
+                    .collect(),
             },
         };
     }
@@ -174,7 +181,7 @@ pub struct RpgSystemWithTitles {
 }
 
 #[derive(Serialize)]
-pub struct TitleWithStock{
+pub struct TitleWithStock {
     pub id: Option<db::TitleId>,
     pub name: String,
     pub system: db::RpgSystemId,
@@ -200,7 +207,7 @@ pub struct TitleWithSystem {
     pub publisher: String,
     pub year: db::Year,
     pub coverimage: Option<String>,
-    pub stock: Option<ItemCount>, //filled only when authenticated
+    pub stock: Option<ItemCount>,     //filled only when authenticated
     pub available: Option<ItemCount>, //filled only when authenticated
 }
 
