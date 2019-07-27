@@ -7,7 +7,7 @@ use actix_service::IntoNewService;
 use actix_web::body::Body;
 use actix_web::dev::HttpServiceFactory;
 use actix_web::error::DispatchError::Service;
-use actix_web::web::Json;
+use actix_web::web::{Json, route};
 use actix_web::{http, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
 use auth::roles::*;
 use auth::{assert_roles, Claims, KeycloakCache};
@@ -31,29 +31,91 @@ pub fn get_static() -> Scope {
 
 pub fn get_v1() -> Scope {
     web::scope("/v1")
-        .service(get_rpg_systems)
-        .service(get_rpg_system)
-        .service(post_rpg_system)
-        .service(put_rpg_system)
-        .service(delete_rpg_system)
-        .service(get_titles)
-        .service(get_title)
-        .service(post_title)
-        .service(put_title)
-        .service(get_books)
-        .service(get_book)
-        .service(post_book)
-        .service(put_book)
-        .service(get_members)
-        .service(get_member)
-        .service(get_member_inventory)
-        .service(post_member_inventory)
-        .service(get_guilds)
-        .service(get_guild)
-        .service(post_guild)
-        .service(put_guild)
-        .service(get_guild_inventory)
-        .service(post_guild_inventory)
+        .service(
+            web::scope("/rpgsystems")
+                .service(
+                    web::resource("/")
+                        .route(web::get().to(get_rpg_systems))
+                        .route(web::post().to(post_rpg_system))
+                )
+                .service(
+                    web::resource("/{systemid}")
+                        .route(web::get().to(get_rpg_system))
+                        .route(web::put().to(put_rpg_system))
+                        .route(web::delete().to(delete_rpg_system)),
+                ),
+        )
+        .service(
+            web::scope("/titles")
+                .service(
+                    web::resource("/")
+                        .route(web::get().to(get_titles))
+                        .route(web::post().to(post_rpg_system)),
+                )
+                .service(
+                    web::resource("/{titleid}")
+                        .route(web::get().to(get_title))
+                        .route(web::put().to(put_title))
+                        .route(web::delete().to(delete_title)),
+                ),
+        )
+        
+        .service(
+            web::scope("/books")
+                .service(
+                    web::resource("/")
+                        .route(web::get().to(get_books))
+                        .route(web::post().to(post_book)),
+                )
+                .service(
+                    web::resource("/{bookid}")
+                        .route(web::get().to(get_book))
+                        .route(web::put().to(put_book))
+                        .route(web::delete().to(delete_book)),
+                ),
+        )
+        .service(
+            web::scope("/guilds")
+                .service(
+                    web::resource("/")
+                        .route(web::get().to(get_guilds))
+                        .route(web::post().to(post_guild)),
+                )
+                .service(
+                    web::scope("/{guildid}")
+                        .service(
+                            web::resource("/")
+                                .route(web::get().to(get_guild))
+                                .route(web::put().to(put_guild))
+                        )
+                        .service(
+                            web::resource("/inventory")
+                                .route(web::get().to(get_guild_inventory))
+                                .route(web::post().to(post_guild_inventory))
+                        )
+                ),
+        )
+
+        .service(
+            web::scope("members")
+                .service(
+                    web::resource("/")
+                        .route(web::get().to(get_members))
+                )
+                .service(
+                    web::scope("/{memberid}")
+                        .service(
+                            web::resource("/")
+                                .route(web::get().to(get_member))
+
+                        )
+                        .service(
+                            web::resource("/inventory")
+                                .route(web::get().to(get_member_inventory))
+                                .route(web::post().to(post_member_inventory))
+                        )
+                )
+        )
 }
 
 // Responder<Item = Into<AsyncResult<HttpResponse>>, Error = Into<Error>>
@@ -62,8 +124,7 @@ pub fn get_v1() -> Scope {
 // - Json<T>
 // https://actix.rs/actix-web/actix_web/trait.Responder.html
 
-#[get("/rpgsystems")]
-fn get_rpg_systems(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     assert_roles(&_req, vec![])?;
 
     return bus::get_rpgsystems(&state.db).and_then(|systems| Ok(HttpResponse::Ok().json(systems)));
@@ -71,8 +132,7 @@ fn get_rpg_systems(state: AppState, _req: HttpRequest) -> Result<HttpResponse, E
     // Response<Json<T>, Into<Error>> = impl Response
 }
 
-#[get("/rpgsystems/{systemid}")]
-fn get_rpg_system(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims: Option<Claims> = assert_roles(&_req, vec![])?;
 
     let id: RpgSystemId = _req.match_info().query("systemid").parse::<RpgSystemId>()?;
@@ -80,9 +140,8 @@ fn get_rpg_system(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Er
     bus::get_rpgsystem(&state.db, claims, id).and_then(|system| Ok(HttpResponse::Ok().json(system)))
 }
 
-#[post("/rpgsystems")]
 fn post_rpg_system(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostRpgSystem>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -98,9 +157,8 @@ fn post_rpg_system(
     })
 }
 
-#[put("/rpgsystems/{systemid}")]
 fn put_rpg_system(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostRpgSystem>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -110,11 +168,10 @@ fn put_rpg_system(
     let id: RpgSystemId = _req.match_info().query("systemid").parse::<RpgSystemId>()?;
     let mut rpg_system = json.into_inner();
     rpg_system.rpgsystem.id = Some(id);
-    bus::put_rpgsystem(&localdb, claims, &system).and_then(|()| Ok(HttpResponse::Ok().finish()))
+    bus::put_rpgsystem(&localdb, claims, &rpg_system).and_then(|()| Ok(HttpResponse::Ok().finish()))
 }
 
-#[delete("/rpgsystems/{systemid}")]
-fn delete_rpg_system(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn delete_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: RpgSystemId = _req.match_info().query("systemid").parse::<RpgSystemId>()?;
@@ -124,16 +181,14 @@ fn delete_rpg_system(state: AppState, _req: HttpRequest) -> Result<HttpResponse,
 }
 
 /// Get all Titles (if authentification is successful)
-#[get("/titles")]
-fn get_titles(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     assert_roles(&_req, vec![])?;
 
     bus::get_titles(&state.db).and_then(|titles| Ok(HttpResponse::Ok().json(titles)))
 }
 
 /// Get a requested Title (if authentification is successful)
-#[get("/titles/{titleid}")]
-fn get_title(state: AppState, _req: HttpRequest) -> HttpResponse {
+fn get_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![])?;
 
     let id: TitleId = _req.match_info().query("titleid").parse::<TitleId>()?;
@@ -142,9 +197,8 @@ fn get_title(state: AppState, _req: HttpRequest) -> HttpResponse {
 }
 
 /// Insert a new Title (if authentification is successful)
-#[post("/titles")]
 fn post_title(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostTitle>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -160,9 +214,8 @@ fn post_title(
 }
 
 /// Update an existing Title (if authentification is successful)
-#[put("/titles/{titleid}")]
 fn put_title(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostTitle>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -177,8 +230,7 @@ fn put_title(
     bus::put_title(&localdb, claims, title).and_then(|()| Ok(HttpResponse::Ok().finish()))
 }
 
-#[delete("/titles/{titleid}")]
-fn delete_title(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn delete_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: TitleId = _req.match_info().query("titleid").parse::<TitleId>()?;
@@ -187,16 +239,14 @@ fn delete_title(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Erro
 }
 
 /// Get all Books (if authentification is successful)
-#[get("/books")]
-fn get_books(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     bus::get_books(&state.db, claims).and_then(|books| Ok(HttpResponse::Ok().json(books)))
 }
 
 /// Get a requested Book (if authentification is successful)
-#[get("/books/{bookid}")]
-fn get_book(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_book(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
     let id: BookId = _req.match_info().query("bookid").parse::<BookId>()?;
@@ -205,9 +255,8 @@ fn get_book(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
 }
 
 /// Insert a new Book (if authentification is successful)
-#[post("/books")]
 fn post_book(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostBook>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -223,9 +272,8 @@ fn post_book(
 }
 
 /// Update an existing Book (if authentification is successful)
-#[put("/books/{bookid}")]
 fn put_book(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostBook>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -240,8 +288,7 @@ fn put_book(
     bus::put_book(&localdb, claims, book).and_then(|()| Ok(HttpResponse::Ok().finish()))
 }
 
-#[delete("/books/{bookid}")]
-fn delete_book(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn delete_book(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN])?;
 
     let id: BookId = _req.match_info().query("bookid").parse::<BookId>()?;
@@ -250,8 +297,7 @@ fn delete_book(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error
 }
 
 /// Get all Members (if authentification is successful)
-#[get("/members")]
-fn get_members(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_members(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(
         &_req,
         vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
@@ -261,8 +307,7 @@ fn get_members(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error
 }
 
 /// Get a requested Member (if authentification is successful)
-#[get("/members/{memberid}")]
-fn get_member(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_member(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(
         &_req,
         vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_LIBRARIAN, ROLE_MEMBER],
@@ -274,28 +319,24 @@ fn get_member(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error>
 }
 
 /// Get the inventory of a Member (if authentification is successful)
-#[get("/members/{memberid}/inventory")]
-fn get_member_inventory(state: AppState, _req: HttpRequest) -> HttpResponse {
-    "GET members/<id>/inventory"
+fn get_member_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+    HttpResponse::NotImplemented().finish()
 }
 
 /// Insert into a member's inventory (if authentification is successful)
-#[post("/members/{memberid}/inventory")]
-fn post_member_inventory(state: AppState, _req: HttpRequest) -> HttpResponse {
-    "POST members/<id>/inventory"
+fn post_member_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+    HttpResponse::NotImplemented().finish()
 }
 
 /// Get all Guilds (if authentification is successful)
-#[get("/guilds")]
-fn get_guilds(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_guilds(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_MEMBER])?;
 
     bus::get_guilds(&state.db, claims).and_then(|guilds| Ok(HttpResponse::Ok().json(guilds)))
 }
 
 /// Get a requested Guild (if authentification is successful)
-#[get("/guilds/{guildid}")]
-fn get_guild(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> {
+fn get_guild(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_ARISTOCRAT, ROLE_MEMBER])?;
 
     let id: GuildId = _req.match_info().query("guildid").parse::<GuildId>()?;
@@ -304,9 +345,8 @@ fn get_guild(state: AppState, _req: HttpRequest) -> Result<HttpResponse, Error> 
 }
 
 /// Insert a new Guild (if authentification is successful)
-#[post("/guilds")]
 fn post_guild(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostGuild>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -322,9 +362,8 @@ fn post_guild(
 }
 
 /// Update an existing Guild (if authentification is successful)
-#[put("/guilds/{guildid}")]
 fn put_guild(
-    state: AppState,
+    state: web::Data<AppState>,
     json: web::Json<PutPostGuild>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
@@ -340,13 +379,11 @@ fn put_guild(
 }
 
 /// Get the inventory of a Guild (if authentification is successful)
-#[get("/guilds/{guildid}/inventory")]
-fn get_guild_inventory(state: AppState, _req: HttpRequest) -> HttpResponse {
-    "GET Guild inventory by Id"
+fn get_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+    HttpResponse::NotImplemented().finish()
 }
 
 /// Insert into a guild's inventory (if authentification is successful)
-#[post("/guilds/{guildid}/inventory")]
-fn post_guild_inventory(state: AppState, _req: HttpRequest) -> HttpResponse {
-    "POST Guild Inventory"
+fn post_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+    HttpResponse::NotImplemented().finish()
 }

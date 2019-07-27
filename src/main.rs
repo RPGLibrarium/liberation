@@ -25,6 +25,7 @@ extern crate tokio;
 extern crate url;
 extern crate url_serde;
 extern crate actix_service;
+extern crate awc;
 
 mod api;
 mod auth;
@@ -52,20 +53,20 @@ fn main() {
     let kc: KeycloakCache = KeycloakCache::new();
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
-    let state = web::Data(api::AppState {
+    let state = api::AppState {
         db: db,
         kc: kc.clone(),
-    });
+    };
 
     let sys = System::new("server");
     kc_actor.start();
 
     HttpServer::new(move || {
-        let app = App::new()
-            .register_data(state)
+        let mut app = App::new()
+            .register_data(web::Data::new(state.clone()))
             .service(get_v1());
             if settings.serve_static_files {
-                app.service(get_static());
+                app = app.service(get_static());
             }
         app
     })

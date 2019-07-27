@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use actix_web::client::Client;
 use actix_web::{client, http, HttpMessage, HttpRequest};
 use api::AppState;
 use base64;
@@ -8,7 +9,7 @@ use futures::Future;
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
-use oauth2::{AuthUrl, ClientId, ClientSecret, TokenUrl};
+use oauth2::{AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
 use openssl::rsa::*;
 use settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
@@ -16,7 +17,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
-use actix_web::client::Client;
 
 pub mod roles {
     pub const ROLE_ADMIN: &str = "admin";
@@ -177,7 +177,8 @@ impl Keycloak {
     }
 
     pub fn fetch(kc: &mut Self, _ctx: &mut Context<Keycloak>) {
-        let token_result = kc.oauth_client.exchange_client_credentials().unwrap();
+        //Get token from Keycloak with credentials
+        let token_result = kc.oauth_client.exchange_client_credentials();
 
         let user_url = kc
             .keycloak_url
@@ -190,19 +191,20 @@ impl Keycloak {
 
         let cloned_cache = kc.cache.clone();
 
+        // Get user information with token
         let mut client = Client::default();
-
-        client.get(user_url) // <- Create request builder
+        client
+            .get(user_url.as_str()) // <- Create request builder
             // .no_default_headers()
             .header(
                 "Authorization",
-                format!("Bearer {}", token_result.access_token().secret()),
+                format!("Bearer {}", token_result.unwrap().access_token().secret()),
             ) // .header("host", "localhost:8081")
             .send() // <- Send http request
             .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|response| {
+            .and_then(|mut response| {
                 debug!("response: {:?}", response);
-                response.json().map_err(|err| Error::JsonPayloadError(err))
+                response.json().map_err(|err| Error::KeycloakJsonError(err))
             })
             .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
             .and_then(|users: Vec<KeycloakUser>| {
@@ -215,6 +217,7 @@ impl Keycloak {
                 Ok(())
             });
 
+        // Get public key information
         let key_url = kc
             .keycloak_url
             .join("realms/")
@@ -226,17 +229,22 @@ impl Keycloak {
 
         let cloned_cache = kc.cache.clone();
 
-        client.get(key_url) // <- Create request builder
+        client
+            .get(key_url.as_str()) // <- Create request builder
             // .no_default_headers()
             // .header("host", "localhost:8081")
             .send() // <- Send http request
             .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|response| response.json().map_err(|err| Error::JsonPayloadError(err)))
+            .and_then(|mut response| {
+                response
+                    .json()
+                    .map_err(|err: awc::error::JsonPayloadError| Error::KeycloakJsonError(err))
+            })
             .map_err(|err| panic!("Unexpected KeycloakError {}", err))
             .and_then(move |response: KeycloakMetaInfo| {
                 cloned_cache.set_public_key(response.public_key);
                 Ok(())
-            })
+            });
     }
 }
 
@@ -263,7 +271,11 @@ pub fn get_claims_for_req(req: &HttpRequest) -> Result<Option<Claims>, Error> {
             Ok(auth_str) => {
                 if auth_str.starts_with("Bearer ") {
                     let token = auth_str.replacen("Bearer ", "", 1);
-                    let pubkey = req.state().kc.get_public_key();
+                    let pubkey = req
+                        .app_data::<AppState>()
+                        .expect("Expected app state is missing!")
+                        .kc
+                        .get_public_key();
                     let pk_der_asn1 = base64::decode(pubkey.as_str())
                         .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
                     let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
@@ -295,10 +307,7 @@ pub fn get_claims_for_req(req: &HttpRequest) -> Result<Option<Claims>, Error> {
     }
 }
 
-pub fn assert_roles(
-    req: &HttpRequest,
-    roles: Vec<&str>,
-) -> Result<Option<Claims>, Error> {
+pub fn assert_roles(req: &HttpRequest, roles: Vec<&str>) -> Result<Option<Claims>, Error> {
     let claims = get_claims_for_req(req)?;
 
     match roles.is_empty() {

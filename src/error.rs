@@ -6,6 +6,7 @@ use mysql::Error as MySqlError;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::RequestTokenError;
 use std::fmt;
+use awc;
 //use std::option::NoneError;
 
 type Field = String;
@@ -24,11 +25,13 @@ pub enum Error {
     /// Database is inconsistent -> 500
     IllegalState,
     /// Invalid Json from user -> 400
-    JsonPayloadError(error::JsonPayloadError),
+    JsonPayloadError(actix_web::error::JsonPayloadError),
     /// Backend can not authenticate with the Keycloak server-> 500
-    KeycloakAuthenticationError(RequestTokenError<BasicErrorResponseType>),
+    //KeycloakAuthenticationError(Box<RequestTokenError<dyn Fail, BasicErrorResponseType>>),
     /// No connection to Keycloak server -> 500
     KeycloakConnectionError(SendRequestError),
+    /// Keycload answer wrong -> 500
+    KeycloakJsonError(awc::error::JsonPayloadError),
     /// Authentication Token is invalid -> 401
     InvalidAuthenticationError,
     /// Missing a required claim -> 403
@@ -68,17 +71,19 @@ impl From<ParseIntError> for Error {
     }
 }
 
-impl From<error::JsonPayloadError> for Error {
-    fn from(error: error::JsonPayloadError) -> Self {
+impl From<actix_web::error::JsonPayloadError> for Error {
+    fn from(error: actix_web::error::JsonPayloadError) -> Self {
         Error::JsonPayloadError(error)
     }
 }
 
-impl From<RequestTokenError<BasicErrorResponseType>> for Error {
-    fn from(error: RequestTokenError<BasicErrorResponseType>) -> Self {
-        Error::KeycloakAuthenticationError(error)
+/*
+impl From<RequestTokenError<Fail, BasicErrorResponseType>> for Error {
+    fn from(error: RequestTokenError<dyn Fail, BasicErrorResponseType>) -> Self {
+        Error::KeycloakAuthenticationError(Box::new(error))
     }
 }
+*/
 
 // impl From<error::Error> for Error {
 //     fn from(error: error::Error) -> Self {
@@ -86,11 +91,13 @@ impl From<RequestTokenError<BasicErrorResponseType>> for Error {
 //     }
 // }
 
+/*
 impl From<error::InternalError<ParseIntError>> for Error {
     fn from(error: error::InternalError<ParseIntError>) -> Self {
         Error::ActixInternalError(error)
     }
 }
+*/
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -103,8 +110,7 @@ impl fmt::Display for Error {
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
-            Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
-            Error::ActixInternalError(ref err) => write!(f, "{{ {} }}", err),
+            //Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
         }
