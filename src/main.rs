@@ -7,7 +7,6 @@ extern crate mysql;
 extern crate serde_derive;
 extern crate actix;
 extern crate actix_files;
-#[macro_use]
 extern crate actix_web;
 extern crate actix_service;
 extern crate awc;
@@ -74,6 +73,7 @@ fn main() {
     .unwrap()
     .start();
 
+    info!("liberation ready");
     sys.run();
 }
 

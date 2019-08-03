@@ -136,7 +136,10 @@ impl ResponseError for Error {
             //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
             // Error::ActixError(err) => err.as_response_error().error_response(),
             // Error::ActixInternalError(err) => err.error_response(),
-            _ => HttpResponse::InternalServerError().body(format!("{}", self)),
+            _ => {
+                error!("Internal Server Error: {:?}", self);
+                HttpResponse::InternalServerError().body(format!("{}", self))
+            },
         }
     }
 }

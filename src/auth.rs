@@ -178,10 +178,9 @@ impl Keycloak {
     }
 
     pub fn fetch(kc: &mut Self, _ctx: &mut Context<Keycloak>) {
-        debug!("fetch called");
+        debug!("authenticating with keycloak...");
         //Get token from Keycloak with credentials
         let token_result = kc.oauth_client.exchange_client_credentials();
-        debug!("token result: {:?}", token_result);
 
         let user_url = kc
             .keycloak_url
@@ -193,6 +192,8 @@ impl Keycloak {
             .unwrap();
 
         let cloned_cache = kc.cache.clone();
+
+        debug!("updating user cache from keycloak...");
 
         Arbiter::spawn(lazy( move || {
             // Get user information with token
@@ -211,7 +212,6 @@ impl Keycloak {
                 .send() // <- Send http request
                 .map_err(|err| { debug!("ERR: {:?}", err); Error::KeycloakConnectionError(err)})
                 .and_then(|mut response| {
-                    debug!("response: {:?}", response);
                     response.json().map_err(|err| Error::KeycloakJsonError(err))
                 })
                 .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
@@ -220,13 +220,12 @@ impl Keycloak {
                     users.into_iter().for_each(move |user| {
                         cloned_cache.insert_user(user);
                     });
-                    println!("Fetched users");
                     //info!("users: {:?}", move cloned_cache2);
                     Ok(())
                 })
         }));
-        debug!("after request");
 
+        debug!("updating public key from keycloak...");
         // Get public key information
         let key_url = kc
             .keycloak_url
@@ -234,8 +233,6 @@ impl Keycloak {
             .unwrap()
             .join(format!("{}/", kc.realm).as_str())
             .unwrap();
-
-        println!("{}", key_url.as_str());
 
         let cloned_cache = kc.cache.clone();
 
@@ -254,7 +251,7 @@ impl Keycloak {
                 })
                 .map_err(|err| panic!("Unexpected KeycloakError {}", err))
                 .and_then(move |response: KeycloakMetaInfo| {
-                    debug!("kc meta: {:?}", response);
+                    trace!("kc meta: {:?}", response);
                     cloned_cache.set_public_key(response.public_key);
                     Ok(())
                 })
@@ -290,7 +287,6 @@ pub fn get_claims_for_req(req: &HttpRequest) -> Result<Option<Claims>, Error> {
                         .expect("Expected app state is missing!")
                         .kc
                         .get_public_key();
-                    debug!("PK: {:?}", pubkey);
                     let pk_der_asn1 = base64::decode(pubkey.as_str())
                         .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
                     let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
