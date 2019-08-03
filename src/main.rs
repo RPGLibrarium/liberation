@@ -7,7 +7,6 @@ extern crate mysql;
 extern crate serde_derive;
 extern crate actix;
 extern crate actix_files;
-#[macro_use]
 extern crate actix_web;
 extern crate actix_service;
 extern crate awc;
@@ -62,20 +61,22 @@ fn main() {
     let sys = System::new("server");
     kc_actor.start();
 
+    let serve_static_files = settings.serve_static_files;
     HttpServer::new(move || {
         let mut app = App::new()
             .wrap(Logger::default())
             .register_data(web::Data::new(state.clone()))
             .service(get_v1());
-        if settings.serve_static_files {
+        if serve_static_files {
             app = app.service(get_static());
         }
         app
     })
-    .bind("0.0.0.0:8080")
+    .bind(format!("0.0.0.0:{}", settings.port))
     .unwrap()
     .start();
 
+    info!("liberation ready");
     sys.run();
 }
 
