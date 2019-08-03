@@ -34,7 +34,7 @@ pub fn get_v1() -> Scope {
         .service(
             web::scope("/rpgsystems")
                 .service(
-                    web::resource("/")
+                    web::resource("")
                         .route(web::get().to(get_rpg_systems))
                         .route(web::post().to(post_rpg_system)),
                 )
@@ -48,7 +48,7 @@ pub fn get_v1() -> Scope {
         .service(
             web::scope("/titles")
                 .service(
-                    web::resource("/")
+                    web::resource("")
                         .route(web::get().to(get_titles))
                         .route(web::post().to(post_rpg_system)),
                 )
@@ -62,7 +62,7 @@ pub fn get_v1() -> Scope {
         .service(
             web::scope("/books")
                 .service(
-                    web::resource("/")
+                    web::resource("")
                         .route(web::get().to(get_books))
                         .route(web::post().to(post_book)),
                 )
@@ -76,14 +76,14 @@ pub fn get_v1() -> Scope {
         .service(
             web::scope("/guilds")
                 .service(
-                    web::resource("/")
+                    web::resource("")
                         .route(web::get().to(get_guilds))
                         .route(web::post().to(post_guild)),
                 )
                 .service(
                     web::scope("/{guildid}")
                         .service(
-                            web::resource("/")
+                            web::resource("")
                                 .route(web::get().to(get_guild))
                                 .route(web::put().to(put_guild)),
                         )
@@ -96,7 +96,7 @@ pub fn get_v1() -> Scope {
         )
         .service(
             web::scope("members")
-                .service(web::resource("/").route(web::get().to(get_members)))
+                .service(web::resource("").route(web::get().to(get_members)))
                 .service(
                     web::scope("/{memberid}")
                         .service(web::resource("/").route(web::get().to(get_member)))
