@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use actix_service::ServiceExt;
 use actix_web::client::Client;
 use actix_web::{client, http, HttpMessage, HttpRequest};
 use api::AppState;

@@ -1,12 +1,12 @@
 use actix_web::client::SendRequestError;
 use actix_web::{error, HttpResponse, ResponseError};
+use awc;
 use core::num::ParseIntError;
 use failure::Fail;
 use mysql::Error as MySqlError;
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::RequestTokenError;
 use std::fmt;
-use awc;
 //use std::option::NoneError;
 
 type Field = String;

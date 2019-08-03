@@ -9,6 +9,8 @@ extern crate actix;
 extern crate actix_files;
 #[macro_use]
 extern crate actix_web;
+extern crate actix_service;
+extern crate awc;
 extern crate base64;
 extern crate chrono;
 extern crate config;
@@ -24,8 +26,6 @@ extern crate serde_json;
 extern crate tokio;
 extern crate url;
 extern crate url_serde;
-extern crate actix_service;
-extern crate awc;
 
 mod api;
 mod auth;
@@ -36,10 +36,10 @@ mod serde_formats;
 mod settings;
 
 use actix::{Actor, System};
-use actix_web::{HttpServer, App, web};
+use actix_web::{web, App, HttpServer};
+use api::{get_static, get_v1};
 use auth::KeycloakCache;
 use settings::Settings;
-use api::{get_v1, get_static};
 
 fn main() {
     env_logger::init();
@@ -65,9 +65,9 @@ fn main() {
         let mut app = App::new()
             .register_data(web::Data::new(state.clone()))
             .service(get_v1());
-            if settings.serve_static_files {
-                app = app.service(get_static());
-            }
+        if settings.serve_static_files {
+            app = app.service(get_static());
+        }
         app
     })
     .bind("0.0.0.0:8080")

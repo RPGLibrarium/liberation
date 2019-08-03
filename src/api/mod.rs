@@ -7,7 +7,7 @@ use actix_service::IntoNewService;
 use actix_web::body::Body;
 use actix_web::dev::HttpServiceFactory;
 use actix_web::error::DispatchError::Service;
-use actix_web::web::{Json, route};
+use actix_web::web::{route, Json};
 use actix_web::{http, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
 use auth::roles::*;
 use auth::{assert_roles, Claims, KeycloakCache};
@@ -36,7 +36,7 @@ pub fn get_v1() -> Scope {
                 .service(
                     web::resource("/")
                         .route(web::get().to(get_rpg_systems))
-                        .route(web::post().to(post_rpg_system))
+                        .route(web::post().to(post_rpg_system)),
                 )
                 .service(
                     web::resource("/{systemid}")
@@ -59,7 +59,6 @@ pub fn get_v1() -> Scope {
                         .route(web::delete().to(delete_title)),
                 ),
         )
-        
         .service(
             web::scope("/books")
                 .service(
@@ -86,35 +85,27 @@ pub fn get_v1() -> Scope {
                         .service(
                             web::resource("/")
                                 .route(web::get().to(get_guild))
-                                .route(web::put().to(put_guild))
+                                .route(web::put().to(put_guild)),
                         )
                         .service(
                             web::resource("/inventory")
                                 .route(web::get().to(get_guild_inventory))
-                                .route(web::post().to(post_guild_inventory))
-                        )
+                                .route(web::post().to(post_guild_inventory)),
+                        ),
                 ),
         )
-
         .service(
             web::scope("members")
-                .service(
-                    web::resource("/")
-                        .route(web::get().to(get_members))
-                )
+                .service(web::resource("/").route(web::get().to(get_members)))
                 .service(
                     web::scope("/{memberid}")
-                        .service(
-                            web::resource("/")
-                                .route(web::get().to(get_member))
-
-                        )
+                        .service(web::resource("/").route(web::get().to(get_member)))
                         .service(
                             web::resource("/inventory")
                                 .route(web::get().to(get_member_inventory))
-                                .route(web::post().to(post_member_inventory))
-                        )
-                )
+                                .route(web::post().to(post_member_inventory)),
+                        ),
+                ),
         )
 }
 
