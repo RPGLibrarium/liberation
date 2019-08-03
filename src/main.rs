@@ -40,6 +40,7 @@ use actix_web::{web, App, HttpServer};
 use api::{get_static, get_v1};
 use auth::KeycloakCache;
 use settings::Settings;
+use actix_web::middleware::Logger;
 
 fn main() {
     env_logger::init();
@@ -63,6 +64,7 @@ fn main() {
 
     HttpServer::new(move || {
         let mut app = App::new()
+            .wrap(Logger::default())
             .register_data(web::Data::new(state.clone()))
             .service(get_v1());
         if settings.serve_static_files {
