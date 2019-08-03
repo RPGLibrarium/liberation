@@ -60,16 +60,17 @@ fn main() {
     let sys = System::new("server");
     kc_actor.start();
 
+    let serve_static_files = settings.serve_static_files;
     HttpServer::new(move || {
         let mut app = App::new()
             .register_data(web::Data::new(state.clone()))
             .service(get_v1());
-        if settings.serve_static_files {
+        if serve_static_files {
             app = app.service(get_static());
         }
         app
     })
-    .bind("0.0.0.0:8080")
+    .bind(format!("0.0.0.0:{}", settings.port))
     .unwrap()
     .start();
 

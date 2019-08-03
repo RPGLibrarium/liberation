@@ -24,6 +24,7 @@ pub struct Keycloak {
 pub struct Settings {
     pub debug: bool,
     pub serve_static_files: bool,
+    pub port: u16,
     pub database: Database,
     pub keycloak: Keycloak,
 }
