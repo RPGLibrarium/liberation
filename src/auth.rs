@@ -6,7 +6,7 @@ use api::AppState;
 use base64;
 use database::type_aliases::*;
 use error::Error;
-use futures::Future;
+use futures::{Future, lazy};
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
@@ -178,8 +178,10 @@ impl Keycloak {
     }
 
     pub fn fetch(kc: &mut Self, _ctx: &mut Context<Keycloak>) {
+        debug!("fetch called");
         //Get token from Keycloak with credentials
         let token_result = kc.oauth_client.exchange_client_credentials();
+        debug!("token result: {:?}", token_result);
 
         let user_url = kc
             .keycloak_url
@@ -192,31 +194,38 @@ impl Keycloak {
 
         let cloned_cache = kc.cache.clone();
 
-        // Get user information with token
-        let mut client = Client::default();
-        client
-            .get(user_url.as_str()) // <- Create request builder
-            // .no_default_headers()
-            .header(
-                "Authorization",
-                format!("Bearer {}", token_result.unwrap().access_token().secret()),
-            ) // .header("host", "localhost:8081")
-            .send() // <- Send http request
-            .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|mut response| {
-                debug!("response: {:?}", response);
-                response.json().map_err(|err| Error::KeycloakJsonError(err))
-            })
-            .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
-            .and_then(|users: Vec<KeycloakUser>| {
-                //info!("users: {:?}", users);
-                users.into_iter().for_each(move |user| {
-                    cloned_cache.insert_user(user);
-                });
-                println!("Fetched users");
-                //info!("users: {:?}", move cloned_cache2);
-                Ok(())
-            });
+        Arbiter::spawn(lazy( move || {
+            // Get user information with token
+            let mut client : Client = Client::build()
+                .bearer_auth(token_result.unwrap().access_token().secret())
+                .finish();
+
+            // let mut client = Client::build(); // Client::default();
+            client
+                .get(user_url.as_str()) // <- Create request builder
+                // .no_default_headers()
+                // .header(
+                //     "Authorization",
+                //     format!("Bearer {}", token_result.unwrap().access_token().secret()),
+                // ) // .header("host", "localhost:8081")
+                .send() // <- Send http request
+                .map_err(|err| { debug!("ERR: {:?}", err); Error::KeycloakConnectionError(err)})
+                .and_then(|mut response| {
+                    debug!("response: {:?}", response);
+                    response.json().map_err(|err| Error::KeycloakJsonError(err))
+                })
+                .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
+                .and_then(|users: Vec<KeycloakUser>| {
+                    //info!("users: {:?}", users);
+                    users.into_iter().for_each(move |user| {
+                        cloned_cache.insert_user(user);
+                    });
+                    println!("Fetched users");
+                    //info!("users: {:?}", move cloned_cache2);
+                    Ok(())
+                })
+        }));
+        debug!("after request");
 
         // Get public key information
         let key_url = kc
@@ -230,22 +239,26 @@ impl Keycloak {
 
         let cloned_cache = kc.cache.clone();
 
-        client
-            .get(key_url.as_str()) // <- Create request builder
-            // .no_default_headers()
-            // .header("host", "localhost:8081")
-            .send() // <- Send http request
-            .map_err(|err| Error::KeycloakConnectionError(err))
-            .and_then(|mut response| {
-                response
-                    .json()
-                    .map_err(|err: awc::error::JsonPayloadError| Error::KeycloakJsonError(err))
-            })
-            .map_err(|err| panic!("Unexpected KeycloakError {}", err))
-            .and_then(move |response: KeycloakMetaInfo| {
-                cloned_cache.set_public_key(response.public_key);
-                Ok(())
-            });
+        Arbiter::spawn(lazy( move || {
+            // client
+            Client::default()
+                .get(key_url.as_str()) // <- Create request builder
+                // .no_default_headers()
+                // .header("host", "localhost:8081")
+                .send() // <- Send http request
+                .map_err(|err| Error::KeycloakConnectionError(err))
+                .and_then(|mut response| {
+                    response
+                        .json()
+                        .map_err(|err: awc::error::JsonPayloadError| Error::KeycloakJsonError(err))
+                })
+                .map_err(|err| panic!("Unexpected KeycloakError {}", err))
+                .and_then(move |response: KeycloakMetaInfo| {
+                    debug!("kc meta: {:?}", response);
+                    cloned_cache.set_public_key(response.public_key);
+                    Ok(())
+                })
+        }));
     }
 }
 
@@ -277,6 +290,7 @@ pub fn get_claims_for_req(req: &HttpRequest) -> Result<Option<Claims>, Error> {
                         .expect("Expected app state is missing!")
                         .kc
                         .get_public_key();
+                    debug!("PK: {:?}", pubkey);
                     let pk_der_asn1 = base64::decode(pubkey.as_str())
                         .expect("JWT checking: invalid base64 encoding of Keycloak public key)");
                     let pk = Rsa::public_key_from_der(pk_der_asn1.as_slice())
