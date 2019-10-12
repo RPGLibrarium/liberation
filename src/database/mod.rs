@@ -141,7 +141,7 @@ impl Database {
                     from books
                     ) b on titles.title_id = b.title_by_id
                 where titles.rpg_system_by_id = :system_id
-                group by book_id;",
+                group by title.title_id;",
             params!{
                 "system_id" => system_id,
             },
