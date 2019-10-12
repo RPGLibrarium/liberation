@@ -259,6 +259,13 @@ footer a {
   text-transform: uppercase;
 }
 
+footer .footer-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: end;
+}
+
 /* overall page contents */
 #loading {
   /* display: none; */
