@@ -23,7 +23,6 @@ API.interceptors.request.use (
   error => Promise.reject(error)
 );
 
-
 document.addEventListener("DOMContentLoaded", initPage);
 
 function initPage(){
