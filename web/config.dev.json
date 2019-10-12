@@ -1,0 +1,4 @@
+{
+  "keycloakConfigLocation": "./keycloak.dev.json",
+  "apiBaseUrl": "http://localhost:8080/v1/"
+}

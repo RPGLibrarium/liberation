@@ -1,6 +1,31 @@
 const WHOOSH_DURATION = 1000;
 const execAfter = setTimeout;
 
+// ########
+// CONFIG #
+// ########
+const WEB_ROOT_PATH = '..';
+const CONFIG_LOCATION = 'config.json';
+let CONFIG = null;
+let _configPromise = (()=>{
+  if (axios) return loadConfig();
+  return new Promise((accpet,reject)=>{
+    document.addEventListener('DOMContentLoaded', ()=>{
+      accept(loadConfig());
+    });
+  });
+})();
+function loadConfig() {
+  return axios.get(`${WEB_ROOT_PATH}/${CONFIG_LOCATION}`)
+    .then(result => {
+      CONFIG = result.data;
+    })
+    .catch(e => {
+      console.error('loading config failed! ', e);
+      return Promise.reject('error loading config');
+    })
+}
+
 // #######
 // PAGES #
 // #######
@@ -49,7 +74,7 @@ ROUTER.notFound(()=>{
 // ######
 // AUTH #
 // ######
-const KC_CONF_LOCATION = '../keycloak.json';
+// const KC_CONF_LOCATION = '../keycloak.json';
 const KC_REFRESH_INTERVAL = 5; // seconds -> how often it is checked
 const KC_REFRESH_THRESHOLD = 10; // seconds -> remaining time which causes refresh
 
@@ -60,7 +85,7 @@ function loadKeycloak(waitForStuff, thenDoStuff) {
   console.debug("Loading keycloak")
   document.querySelector(':root').classList.add('loading');
   if(typeof Keycloak === 'undefined' || !Keycloak){
-    axios.get(KC_CONF_LOCATION)
+    axios.get(`${WEB_ROOT_PATH}/${CONFIG.keycloakConfigLocation}`)
       .then(res => res.data)
       .then(conf => {
         let scriptLocation = `${conf['auth-server-url']}/js/keycloak.js`;
@@ -86,7 +111,7 @@ function initKeycloak(waitForStuff, thenDoStuff){
   if(!keycloak){
     console.debug("Init keycloak")
     // TODO the following seems to be easier than passing the conf object o_O ... we should be able to reuse it!
-    keycloak = new Keycloak(KC_CONF_LOCATION);
+    keycloak = new Keycloak(`${WEB_ROOT_PATH}/${CONFIG.keycloakConfigLocation}`);
   }
 
   keycloak.init({
@@ -133,21 +158,24 @@ function checkRoles(role) {
 // #####
 // API #
 // #####
-export const API = axios.create({
-  baseURL: 'http://localhost:8080/v1/',
-  timeout: 1000,
-  responseType:'json',
+export let API = null;
+_configPromise.then(()=>{
+  API = axios.create({
+    get baseURL() { return CONFIG.apiBaseUrl; }, // 'http://localhost:8080/v1/',
+    timeout: 1000,
+    responseType:'json',
+  });
+  //inject auth header if not already set and a token is available
+  API.interceptors.request.use (
+    config => {
+      if(!config.headers.Authorization && keycloak && keycloak.authenticated){
+        config.headers.Authorization = `Bearer ${keycloak.token}`;
+      }
+      return config;
+    },
+    error => Promise.reject(error)
+  );
 });
-//inject auth header if not already set and a token is available
-API.interceptors.request.use (
-  config => {
-    if(!config.headers.Authorization && keycloak && keycloak.authenticated){
-      config.headers.Authorization = `Bearer ${keycloak.token}`;
-    }
-    return config;
-  },
-  error => Promise.reject(error)
-);
 
 
 // #####################
@@ -223,5 +251,5 @@ function updateNavBar() {
 // GENREAL MAGIC STUFF #
 // #####################
 export const MAGIC = (waitForStuff, thenDoStuff)=>{
-  loadKeycloak(waitForStuff, thenDoStuff);
+  _configPromise.then(()=>loadKeycloak(waitForStuff, thenDoStuff));
 };
