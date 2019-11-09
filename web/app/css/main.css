@@ -39,6 +39,7 @@ Lighter Dark Grey: rgb(74, 70, 64)
 
 body {
   background-color: var(--color-cd-light-ish);
+  color: var(--color-cd-dark-ish);
   font-family: 'Source Sans Pro', Arial, Helvetica, sans-serif;
   display: flex;
   min-height: 100vh;
