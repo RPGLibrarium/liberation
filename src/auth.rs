@@ -6,7 +6,7 @@ use api::AppState;
 use base64;
 use database::type_aliases::*;
 use error::Error;
-use futures::{Future, lazy};
+use futures::{Future, future::lazy};
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
@@ -161,7 +161,7 @@ impl Keycloak {
                 auth_url,
                 Some(token_url),
             ),
-            cache: cache,
+            cache,
         };
 
         return kc;
