@@ -1,4 +1,6 @@
 use super::*;
+use serde::Serialize;
+use mysql::params;
 
 /// Id type for Member
 pub type MemberId = EntityId;
@@ -191,7 +193,7 @@ mod tests {
         let db = Database::from_settings(&settings).unwrap();
         let mut member_in = Member::new(None, _s("somememberId"));
 
-        let result = db.insert(&mut member_in).and_then(|member_id| {
+        let result = db.insert(&mut member_in).and_then(|_member_id| {
             member_in.external_id = String::from(TOO_LONG_STRING);
             return db.update(&member_in);
         });

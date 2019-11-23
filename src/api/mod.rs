@@ -3,16 +3,16 @@ mod dto;
 pub use self::dto::*;
 
 use actix_files as fs;
-use actix_service::IntoNewService;
-use actix_web::body::Body;
-use actix_web::dev::HttpServiceFactory;
-use actix_web::error::DispatchError::Service;
-use actix_web::web::{route, Json};
+
+
+
+
+
 use actix_web::{http, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
-use auth::roles::*;
-use auth::{assert_roles, Claims, KeycloakCache};
-use business as bus;
-use database::*;
+use crate::auth::roles::*;
+use crate::auth::{assert_roles, Claims, KeycloakCache};
+use crate::business as bus;
+use crate::database::*;
 //use futures::future::Future;
 
 /// Handling of external modules
@@ -310,12 +310,12 @@ fn get_member(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpRespo
 }
 
 /// Get the inventory of a Member (if authentification is successful)
-fn get_member_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+fn get_member_inventory(_state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
     HttpResponse::NotImplemented().finish()
 }
 
 /// Insert into a member's inventory (if authentification is successful)
-fn post_member_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+fn post_member_inventory(_state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
     HttpResponse::NotImplemented().finish()
 }
 
@@ -370,11 +370,11 @@ fn put_guild(
 }
 
 /// Get the inventory of a Guild (if authentification is successful)
-fn get_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+fn get_guild_inventory(_state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
     HttpResponse::NotImplemented().finish()
 }
 
 /// Insert into a guild's inventory (if authentification is successful)
-fn post_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
+fn post_guild_inventory(_state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
     HttpResponse::NotImplemented().finish()
 }

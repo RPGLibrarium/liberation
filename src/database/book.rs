@@ -1,4 +1,6 @@
 use super::*;
+use serde::{Serialize, Deserialize};
+use mysql::params;
 
 /// Id type for Book
 pub type BookId = Id;
@@ -468,7 +470,7 @@ mod tests {
     fn update_book_quality_too_long() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, mut orig_book)| {
+        let result = insert_book_default(&db).and_then(|(_book_id, mut orig_book)| {
             orig_book.quality = _s(TOO_LONG_STRING);
             db.update(&orig_book)
         });

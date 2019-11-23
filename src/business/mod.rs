@@ -1,7 +1,7 @@
-use api::*;
-use auth::{Claims, KeycloakCache};
-use database::*;
-use error::Error;
+use crate::api::*;
+use crate::auth::{Claims};
+use crate::database::*;
+use crate::error::Error;
 use std::collections::HashMap;
 
 /// Get all RPG systems from database
@@ -21,7 +21,7 @@ pub fn get_rpgsystem(
 ) -> Result<GetRpgSystem, Error> {
     let titles = db.get_titles_by_rpg_system(system_id)?;
 
-    let include_stock = match (claims) {
+    let include_stock = match claims {
         Some(_) => true,
         _ => false,
     };
@@ -35,7 +35,7 @@ pub fn get_rpgsystem(
 /// Insert a RPG system into database
 pub fn post_rpgsystem(
     db: &Database,
-    claims: Option<Claims>,
+    _claims: Option<Claims>,
     system: PutPostRpgSystem,
 ) -> Result<RpgSystemId, Error> {
     //TODO: Error handling
@@ -46,7 +46,7 @@ pub fn post_rpgsystem(
 /// Update a specific system in database
 pub fn put_rpgsystem(
     db: &Database,
-    claims: Option<Claims>,
+    _claims: Option<Claims>,
     system: &PutPostRpgSystem,
 ) -> Result<(), Error> {
     //TODO: Error handling
@@ -56,7 +56,7 @@ pub fn put_rpgsystem(
 /// Delete the RPG system with given id from database
 pub fn delete_rpgsystem(
     db: &Database,
-    claims: Option<Claims>,
+    _claims: Option<Claims>,
     systemid: RpgSystemId,
 ) -> Result<(), Error> {
     match db.delete::<RpgSystem>(systemid) {
@@ -101,7 +101,7 @@ pub fn get_title(
 /// Insert a title into database
 pub fn post_title(
     db: &Database,
-    claims: Option<Claims>,
+    _claims: Option<Claims>,
     title: PutPostTitle,
 ) -> Result<TitleId, Error> {
     //TODO: Error handling
@@ -109,13 +109,13 @@ pub fn post_title(
 }
 
 /// Update a specific title in database
-pub fn put_title(db: &Database, claims: Option<Claims>, title: PutPostTitle) -> Result<(), Error> {
+pub fn put_title(db: &Database, _claims: Option<Claims>, title: PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<Title>(&title.title)?)
 }
 
 /// Delete the title with given id from database
-pub fn delete_title(db: &Database, claims: Option<Claims>, id: TitleId) -> Result<(), Error> {
+pub fn delete_title(db: &Database, _claims: Option<Claims>, id: TitleId) -> Result<(), Error> {
     //TODO: Errorhandling
     db.delete::<Title>(id)?;
     Ok(())
@@ -123,16 +123,16 @@ pub fn delete_title(db: &Database, claims: Option<Claims>, id: TitleId) -> Resul
 
 /// Get all books of a title including rental information
 fn get_books_by_title_id(
-    db: &Database,
-    id: TitleId,
-    claims: Option<Claims>,
+    _db: &Database,
+    _id: TitleId,
+    _claims: Option<Claims>,
 ) -> Result<Vec<BookWithOwnerWithRental>, Error> {
     //TODO: Stub
     return Ok(vec![]);
 }
 
 /// Get all books from database
-pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Error> {
+pub fn get_books(db: &Database, _claims: Option<Claims>) -> Result<GetBooks, Error> {
     //TODO: authentication
 
     //TODO Error mapping
@@ -187,7 +187,7 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                 BookWithTitleWithOwnerWithRental {
                     id: book.id.expect("book id shall not be empty"),
                     quality: book.quality,
-                    available: available,
+                    available,
                     external_inventory_id: book.external_inventory_id,
                     rental: match rental {
                         None => None,
@@ -230,74 +230,74 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
     })
 }
 
-pub fn get_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(), Error> {
+pub fn get_book(_db: &Database, _claims: Option<Claims>, _id: BookId) -> Result<(), Error> {
     //TODO:: Stub
     //TODO: authentication
     Ok(())
 }
 
 pub fn post_book(
-    db: &Database,
-    claims: Option<Claims>,
-    book: PutPostBook,
+    _db: &Database,
+    _claims: Option<Claims>,
+    _book: PutPostBook,
 ) -> Result<BookId, Error> {
     //TODO:: Stub
     //TODO: authentication
     Ok(1234)
 }
 
-pub fn put_book(db: &Database, claims: Option<Claims>, book: PutPostBook) -> Result<(), Error> {
+pub fn put_book(_db: &Database, _claims: Option<Claims>, _book: PutPostBook) -> Result<(), Error> {
     //TODO:: Stub
     //TODO: authentication
     Ok(())
 }
 
-pub fn delete_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(), Error> {
+pub fn delete_book(db: &Database, _claims: Option<Claims>, id: BookId) -> Result<(), Error> {
     //TODO:: Stub
     //TODO: Errorhandling
     db.delete::<Book>(id)?;
     Ok(())
 }
 
-pub fn get_members(db: &Database, claims: Option<Claims>) -> Result<GetMembers, Error> {
+pub fn get_members(_db: &Database, _claims: Option<Claims>) -> Result<GetMembers, Error> {
     //TODO: Stub
     //TODO: Get Members from Database
     //TODO: Complete Infos from Keycloak
     Ok(GetMembers { members: vec![] })
 }
 
-pub fn get_member(db: &Database, claims: Option<Claims>, id: MemberId) -> Result<(), Error> {
+pub fn get_member(_db: &Database, _claims: Option<Claims>, _id: MemberId) -> Result<(), Error> {
     //TODO: Stub
     //TODO: Get Members from Database
     //TODO: Complete Infos from Keycloak
     Ok(())
 }
 
-pub fn get_guilds(db: &Database, claims: Option<Claims>) -> Result<GetGuilds, Error> {
+pub fn get_guilds(_db: &Database, _claims: Option<Claims>) -> Result<GetGuilds, Error> {
     //TODO: Stub
     Ok(GetGuilds { guilds: vec![] })
 }
 
-pub fn get_guild(db: &Database, claims: Option<Claims>, id: GuildId) -> Result<(), Error> {
+pub fn get_guild(_db: &Database, _claims: Option<Claims>, _id: GuildId) -> Result<(), Error> {
     //TODO: Stub
     Ok(())
 }
 
 pub fn post_guild(
-    db: &Database,
-    claims: Option<Claims>,
-    guild: PutPostGuild,
+    _db: &Database,
+    _claims: Option<Claims>,
+    _guild: PutPostGuild,
 ) -> Result<GuildId, Error> {
     //TODO: Stub
     Ok(1234)
 }
 
-pub fn put_guild(db: &Database, claims: Option<Claims>, guild: PutPostGuild) -> Result<(), Error> {
+pub fn put_guild(_db: &Database, _claims: Option<Claims>, _guild: PutPostGuild) -> Result<(), Error> {
     //TODO: Stub
     Ok(())
 }
 
-pub fn delete_guild(db: &Database, claims: Option<Claims>, guild: GuildId) -> Result<(), Error> {
+pub fn delete_guild(_db: &Database, _claims: Option<Claims>, _guild: GuildId) -> Result<(), Error> {
     //TODO: Stub
     Ok(())
 }
