@@ -1,23 +1,24 @@
 use actix::prelude::*;
 use actix_service::ServiceExt;
 use actix_web::client::Client;
-use actix_web::{client, http, HttpMessage, HttpRequest};
-use api::AppState;
+use actix_web::{http, HttpMessage, HttpRequest};
+use crate::api::AppState;
 use base64;
-use database::type_aliases::*;
-use error::Error;
+use crate::database::type_aliases::*;
+use crate::error::Error;
 use futures::{Future, future::lazy};
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
 use oauth2::{AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
 use openssl::rsa::*;
-use settings::Keycloak as KeycloakSettings;
+use crate::settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
+use serde::{Serialize, Deserialize};
 
 pub mod roles {
     pub const ROLE_ADMIN: &str = "admin";
@@ -83,7 +84,7 @@ pub struct Keycloak {
 
 impl KeycloakCache {
     pub fn new() -> KeycloakCache {
-        let empty_key: [u8; 0];
+        let _empty_key: [u8; 0];
         KeycloakCache {
             cache: Arc::new(Mutex::new(HashMap::new())),
             pk: Arc::new(Mutex::new(String::from(""))),
@@ -197,7 +198,7 @@ impl Keycloak {
 
         Arbiter::spawn(lazy( move || {
             // Get user information with token
-            let mut client : Client = Client::build()
+            let client : Client = Client::build()
                 .bearer_auth(token_result.unwrap().access_token().secret())
                 .finish();
 

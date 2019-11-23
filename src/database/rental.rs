@@ -1,5 +1,7 @@
 use super::*;
-use serde_formats;
+use crate::serde_formats;
+use serde::Serialize;
+use mysql::params;
 
 /// Id type for Rental
 pub type RentalId = Id;
@@ -223,7 +225,7 @@ mod tests {
     fn insert_rental_invalid_book() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, book)| {
+        let result = insert_book_default(&db).and_then(|(_book_id, book)| {
             db.insert(&mut Rental::new(
                 None,
                 _d(2014, 8, 16),
@@ -265,7 +267,7 @@ mod tests {
     fn insert_rental_wrong_owner_type() {
         let settings = setup();
         let db = Database::from_settings(&settings).unwrap();
-        let result = insert_book_default(&db).and_then(|(book_id, book)| {
+        let result = insert_book_default(&db).and_then(|(_book_id, book)| {
             db.insert(&mut Rental::new(
                 None,
                 _d(2014, 8, 16),
@@ -342,7 +344,7 @@ mod tests {
                 ))
                 .and_then(|book_id| Ok((rental_id, orig_rental, book_id, guild_id)))
             })
-            .and_then(|(rental_id, mut orig_rental, book_id, guild_id)| {
+            .and_then(|(rental_id, orig_rental, book_id, guild_id)| {
                 let rental_update = Rental {
                     id: Some(rental_id),
                     from: _d(2090, 10, 11),

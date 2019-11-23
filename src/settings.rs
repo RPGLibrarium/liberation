@@ -1,6 +1,7 @@
 use config::{Config, ConfigError, Environment, File};
 use url::Url;
 use url_serde;
+use serde::{Deserialize};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Database {

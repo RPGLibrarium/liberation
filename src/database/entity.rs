@@ -1,6 +1,6 @@
 use super::*;
-
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use mysql::params;
 
 /// Id type for Entity
 pub type EntityId = Id;

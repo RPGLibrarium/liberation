@@ -1,5 +1,7 @@
 use super::*;
 use std::string::String;
+use serde::{Serialize, Deserialize};
+use mysql::params;
 
 /// Id type for RpgSystem
 pub type RpgSystemId = Id;

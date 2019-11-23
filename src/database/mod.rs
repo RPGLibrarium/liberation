@@ -1,6 +1,8 @@
-pub use super::error::Error;
-use super::settings;
+pub use crate::error::Error;
+use crate::settings;
 use chrono::prelude::*;
+use mysql::params;
+use serde::{Serialize};
 pub static INIT_DB_STRUCTURE: &str = include_str!("../../res/init-db-structure.sql");
 
 /// Checks string and returns error if string is too long
@@ -250,7 +252,7 @@ impl Database {
 
     //TODO: Unfinished
     /// Gets all Book objects associated with the given Title
-    pub fn get_books_by_title(&self, id: TitleId) -> Result<Vec<Book>, Error> {
+    pub fn get_books_by_title(&self, _id: TitleId) -> Result<Vec<Book>, Error> {
         return Ok(vec![]);
     }
 
@@ -307,15 +309,15 @@ pub trait DMO<T = Self> {
     /// Id
     type Id;
     /// Gets all objects of self type from the underlaying database
-    fn get_all(&Database) -> Result<Vec<T>, Error>;
+    fn get_all(this: &Database) -> Result<Vec<T>, Error>;
     /// Gets an object of self type with given id from the underlaying database
-    fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
+    fn get(this: &Database, id: Self::Id) -> Result<Option<T>, Error>;
     /// Inserts an object of self type into the underlaying database
-    fn insert(&Database, &T) -> Result<Id, Error>;
+    fn insert(this: &Database, dmo: &T) -> Result<Id, Error>;
     /// Updates an object of self type in the underlaying database
-    fn update(&Database, &T) -> Result<(), Error>;
+    fn update(this: &Database, dmo: &T) -> Result<(), Error>;
     /// Delets an object of self type from the underlaying database
-    fn delete(&Database, Self::Id) -> Result<bool, Error>;
+    fn delete(this: &Database, id: Self::Id) -> Result<bool, Error>;
 }
 
 #[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
@@ -446,14 +448,14 @@ mod tests {
     #[test]
     fn connect() {
         let settings = setup();
-        let db = Database::from_settings(&settings).unwrap();
+        let _db = Database::from_settings(&settings).unwrap();
         //teardown(settings);
     }
 
     #[test]
     fn db_init() {
         let settings = setup();
-        let db = Database::from_settings(&settings).unwrap();
+        let _db = Database::from_settings(&settings).unwrap();
 
         teardown(settings);
     }

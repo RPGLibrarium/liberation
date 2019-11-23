@@ -1,4 +1,6 @@
 use super::*;
+use serde::{Serialize, Deserialize};
+use mysql::params;
 
 /// Id type for guild
 pub type GuildId = EntityId;
@@ -239,7 +241,7 @@ mod tests {
                     member_id,
                 );
                 db.insert(&mut orig_guild)
-                    .and_then(|guild_id| Ok(orig_guild))
+                    .and_then(|_guild_id| Ok(orig_guild))
             })
             .and_then(|mut orig_guild| {
                 orig_guild.name = _s(TOO_LONG_STRING);

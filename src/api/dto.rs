@@ -1,5 +1,6 @@
-use database as db;
-use serde_formats;
+use crate::database as db;
+use serde::{Serialize, Deserialize};
+use crate::serde_formats;
 
 type ItemCount = u32;
 
@@ -40,11 +41,11 @@ impl GetRpgSystem {
                         publisher: title.publisher,
                         year: title.year,
                         coverimage: title.coverimage,
-                        stock: match (include_stock) {
+                        stock: match include_stock {
                             true => Some(stock),
                             _ => None,
                         },
-                        available: match (include_stock) {
+                        available: match include_stock {
                             true => Some(available),
                             _ => None,
                         },
@@ -85,7 +86,7 @@ impl GetTitle {
             title: TitleWithSystemWithBooks {
                 id: title.id.unwrap(),
                 name: title.name,
-                system: system,
+                system,
                 language: title.language,
                 publisher: title.publisher,
                 year: title.year,

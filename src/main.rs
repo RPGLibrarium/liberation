@@ -1,30 +1,4 @@
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-#[macro_use]
-extern crate mysql;
-#[macro_use]
-extern crate serde_derive;
-extern crate actix;
-extern crate actix_files;
-extern crate actix_web;
-extern crate actix_service;
-extern crate awc;
-extern crate base64;
-extern crate chrono;
-extern crate config;
-extern crate core;
-extern crate failure;
-extern crate futures;
-extern crate jsonwebtoken;
-extern crate oauth2;
-extern crate openssl;
-extern crate rand;
-extern crate serde;
-extern crate serde_json;
-extern crate tokio;
-extern crate url;
-extern crate url_serde;
+#[macro_use] extern crate log;
 
 mod api;
 mod auth;
@@ -54,7 +28,7 @@ fn main() {
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
     let state = api::AppState {
-        db: db,
+        db,
         kc: kc.clone(),
     };
 
