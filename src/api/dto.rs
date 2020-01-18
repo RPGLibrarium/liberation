@@ -273,9 +273,7 @@ pub struct UnresolvedEntity {
 
 #[derive(Serialize)]
 pub struct RentalWithRentee {
-    #[serde(with = "serde_formats::naive_date")]
     pub from: db::Date,
-    #[serde(with = "serde_formats::naive_date")]
     pub to: db::Date,
     pub rentee: Entity,
 }

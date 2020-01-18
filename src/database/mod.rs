@@ -25,7 +25,6 @@ mod book;
 mod entity;
 mod guild;
 mod member;
-mod rental;
 mod rpgsystem;
 mod title;
 
@@ -33,7 +32,6 @@ pub use self::book::Book;
 pub use self::entity::EntityType;
 pub use self::guild::Guild;
 pub use self::member::Member;
-pub use self::rental::Rental;
 pub use self::rpgsystem::RpgSystem;
 pub use self::title::Title;
 
@@ -42,7 +40,6 @@ pub use self::entity::EntityId;
 pub use self::guild::GuildId;
 pub use self::member::ExternalId;
 pub use self::member::MemberId;
-pub use self::rental::RentalId;
 pub use self::rpgsystem::RpgSystemId;
 pub use self::title::TitleId;
 
@@ -52,7 +49,7 @@ use mysql;
 pub type Id = u64;
 
 pub type Year = i16;
-pub type Date = NaiveDate;
+pub type Date = DateTime<Utc>;
 
 pub mod type_aliases {
     pub use super::BookId;
@@ -60,7 +57,6 @@ pub mod type_aliases {
     pub use super::ExternalId;
     pub use super::GuildId;
     pub use super::MemberId;
-    pub use super::RentalId;
     pub use super::RpgSystemId;
     pub use super::TitleId;
 
@@ -253,53 +249,6 @@ impl Database {
     pub fn get_books_by_title(&self, id: TitleId) -> Result<Vec<Book>, Error> {
         return Ok(vec![]);
     }
-
-    // one function to query them all, retrieve their data and store it in stucts
-    /// Gets all Book objects with additional rental information
-    pub fn get_books_with_details(&self) -> Result<Vec<(Book, Option<Rental>, bool)>, Error> {
-        return self.pool
-            .prep_exec(
-                "select
-                    books.book_id, books.owner_type, books.quality, books.external_inventory_id, books.title_by_id, \
-                    if(books.owner_type = 'member', o_members.member_id, o_guilds.guild_id) as owner_id, \
-                    rentals.rental_id, rentals.from_date, rentals.to_date, rentals.rentee_type, \
-                    if(rentals.rentee_type = 'member', r_members.member_id, r_guilds.guild_id) as rentee_id, \
-                    (rentals.to_date is null or rentals.to_date < CURRENT_DATE) as available \
-                from books \
-                left outer join members as o_members on books.owner_member_by_id = o_members.member_id and books.owner_type = 'member' \
-                left outer join guilds as o_guilds on books.owner_guild_by_id = o_guilds.guild_id and books.owner_type = 'guild' \
-                left outer join rentals on books.book_id = rentals.book_by_id and rentals.to_date >= ALL (select to_date from rentals where book_by_id = books.book_id) \
-                left outer join members as r_members on rentals.rentee_member_by_id = r_members.member_id and rentals.rentee_type = 'member' \
-                left outer join guilds as r_guilds on rentals.rentee_guild_by_id = r_guilds.guild_id and rentals.rentee_type = 'guild' \
-                group by book_id;
-                ", ())
-            .map_err(|err| Error::DatabaseError(err))
-            .map(|result| {
-                result.map(|x| x.unwrap()).map(|row| {
-                    let (book_id, owner_type, quality, external_inventory_id, title_id, owner_id, rental_id, rental_from, rental_to, rentee_type, rentee_id, available)
-                    : (BookId, String, String, ExternalInventoryId, TitleId, EntityId, Option<RentalId>, Option<NaiveDate>, Option<NaiveDate>, Option<String>, Option<EntityId>, bool) = mysql::from_row(row);
-                    (
-                        Book {
-                            id: Some(book_id),
-                            title: title_id,
-                            owner_type: EntityType::from_str(owner_type.as_str()).expect("Bad owner type"),
-                            owner: owner_id,
-                            quality: quality,
-                            external_inventory_id,
-                        },
-                        rental_id.map_or_else(|| None, |id| Some(Rental {
-                            id: Some(id),
-                            from: rental_from.expect("rental start date is not set"),
-                            to: rental_to.expect("rental end date is not set"),
-                            book: book_id,
-                            rentee: rentee_id.expect("rentee_id is not set"),
-                            rentee_type: EntityType::from_str(rentee_type.expect("rentee type is not set").as_str()).expect("Bad rentee Type"),
-                        })),
-                        available,
-                    )
-                }).collect::<Vec<(Book, Option<Rental>, bool)>>()
-            });
-    }
 }
 
 /// Implementing the DMO trait guarantees the provision of basic database functions
@@ -307,15 +256,15 @@ pub trait DMO<T = Self> {
     /// Id
     type Id;
     /// Gets all objects of self type from the underlaying database
-    fn get_all(&Database) -> Result<Vec<T>, Error>;
+    fn get_all(_: &Database) -> Result<Vec<T>, Error>;
     /// Gets an object of self type with given id from the underlaying database
-    fn get(&Database, Self::Id) -> Result<Option<T>, Error>;
+    fn get(_: &Database, _: Self::Id) -> Result<Option<T>, Error>;
     /// Inserts an object of self type into the underlaying database
-    fn insert(&Database, &T) -> Result<Id, Error>;
+    fn insert(_: &Database, _: &T) -> Result<Id, Error>;
     /// Updates an object of self type in the underlaying database
-    fn update(&Database, &T) -> Result<(), Error>;
+    fn update(_: &Database, _: &T) -> Result<(), Error>;
     /// Delets an object of self type from the underlaying database
-    fn delete(&Database, Self::Id) -> Result<bool, Error>;
+    fn delete(_: &Database, _: Self::Id) -> Result<bool, Error>;
 }
 
 #[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]

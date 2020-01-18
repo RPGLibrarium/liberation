@@ -136,7 +136,7 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
     //TODO: authentication
 
     //TODO Error mapping
-    let books = db.get_books_with_details()?;
+    let books = Book::get_all(db)?;
     let systems_vec = RpgSystem::get_all(db)?;
     let titles_vec = Title::get_all(db)?;
     let guilds_vec = Guild::get_all(db)?;
@@ -183,7 +183,7 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
     Ok(GetBooks {
         books: books
             .into_iter()
-            .map(move |(book, rental, available)| {
+            .map(move | book | {
                 BookWithTitleWithOwnerWithRental {
                     id: book.id.expect("book id shall not be empty"),
                     quality: book.quality,

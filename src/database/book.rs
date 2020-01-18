@@ -1,14 +1,58 @@
 use super::*;
+use mysql::{Row, QueryResult, MySqlError};
 
 /// Id type for Book
 pub type BookId = Id;
 pub type ExternalInventoryId = u64;
+
+/// EntityType describes whether an entity is a person or an organisation
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+pub enum BookState {
+    /// Free for rental by everybody,
+    Free,
+    /// Rented
+    Rented,
+    /// Reserved, can only be rented by next person in queue
+    Reserved,
+    /// Lost, might respawn some day but not available for rental at the moment
+    Lost,
+    /// Destroyed in all eternity
+    Destroyed,
+}
+
+impl BookState {
+    /// Converts a string describing a BookState to a BookState
+    /// possible values: "free", "rented", "reserved", "lost", "destroyed"
+    pub fn from_str(s: &str) -> Result<BookState, String> {
+        match s {
+            "free" => Ok(BookState::Free),
+            "rented" => Ok(BookState::Rented),
+            "reserved" => Ok(BookState::Reserved),
+            "lost" => Ok(BookState::Lost),
+            "destroyed" => Ok(BookState::Destroyed),
+            _ => Err(String::from("Expected 'free' or 'rented', 'reserved', 'lost', 'destroyed'.")),
+        }
+    }
+
+    /// Converts an EntityType to a corresponding string
+    pub fn to_string(&self) -> String {
+        match self {
+            BookState::Free => String::from("free"),
+            BookState::Rented => String::from("rented"),
+            BookState::Reserved => String::from("reserved"),
+            BookState::Lost => String::from("lost"),
+            BookState::Destroyed => String::from("destroyed"),
+        }
+    }
+}
 
 /// Book describes a specific (physical) book
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Book {
     /// Unique id
     pub id: Option<BookId>,
+    /// External id written onto a book and in guild inventory lists
+    pub external_inventory_id: ExternalInventoryId,
     /// Title of (physical) book
     pub title: TitleId,
     /// Type of current possessor
@@ -17,102 +61,100 @@ pub struct Book {
     pub owner: EntityId,
     /// Condition of book
     pub quality: String,
-    /// External id written onto a book and in guild inventory lists
-    pub external_inventory_id: ExternalInventoryId,
+    /// 'Rental' state of the book
+    pub state: BookState,
+    /// Since when is the book in it's state
+    pub state_since: Date,
+    /// Type of current Rentee
+    pub rentee_type: EntityType,
+    /// Id of current Rentee
+    pub rentee: EntityId,
 }
 
 impl Book {
-    /// Construct a new Book object with given parameters
-    pub fn new(
-        id: Option<BookId>,
-        title: TitleId,
-        owner: EntityId,
-        owner_type: EntityType,
-        quality: String,
-        external_inventory_id: ExternalInventoryId,
-    ) -> Book {
-        return Book {
-            id: id,
-            title: title,
-            owner_type: owner_type,
-            owner: owner,
-            quality: quality,
-            external_inventory_id: external_inventory_id,
-        };
-    }
-
     /// Construct a new Book object with given parameters with manual input of owner type
     pub fn from_db(
+        row: Row
+        /*
         id: BookId,
         title: TitleId,
         owner_member: Option<MemberId>,
         owner_guild: Option<GuildId>,
         owner_type: String,
+        book_state: String,
+        book_state_since: Date,
         quality: String,
         external_inventory_id: ExternalInventoryId,
+        */
     ) -> Result<Book, String> {
-        let owner_type = match EntityType::from_str(owner_type.as_str()) {
-            Ok(x) => x,
-            Err(_) => return Err(String::from("Bad owner_type")),
-        };
+        let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id, book_state, state_since, rentee_type, rentee_member, rentee_guild) = mysql::from_row(row);
 
-        let owner: EntityId =
-            match match owner_type {
-                EntityType::Member => owner_member,
-                EntityType::Guild => owner_guild,
-            } {
-                Some(x) => x,
-                None => return Err(String::from(
-                    "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
-                )),
-            };
-        Ok(Book::new(
-            Some(id),
+        let owner_type = EntityType::from_str(owner_type.as_str())
+            .map_err("Bad owner_type in database")?;
+
+        let rentee_type = EntityType::from_str(rentee_type.as_str())
+            .map_err("Bad rentee_type in database")?;
+
+        let owner: EntityId = owner_type.select_entity_id(owner_member, owner_guild)?;
+        let rentee: EntityId = rentee_type.select_entity_id(rentee_member, rentee_guild)?;
+
+        let state: BookState = BookState::from_str(book_state.as_str())
+            .map_err("Bad state in database")?;
+
+
+        Ok(Book {
+            id: Some(id),
+            external_inventory_id,
             title,
             owner,
             owner_type,
             quality,
-            external_inventory_id,
-        ))
+            state,
+            state_since,
+            rentee,
+            rentee_type,
+        })
     }
+}
+
+//TODO: Transform E1 and E2 to our Database Error.
+fn to_vec<F, R, E1, E2>(query: MyResult<QueryResult>, f: F) -> Result<Vec<R>, E1> where F: Fn(Row) -> Result<R, E2> {
+    query.map(|result| {
+        result.map(|x| x.unwrap()).map(f.unwrap()).collect()
+    })
 }
 
 impl DMO for Book {
     type Id = BookId;
 
     fn get_all(db: &Database) -> Result<Vec<Book>, Error> {
-        Ok(db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id from books;",())
-    .map(|result| {
-        result.map(|x| x.unwrap()).map(|row| {
-            let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
-            //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
-            Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
-        }).collect()
-    })?)
+        let query = db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id, state, state_since, rentee_type, rentee_member_by_id, rentee_guild_by_id from books;", ());
+        to_vec(query, |row| Book::from_db(row));
     }
 
     fn get(db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
         let mut results = db.pool
-        .prep_exec(
-            "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id from books where book_id=:book_id;",
-            params!{
+            .prep_exec(
+                "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id, state, state_since, rentee_type, rentee_member_by_id, rentee_guild_by_id from books where book_id=:book_id;",
+                params! {
                 "book_id" => book_id,
             },
-        )
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
-                //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.possessor
-                Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
-            }).collect::<Vec<Book>>()
-        })?;
+            )
+            .map(|result| {
+                result.map(|x| x.unwrap()).map(|row| {
+                    //let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
+                    //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
+                    Book::from_db(row).unwrap()
+                    //Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
+                }).collect::<Vec<Book>>()
+            })?;
         return Ok(results.pop());
     }
 
     fn insert(db: &Database, inp: &Book) -> Result<BookId, Error> {
         check_varchar_length!(inp.quality);
         Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality, external_inventory_id) values (:title, :owner_member, :owner_guild, :quality, :external_inventory_id)",
-        params!{
+                             params! {
             "title" => inp.title,
             "owner_member" => match inp.owner_type {
                 EntityType::Member => Some(inp.owner),
@@ -125,14 +167,14 @@ impl DMO for Book {
             "quality" => inp.quality.clone(),
             "external_inventory_id" => inp.external_inventory_id,
         }).map(|result| {
-                result.last_insert_id()
+            result.last_insert_id()
         })?)
     }
 
     fn update(db: &Database, book: &Book) -> Result<(), Error> {
         check_varchar_length!(book.quality);
         Ok(db.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality, external_inventory_id=:external_inventory_id where book_id=:id;",
-        params!{
+                             params! {
             "title" => book.title,
             "owner_member" => match book.owner_type {
                 EntityType::Member => Some(book.owner),
@@ -166,6 +208,7 @@ impl DMO for Book {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
@@ -224,7 +267,7 @@ mod tests {
                     None,
                     _s("uiii-a-uuid-or-sth-similar-2481632"),
                 ))
-                .and_then(|member_id| Ok((title_id, member_id)))
+                    .and_then(|member_id| Ok((title_id, member_id)))
             })
             .and_then(|(title_id, member_id)| {
                 db.insert(&mut Book::new(
@@ -363,7 +406,7 @@ mod tests {
                     None,
                     _s("annother-uuuuuiiii-iiiiddd-123443214"),
                 ))
-                .and_then(|member_id| Ok((title_id, member_id)))
+                    .and_then(|member_id| Ok((title_id, member_id)))
             })
             .and_then(|(title_id, member_id)| {
                 db.insert(&mut Guild::new(
@@ -372,7 +415,7 @@ mod tests {
                     _s("Sesame Street 123"),
                     member_id,
                 ))
-                .and_then(|guild_id| Ok((title_id, guild_id)))
+                    .and_then(|guild_id| Ok((title_id, guild_id)))
             })
             .and_then(|(title_id, guild_id)| {
                 insert_book_default(&db)
@@ -479,3 +522,4 @@ mod tests {
         }
     }
 }
+*/
