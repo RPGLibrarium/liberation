@@ -27,6 +27,7 @@ mod guild;
 mod member;
 mod rpgsystem;
 mod title;
+mod dmo;
 
 pub use self::book::Book;
 pub use self::entity::EntityType;
@@ -44,6 +45,7 @@ pub use self::rpgsystem::RpgSystemId;
 pub use self::title::TitleId;
 
 use mysql;
+use crate::database::dmo::DMO;
 
 /// Type for ids
 pub type Id = u64;
@@ -251,21 +253,7 @@ impl Database {
     }
 }
 
-/// Implementing the DMO trait guarantees the provision of basic database functions
-pub trait DMO<T = Self> {
-    /// Id
-    type Id;
-    /// Gets all objects of self type from the underlaying database
-    fn get_all(_: &Database) -> Result<Vec<T>, Error>;
-    /// Gets an object of self type with given id from the underlaying database
-    fn get(_: &Database, _: Self::Id) -> Result<Option<T>, Error>;
-    /// Inserts an object of self type into the underlaying database
-    fn insert(_: &Database, _: &T) -> Result<Id, Error>;
-    /// Updates an object of self type in the underlaying database
-    fn update(_: &Database, _: &T) -> Result<(), Error>;
-    /// Delets an object of self type from the underlaying database
-    fn delete(_: &Database, _: Self::Id) -> Result<bool, Error>;
-}
+
 
 #[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
 #[derive(Debug, PartialEq, Eq, Serialize)]

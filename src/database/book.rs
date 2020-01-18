@@ -117,95 +117,10 @@ impl Book {
     }
 }
 
-//TODO: Transform E1 and E2 to our Database Error.
-fn to_vec<F, R, E1, E2>(query: MyResult<QueryResult>, f: F) -> Result<Vec<R>, E1> where F: Fn(Row) -> Result<R, E2> {
-    query.map(|result| {
-        result.map(|x| x.unwrap()).map(f.unwrap()).collect()
-    })
-}
-
 impl DMO for Book {
     type Id = BookId;
 
-    fn get_all(db: &Database) -> Result<Vec<Book>, Error> {
-        let query = db.pool.prep_exec("select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id, state, state_since, rentee_type, rentee_member_by_id, rentee_guild_by_id from books;", ());
-        to_vec(query, |row| Book::from_db(row));
-    }
-
-    fn get(db: &Database, book_id: BookId) -> Result<Option<Book>, Error> {
-        let mut results = db.pool
-            .prep_exec(
-                "select book_id, title_by_id, owner_member_by_id, owner_guild_by_id, owner_type, quality, external_inventory_id, state, state_since, rentee_type, rentee_member_by_id, rentee_guild_by_id from books where book_id=:book_id;",
-                params! {
-                "book_id" => book_id,
-            },
-            )
-            .map(|result| {
-                result.map(|x| x.unwrap()).map(|row| {
-                    //let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id) = mysql::from_row(row);
-                    //FIXME: @FutureMe: You should have handled the error directly!!!! You stupid prick.
-                    Book::from_db(row).unwrap()
-                    //Book::from_db(id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id).unwrap()
-                }).collect::<Vec<Book>>()
-            })?;
-        return Ok(results.pop());
-    }
-
-    fn insert(db: &Database, inp: &Book) -> Result<BookId, Error> {
-        check_varchar_length!(inp.quality);
-        Ok(db.pool.prep_exec("insert into books (title_by_id, owner_member_by_id, owner_guild_by_id, quality, external_inventory_id) values (:title, :owner_member, :owner_guild, :quality, :external_inventory_id)",
-                             params! {
-            "title" => inp.title,
-            "owner_member" => match inp.owner_type {
-                EntityType::Member => Some(inp.owner),
-                EntityType::Guild => None,
-            },
-            "owner_guild" => match inp.owner_type {
-                EntityType::Member => None,
-                EntityType::Guild => Some(inp.owner),
-            },
-            "quality" => inp.quality.clone(),
-            "external_inventory_id" => inp.external_inventory_id,
-        }).map(|result| {
-            result.last_insert_id()
-        })?)
-    }
-
-    fn update(db: &Database, book: &Book) -> Result<(), Error> {
-        check_varchar_length!(book.quality);
-        Ok(db.pool.prep_exec("update books set title_by_id=:title, owner_member_by_id=:owner_member, owner_guild_by_id=:owner_guild, quality=:quality, external_inventory_id=:external_inventory_id where book_id=:id;",
-                             params! {
-            "title" => book.title,
-            "owner_member" => match book.owner_type {
-                EntityType::Member => Some(book.owner),
-                EntityType::Guild => None,
-            },
-            "owner_guild" => match book.owner_type {
-                EntityType::Member => None,
-                EntityType::Guild => Some(book.owner),
-            },
-            "quality" => book.quality.clone(),
-            "external_inventory_id" => book.external_inventory_id,
-            "id" => book.id,
-        }).and(Ok(()))?)
-    }
-
-    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "delete from books where book_id=:id",
-                params! {
-                    "id" => id,
-                },
-            )
-            .map_err(|err| Error::DatabaseError(err))
-            .and_then(|result| match result.affected_rows() {
-                1 => Ok(true),
-                0 => Ok(false),
-                _ => Err(Error::IllegalState),
-            })?)
-    }
+    //TODO
 }
 
 /*

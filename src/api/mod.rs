@@ -9,18 +9,20 @@ use actix_web::dev::HttpServiceFactory;
 use actix_web::error::DispatchError::Service;
 use actix_web::web::{route, Json};
 use actix_web::{http, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
-use auth::roles::*;
-use auth::{assert_roles, Claims, KeycloakCache};
-use business as bus;
-use database::*;
+use crate::auth::roles::*;
+use crate::auth::{assert_roles, Claims, KeycloakCache};
+use crate::business as bus;
+use crate::database::*;
+use crate::database::{Database, RpgSystemId, TitleId, BookId, GuildId, MemberId};
+use crate::error::Error;
 //use futures::future::Future;
 
 /// Handling of external modules
 #[derive(Clone)]
 pub struct AppState {
-    /// Underlaying database
+    /// Underlying database
     pub db: Database,
-    /// Keycloak for authentification
+    /// Keycloak for authentication
     pub kc: KeycloakCache,
 }
 

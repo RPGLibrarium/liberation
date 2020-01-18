@@ -1,5 +1,4 @@
-use database as db;
-use serde_formats;
+use crate::database as db;
 
 type ItemCount = u32;
 
@@ -40,11 +39,11 @@ impl GetRpgSystem {
                         publisher: title.publisher,
                         year: title.year,
                         coverimage: title.coverimage,
-                        stock: match (include_stock) {
+                        stock: match include_stock {
                             true => Some(stock),
                             _ => None,
                         },
-                        available: match (include_stock) {
+                        available: match include_stock {
                             true => Some(available),
                             _ => None,
                         },

@@ -1,7 +1,7 @@
-use api::*;
-use auth::{Claims, KeycloakCache};
-use database::*;
-use error::Error;
+use crate::api::*;
+use crate::auth::{Claims, KeycloakCache};
+use crate::database::*;
+use crate::error::Error;
 use std::collections::HashMap;
 
 /// Get all RPG systems from database
@@ -187,7 +187,7 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
                 BookWithTitleWithOwnerWithRental {
                     id: book.id.expect("book id shall not be empty"),
                     quality: book.quality,
-                    available: available,
+                    available,
                     external_inventory_id: book.external_inventory_id,
                     rental: match rental {
                         None => None,

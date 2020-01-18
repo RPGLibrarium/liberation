@@ -2,17 +2,17 @@ use actix::prelude::*;
 use actix_service::ServiceExt;
 use actix_web::client::Client;
 use actix_web::{client, http, HttpMessage, HttpRequest};
-use api::AppState;
+use crate::api::AppState;
 use base64;
-use database::type_aliases::*;
-use error::Error;
+use crate::database::type_aliases::*;
+use crate::error::Error;
 use futures::{Future, future::lazy};
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
 use oauth2::{AuthUrl, ClientId, ClientSecret, TokenResponse, TokenUrl};
 use openssl::rsa::*;
-use settings::Keycloak as KeycloakSettings;
+use crate::settings::Keycloak as KeycloakSettings;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -195,9 +195,9 @@ impl Keycloak {
 
         debug!("updating user cache from keycloak...");
 
-        Arbiter::spawn(lazy( move || {
+        Arbiter::spawn(lazy(move || {
             // Get user information with token
-            let mut client : Client = Client::build()
+            let mut client: Client = Client::build()
                 .bearer_auth(token_result.unwrap().access_token().secret())
                 .finish();
 
@@ -210,7 +210,10 @@ impl Keycloak {
                 //     format!("Bearer {}", token_result.unwrap().access_token().secret()),
                 // ) // .header("host", "localhost:8081")
                 .send() // <- Send http request
-                .map_err(|err| { debug!("ERR: {:?}", err); Error::KeycloakConnectionError(err)})
+                .map_err(|err| {
+                    debug!("ERR: {:?}", err);
+                    Error::KeycloakConnectionError(err)
+                })
                 .and_then(|mut response| {
                     response.json().map_err(|err| Error::KeycloakJsonError(err))
                 })
@@ -236,7 +239,7 @@ impl Keycloak {
 
         let cloned_cache = kc.cache.clone();
 
-        Arbiter::spawn(lazy( move || {
+        Arbiter::spawn(lazy(move || {
             // client
             Client::default()
                 .get(key_url.as_str()) // <- Create request builder
