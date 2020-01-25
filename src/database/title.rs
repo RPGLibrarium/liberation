@@ -1,5 +1,8 @@
 use super::*;
 use mysql;
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+use mysql::Value;
 
 /// Id type for Title
 pub type TitleId = Id;
@@ -48,97 +51,33 @@ impl Title {
 
 impl DMO for Title {
     type Id = TitleId;
-    fn get_all(db: &Database) -> Result<Vec<Title>, Error> {
-        Ok(db.pool.prep_exec("select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles;",())
-    .map(|result| {
-        result.map(|x| x.unwrap()).map(|row| {
-            let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
-            Title {
-                id: id,
-                name: name,
-                system: system,
-                language: language,
-                publisher: publisher,
-                year: year,
-                coverimage: coverimage,
-            }
-        }).collect()
-    })?)
+
+    fn select_columns() -> Vec<&'static str> {
+        vec!["name", "rpg_system_by_id", "language", "publisher", "year", "coverimage"]
     }
 
-    //TODO: Test
-    fn get(db: &Database, title_id: TitleId) -> Result<Option<Title>, Error> {
-        let mut results = db.pool
-        .prep_exec(
-            "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage from titles where title_id=:title_id;",
-            params!{
-                "title_id" => title_id,
-            },
-        )
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row);
-                Title {
-                    id: id,
-                    name: name,
-                    system: system,
-                    language: language,
-                    publisher: publisher,
-                    year: year,
-                    coverimage: coverimage,
-                }
-            }).collect::<Vec<Title>>()
-        })?;
-        return Ok(results.pop());
+    fn id_column() -> &'static str {
+        "title_id"
     }
 
-    //TODO Test
+    fn table_name() -> &'static str {
+        "titles"
+    }
 
-    fn insert(db: &Database, inp: &Title) -> Result<TitleId, Error> {
-        check_varchar_length!(inp.name, inp.language, inp.publisher);
-        Ok(db.pool.prep_exec("insert into titles (name, rpg_system_by_id, language, publisher, year, coverimage) values (:name, :system, :language, :publisher, :year, :coverimage)",
+    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
         params!{
-            "name" => inp.name.clone(),
-            "system" => inp.system,
-            "language" => inp.language.clone(),
-            "publisher" => inp.publisher.clone(),
-            "year" => inp.year,
-            "coverimage" => inp.coverimage.clone(),
-        }).map(|result| result.last_insert_id())?)
-    }
-
-    fn update(db: &Database, title: &Title) -> Result<(), Error> {
-        check_varchar_length!(title.name, title.language, title.publisher);
-        Ok(db.pool.prep_exec("update titles set name=:name, rpg_system_by_id=:system, language=:language, publisher=:publisher, year=:year, coverimage=:coverimage where title_id=:id;",
-        params!{
-            "name" => title.name.clone(),
-            "system" => title.system,
-            "language" => title.language.clone(),
-            "publisher" => title.publisher.clone(),
-            "year" => title.year,
-            "coverimage" => title.coverimage.clone(),
-            "id" => title.id,
-        }).and(Ok(()))?)
-    }
-
-    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "delete from titles where title_id=:id",
-                params! {
-                    "id" => id,
-                },
-            )
-            .map_err(|err| Error::DatabaseError(err))
-            .and_then(|result| match result.affected_rows() {
-                1 => Ok(true),
-                0 => Ok(false),
-                _ => Err(Error::IllegalState),
-            })?)
+            "title_id" => self.id,
+            "name" => self.name,
+            "rpg_system_by_id" => self.system,
+            "language" => self.language,
+            "publisher" => self.publisher,
+            "year" => self.year,
+            "coverimage" => self.coverimage
+        }
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
@@ -385,3 +324,4 @@ mod tests {
     #[test]
     fn get_titles_by_rpg_system_correct() {}
 }
+*/

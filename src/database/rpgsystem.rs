@@ -1,5 +1,8 @@
 use super::*;
 use std::string::String;
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+use mysql::Value;
 
 /// Id type for RpgSystem
 pub type RpgSystemId = Id;
@@ -19,111 +22,38 @@ impl RpgSystem {
     /// Construct a new RpgSystem object with given parameters
     pub fn new(id: Option<RpgSystemId>, name: String, shortname: Option<String>) -> RpgSystem {
         RpgSystem {
-            id: id,
-            name: name,
-            shortname: shortname,
+            id,
+            name,
+            shortname,
         }
     }
 }
 
 impl DMO for RpgSystem {
     type Id = RpgSystemId;
-    fn insert(db: &Database, inp: &RpgSystem) -> Result<RpgSystemId, Error> {
-        check_varchar_length!(inp.name);
-        Ok(db
-            .pool
-            .prep_exec(
-                "insert into rpg_systems (name, shortname) values (:name, :shortname)",
-                params! {
-                    "name" => inp.name.clone(),
-                    "shortname" => inp.shortname.clone()
-                },
-            )
-            .map(|result| result.last_insert_id())?)
+
+    fn select_columns() -> Vec<&'static str> {
+        vec!["name", "shortname"]
     }
 
-    fn get_all(db: &Database) -> Result<Vec<RpgSystem>, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "select rpg_system_id, name, shortname from rpg_systems;",
-                (),
-            )
-            .map(|result| {
-                result
-                    .map(|x| x.unwrap())
-                    .map(|row| {
-                        let (id, name, short): (Option<RpgSystemId>, String, Option<String>) =
-                            mysql::from_row(row);
-                        RpgSystem {
-                            id: id,
-                            name: name,
-                            shortname: short,
-                        }
-                    })
-                    .collect()
-            })?)
+    fn id_column() -> &'static str {
+        "rpg_system_id"
     }
 
-    //TODO: Test
-    fn get(db: &Database, rpg_system_id: Id) -> Result<Option<RpgSystem>, Error> {
-        let mut results = db.pool
-            .prep_exec(
-                "select rpg_system_id, name, shortname from rpg_systems where rpg_system_id=:rpg_system_id;",
-                params!{
-                    "rpg_system_id" => rpg_system_id,
-                },
-            )
-            .map(|result| {
-                result
-                    .map(|x| x.unwrap())
-                    .map(|row| {
-                        let (id, name, short) : (Option<RpgSystemId>, String, Option<String>) = mysql::from_row(row);
-                        RpgSystem { id: id, name: name, shortname: short }
-                    })
-                    .collect::<Vec<RpgSystem>>()
-            })?;
-        return Ok(results.pop());
+    fn table_name() -> &'static str {
+        "rpg_systems"
     }
 
-    fn update(db: &Database, rpgsystem: &RpgSystem) -> Result<(), Error> {
-        check_varchar_length!(rpgsystem.name);
-        /*match rpgsystem.shortname {
-            None => (),
-            Some(short) => check_varchar_length!(short)
-        }*/
-
-        Ok(db
-            .pool
-            .prep_exec(
-                "update rpg_systems set name=:name, shortname=:short where rpg_system_id=:id;",
-                params! {
-                    "name" => rpgsystem.name.clone(),
-                    "short" => rpgsystem.shortname.clone(),
-                    "id" => rpgsystem.id,
-                },
-            )
-            .map(|_| ())?)
-    }
-
-    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "delete from rpg_systems where rpg_system_id=:id",
-                params! {
-                    "id" => id,
-                },
-            )
-            .map_err(|err| Error::DatabaseError(err))
-            .and_then(|result| match result.affected_rows() {
-                1 => Ok(true),
-                0 => Ok(false),
-                _ => Err(Error::IllegalState),
-            })?)
+    fn insert_params(&self) -> HashMap<String, Value> {
+        params!{
+            "rpg_system_id" => self.id,
+            "name" => self.name,
+            "shortname" => self.shortname
+        }
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
@@ -275,3 +205,4 @@ mod tests {
     #[test]
     fn get_rpg_system_by_id_correct() {}
 }
+*/

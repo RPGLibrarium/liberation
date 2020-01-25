@@ -1,4 +1,7 @@
 use super::*;
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+use mysql::{Value, Row};
 
 /// Id type for guild
 pub type GuildId = EntityId;
@@ -19,102 +22,46 @@ pub struct Guild {
 impl Guild {
     /// Construct a new Guild object with given parameters
     pub fn new(id: Option<GuildId>, name: String, address: String, contact: MemberId) -> Guild {
-        Guild {
-            id: id,
-            name: name,
-            address: address,
-            contact: contact,
-        }
     }
 }
 
 impl DMO for Guild {
     type Id = GuildId;
 
-    fn insert(db: &Database, inp: &Guild) -> Result<GuildId, Error> {
-        check_varchar_length!(inp.name, inp.address);
-        Ok(db.pool.prep_exec("insert into guilds (name, address, contact_by_member_id) values (:name, :address, :contact)",
+    fn select_columns() -> Vec<&'static str> {
+        vec!["name", "address", "contact_by_member_id"]
+    }
+
+    fn id_column() -> &'static str {
+        "guild_id"
+    }
+
+    fn table_name() -> &'static str {
+        "guilds"
+    }
+
+    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
         params!{
-            "name" => inp.name.clone(),
-            "address" => inp.address.clone(),
-            "contact" => inp.contact,
-        }).map(|result|result.last_insert_id()
-        )?)
+            "guild_id" => self.id,
+            "name" => self.name,
+            "address" => self.address,
+            "contact_by_member_id" => self.contact
+        }
     }
 
-    fn get(db: &Database, guild_id: GuildId) -> Result<Option<Guild>, Error> {
-        let mut results = db.pool
-        .prep_exec(
-            "select guild_id, name, address, contact_by_member_id from guilds where guild_id=:guild_id;",
-            params!{
-                "guild_id" => guild_id,
-            },
-        )
-    .map(|result| {
-        result.map(|x| x.unwrap()).map(|row| {
-            let (id, name, address, contact) = mysql::from_row(row);
-            Guild {
-                id: id,
-                name: name,
-                address: address,
-                contact: contact
-            }
-        }).collect::<Vec<Guild>>()
-    })?;
-        return Ok(results.pop());
-    }
+    fn from_row_opt(row: Row) ->  {
+        let (id, name, address, contact) = row;
+        Ok(Guild {
+            id: id,
+            name: name,
+            address: address,
+            contact: contact,
+        })
 
-    fn get_all(db: &Database) -> Result<Vec<Guild>, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "select guild_id, name, address, contact_by_member_id from guilds;",
-                (),
-            )
-            .map(|result| {
-                result
-                    .map(|x| x.unwrap())
-                    .map(|row| {
-                        let (id, name, address, contact) = mysql::from_row(row);
-                        Guild {
-                            id: id,
-                            name: name,
-                            address: address,
-                            contact: contact,
-                        }
-                    })
-                    .collect()
-            })?)
-    }
-
-    fn update(db: &Database, guild: &Guild) -> Result<(), Error> {
-        check_varchar_length!(guild.name, guild.address);
-        Ok(db.pool.prep_exec("update guilds set name=:name, address=:address, contact_by_member_id=:contact where guild_id=:id",
-        params!{
-            "name" => guild.name.clone(),
-            "address" => guild.address.clone(),
-            "contact" => guild.contact,
-            "id" => guild.id,
-        }).and(Ok(()))?)
-    }
-
-    fn delete(db: &Database, id: Id) -> Result<bool, Error> {
-        Ok(db
-            .pool
-            .prep_exec(
-                "delete from guilds where GuildId=:id",
-                params! {
-                    "id" => id,
-                },
-            )
-            .map_err(|err| Error::DatabaseError(err))
-            .and_then(|result| match result.affected_rows() {
-                1 => Ok(true),
-                0 => Ok(false),
-                _ => Err(Error::IllegalState),
-            })?)
     }
 }
+
+/*
 #[cfg(test)]
 mod tests {
     use database::test_util::*;
@@ -337,3 +284,4 @@ mod tests {
         }
     }
 }
+*/

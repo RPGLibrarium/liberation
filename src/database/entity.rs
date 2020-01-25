@@ -1,6 +1,7 @@
 use super::*;
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use crate::error::Error::IllegalState;
 
 /// Id type for Entity
 pub type EntityId = Id;
@@ -21,7 +22,7 @@ impl EntityType {
         match s {
             "member" => Ok(EntityType::Member),
             "guild" => Ok(EntityType::Guild),
-            _ => Err(String::from("Expected 'member' or 'guild'")),
+            _ => IllegalState("Expected 'member' or 'guild'"),
         }
     }
 
@@ -35,15 +36,13 @@ impl EntityType {
 
     /// Based on the given type, select the correct of both given Ids.
     pub fn select_entity_id(&self, member_id: Option<MemberId>, guild_id: Option<GuildId>)
-                        -> Result<EntityId, String> {
+                            -> Result<EntityId, Error> {
         match match self {
             EntityType::Member => member_id,
             EntityType::Guild => guild_id,
         } {
             Some(x) => Ok(x),
-            None => Err(String::from(
-                "Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.",
-            )),
+            None => IllegalState("Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'."),
         }
     }
 }
@@ -67,3 +66,16 @@ impl<'de> Deserialize<'de> for EntityType {
     }
 }
 
+pub fn to_guild_id(id: EntityId, entity_type: EntityType) -> Option<EntityId> {
+    match entity_type {
+        EntityType::Member => None,
+        EntityType::Guild => Some(id),
+    }
+}
+
+pub fn to_member_id(id: EntityId, entity_type: EntityType) -> Option<EntityId> {
+    match entity_type {
+        EntityType::Member => Some(id),
+        EntityType::Guild => None,
+    }
+}

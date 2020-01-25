@@ -23,7 +23,7 @@ pub enum Error {
     /// User input has wrong type -> 400
     IllegalValueForType(Field),
     /// Database is inconsistent -> 500
-    IllegalState,
+    IllegalState(&'static str),
     /// Invalid Json from user -> 400
     JsonPayloadError(actix_web::error::JsonPayloadError),
     /// Backend can not authenticate with the Keycloak server-> 500
@@ -110,6 +110,7 @@ impl fmt::Display for Error {
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
+            Error::InvalidState(ref msg) => write!(f, "ERROR: Invalid State: {}", msg),
             //Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),
@@ -138,7 +139,7 @@ impl ResponseError for Error {
             // Error::ActixInternalError(err) => err.error_response(),
             _ => {
                 error!("Internal Server Error: {:?}", self);
-                HttpResponse::InternalServerError().body(format!("{}", self))
+                HttpResponse::InternalServerError().body("")
             },
         }
     }

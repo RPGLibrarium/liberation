@@ -1,5 +1,9 @@
 use super::*;
-use mysql::{Row, QueryResult, MySqlError};
+use mysql::{Row, QueryResult, MySqlError, Value, FromRowError};
+use std::collections::hash_map::RandomState;
+use std::collections::HashMap;
+use crate::database::entity::{to_guild_id, to_member_id};
+use mysql::prelude::FromRow;
 
 /// Id type for Book
 pub type BookId = Id;
@@ -71,56 +75,76 @@ pub struct Book {
     pub rentee: EntityId,
 }
 
-impl Book {
-    /// Construct a new Book object with given parameters with manual input of owner type
-    pub fn from_db(
-        row: Row
-        /*
-        id: BookId,
-        title: TitleId,
-        owner_member: Option<MemberId>,
-        owner_guild: Option<GuildId>,
-        owner_type: String,
-        book_state: String,
-        book_state_since: Date,
-        quality: String,
-        external_inventory_id: ExternalInventoryId,
-        */
-    ) -> Result<Book, String> {
-        let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id, book_state, state_since, rentee_type, rentee_member, rentee_guild) = mysql::from_row(row);
-
-        let owner_type = EntityType::from_str(owner_type.as_str())
-            .map_err("Bad owner_type in database")?;
-
-        let rentee_type = EntityType::from_str(rentee_type.as_str())
-            .map_err("Bad rentee_type in database")?;
-
-        let owner: EntityId = owner_type.select_entity_id(owner_member, owner_guild)?;
-        let rentee: EntityId = rentee_type.select_entity_id(rentee_member, rentee_guild)?;
-
-        let state: BookState = BookState::from_str(book_state.as_str())
-            .map_err("Bad state in database")?;
-
-
-        Ok(Book {
-            id: Some(id),
-            external_inventory_id,
-            title,
-            owner,
-            owner_type,
-            quality,
-            state,
-            state_since,
-            rentee,
-            rentee_type,
-        })
-    }
-}
-
 impl DMO for Book {
     type Id = BookId;
 
-    //TODO
+    fn select_columns() -> Vec<&'static str> {
+        vec!["external_inventory_id",
+             "title_by_id",
+             "owner_member_by_id",
+             "owner_guild_by_id",
+             "owner_type",
+             "quality",
+             "state",
+             "state_since",
+             "rentee_member_by_id",
+             "rentee_guild_by_id",
+             "rentee_type"
+        ]
+    }
+
+    fn id_column() -> &'static str {
+        "book_id"
+    }
+
+    fn table_name() -> &'static str {
+        "books"
+    }
+
+    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
+        params! {
+            "book_id" => self.id,
+            "external_inventory_id" => self.external_inventory_id,
+            "title_by_id" => self.title,
+            "owner_member_by_id" => to_member_id( self.owner, self.owner_type),
+            "owner_guild_by_id" => to_guild_id( self.owner, self.owner_type),
+            "quality" => self.quality,
+            "state" => self.state,
+            "state_since" => self.state_since,
+            "rentee_member_by_id" => to_member_id( self.rentee, self.rentee_type),
+            "rentee_guild_by_id" => to_guild_id( self.rentee, self.rentee_type),
+        }
+    }
+    fn from_row_opt(row: Row) -> Result<Self, FromRowError> where
+        Self: Sized {
+        let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id, book_state, state_since, rentee_type, rentee_member, rentee_guild) = mysql::from_row(row.clone());
+        {
+            let owner_type = EntityType::from_str(owner_type.as_str())?;
+
+            let rentee_type = EntityType::from_str(rentee_type.as_str())?;
+
+            let owner: EntityId = owner_type.select_entity_id(owner_member, owner_guild)?;
+            let rentee: EntityId = rentee_type.select_entity_id(rentee_member, rentee_guild)?;
+
+            let state: BookState = BookState::from_str(book_state.as_str())?;
+
+            Ok(Book {
+                id: Some(id),
+                external_inventory_id,
+                title,
+                owner,
+                owner_type,
+                quality,
+                state,
+                state_since,
+                rentee,
+                rentee_type,
+            })
+        }.map_err(|err| {
+            error!("{}", err);
+            FromRowError(row)
+        })
+    }
 }
 
 /*
