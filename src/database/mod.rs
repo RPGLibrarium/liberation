@@ -27,7 +27,7 @@ mod guild;
 mod member;
 mod rpgsystem;
 mod title;
-mod dmo;
+pub(crate) mod dmo;
 
 pub use self::book::Book;
 pub use self::entity::EntityType;
@@ -182,13 +182,13 @@ impl Database {
                     let (id, name, language, publisher, year, coverimage, system_id, system_name, system_short, stock, available): (Option<TitleId>, String, String, String, i16, Option<String>, RpgSystemId, String, Option<String>, u32, u32)  = mysql::from_row(row);
                     (
                         Title {
-                            id: id,
-                            name: name,
+                            id,
+                            name,
                             system: system_id,
-                            language: language,
-                            publisher: publisher,
-                            year: year,
-                            coverimage: coverimage,
+                            language,
+                            publisher,
+                            year,
+                            coverimage,
                         },
                         RpgSystem {
                             id: Some(system_id),

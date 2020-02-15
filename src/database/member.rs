@@ -1,7 +1,7 @@
 use super::*;
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use mysql::Value;
+use mysql::{Value, FromRowError, Row};
 
 /// Id type for Member
 pub type MemberId = EntityId;
@@ -15,16 +15,6 @@ pub struct Member {
     pub id: Option<MemberId>,
     /// External id for identification with KeyCloak
     pub external_id: ExternalId,
-}
-
-impl Member {
-    /// Construct a new Member object with given parameters
-    pub fn new(id: Option<MemberId>, external_id: ExternalId) -> Member {
-        Member {
-            id: id,
-            external_id: external_id,
-        }
-    }
 }
 
 impl DMO for Member {
@@ -42,11 +32,20 @@ impl DMO for Member {
         "members"
     }
 
-    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
-        params!{
+    fn insert_params(&self) -> Vec<(String, Value)> {
+        params! {
             "member_id" => self.id,
             "external_id" => self.external_id
         }
+    }
+
+    fn from_row(row: Row) -> Result<Self, Error> {
+        let (id, external_id) = mysql::from_row(row.clone());
+
+        Ok(Member {
+            id,
+            external_id,
+        })
     }
 }
 

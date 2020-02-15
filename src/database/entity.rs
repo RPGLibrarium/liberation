@@ -1,7 +1,7 @@
 use super::*;
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use crate::error::Error::IllegalState;
+use crate::error::Error::{IllegalState, EnumFromStringError};
 
 /// Id type for Entity
 pub type EntityId = Id;
@@ -18,11 +18,11 @@ pub enum EntityType {
 impl EntityType {
     /// Converts a string describing an EntityType to an EntityType
     /// possible values: "member", "guild"
-    pub fn from_str(s: &str) -> Result<EntityType, String> {
+    pub fn from_str(s: &str) -> Result<EntityType, Error> {
         match s {
             "member" => Ok(EntityType::Member),
             "guild" => Ok(EntityType::Guild),
-            _ => IllegalState("Expected 'member' or 'guild'"),
+            _ => Err(EnumFromStringError(String::from("Expected 'member' or 'guild'"))),
         }
     }
 
@@ -42,7 +42,7 @@ impl EntityType {
             EntityType::Guild => guild_id,
         } {
             Some(x) => Ok(x),
-            None => IllegalState("Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'."),
+            None => Err(IllegalState("Field 'owner_member' or 'owner_guild' is not set according to 'owner_type'.")),
         }
     }
 }

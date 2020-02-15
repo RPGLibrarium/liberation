@@ -1,7 +1,7 @@
 use super::*;
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use mysql::{Value, Row};
+use mysql::{Value, Row, FromRowError};
 
 /// Id type for guild
 pub type GuildId = EntityId;
@@ -19,12 +19,6 @@ pub struct Guild {
     pub contact: MemberId,
 }
 
-impl Guild {
-    /// Construct a new Guild object with given parameters
-    pub fn new(id: Option<GuildId>, name: String, address: String, contact: MemberId) -> Guild {
-    }
-}
-
 impl DMO for Guild {
     type Id = GuildId;
 
@@ -40,7 +34,7 @@ impl DMO for Guild {
         "guilds"
     }
 
-    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
+    fn insert_params(&self) -> Vec<(String, Value)> {
         params!{
             "guild_id" => self.id,
             "name" => self.name,
@@ -49,15 +43,15 @@ impl DMO for Guild {
         }
     }
 
-    fn from_row_opt(row: Row) ->  {
-        let (id, name, address, contact) = row;
+    fn from_row(row: Row) -> Result<Self, Error> where
+        Self : Sized {
+        let (id, name, address, contact) = mysql::from_row(row.clone());
         Ok(Guild {
-            id: id,
-            name: name,
-            address: address,
-            contact: contact,
+            id,
+            name,
+            address,
+            contact,
         })
-
     }
 }
 

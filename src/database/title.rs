@@ -2,7 +2,7 @@ use super::*;
 use mysql;
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use mysql::Value;
+use mysql::{Value, FromRowError, Row};
 
 /// Id type for Title
 pub type TitleId = Id;
@@ -26,29 +26,6 @@ pub struct Title {
     pub coverimage: Option<String>,
 }
 
-impl Title {
-    /// Construct a new Title object with given parameters
-    pub fn new(
-        id: Option<TitleId>,
-        name: String,
-        system: RpgSystemId,
-        language: String,
-        publisher: String,
-        year: Year,
-        coverimage: Option<String>,
-    ) -> Title {
-        Title {
-            id: id,
-            name: name,
-            system: system,
-            language: language,
-            publisher: publisher,
-            year: year,
-            coverimage: coverimage,
-        }
-    }
-}
-
 impl DMO for Title {
     type Id = TitleId;
 
@@ -64,8 +41,8 @@ impl DMO for Title {
         "titles"
     }
 
-    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
-        params!{
+    fn insert_params(&self) -> Vec<(String, Value)> {
+        params! {
             "title_id" => self.id,
             "name" => self.name,
             "rpg_system_by_id" => self.system,
@@ -74,6 +51,19 @@ impl DMO for Title {
             "year" => self.year,
             "coverimage" => self.coverimage
         }
+    }
+
+    fn from_row(row: Row) -> Result<Self, Error> {
+        let (id, name, system, language, publisher, year, coverimage) = mysql::from_row(row.clone());
+        Ok(Title {
+            id,
+            name,
+            system,
+            language,
+            publisher,
+            year,
+            coverimage,
+        })
     }
 }
 

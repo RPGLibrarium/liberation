@@ -4,6 +4,8 @@ use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use crate::database::entity::{to_guild_id, to_member_id};
 use mysql::prelude::FromRow;
+use crate::serde_formats;
+use crate::error::Error::EnumFromStringError;
 
 /// Id type for Book
 pub type BookId = Id;
@@ -27,14 +29,14 @@ pub enum BookState {
 impl BookState {
     /// Converts a string describing a BookState to a BookState
     /// possible values: "free", "rented", "reserved", "lost", "destroyed"
-    pub fn from_str(s: &str) -> Result<BookState, String> {
+    pub fn from_str(s: &str) -> Result<BookState, Error> {
         match s {
             "free" => Ok(BookState::Free),
             "rented" => Ok(BookState::Rented),
             "reserved" => Ok(BookState::Reserved),
             "lost" => Ok(BookState::Lost),
             "destroyed" => Ok(BookState::Destroyed),
-            _ => Err(String::from("Expected 'free' or 'rented', 'reserved', 'lost', 'destroyed'.")),
+            _ => Err(EnumFromStringError(String::from("Expected 'free' or 'rented', 'reserved', 'lost', 'destroyed'."))),
         }
     }
 
@@ -51,7 +53,7 @@ impl BookState {
 }
 
 /// Book describes a specific (physical) book
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub struct Book {
     /// Unique id
     pub id: Option<BookId>,
@@ -68,7 +70,8 @@ pub struct Book {
     /// 'Rental' state of the book
     pub state: BookState,
     /// Since when is the book in it's state
-    pub state_since: Date,
+    #[serde(with = "serde_formats::naive_date")]
+    pub state_since: NaiveDate,
     /// Type of current Rentee
     pub rentee_type: EntityType,
     /// Id of current Rentee
@@ -101,7 +104,7 @@ impl DMO for Book {
         "books"
     }
 
-    fn insert_params(&self) -> HashMap<String, Value, RandomState> {
+    fn insert_params(&self) -> Vec<(String, Value)> {
         params! {
             "book_id" => self.id,
             "external_inventory_id" => self.external_inventory_id,
@@ -109,23 +112,27 @@ impl DMO for Book {
             "owner_member_by_id" => to_member_id( self.owner, self.owner_type),
             "owner_guild_by_id" => to_guild_id( self.owner, self.owner_type),
             "quality" => self.quality,
-            "state" => self.state,
+            "state" => self.state.to_string(),
             "state_since" => self.state_since,
             "rentee_member_by_id" => to_member_id( self.rentee, self.rentee_type),
             "rentee_guild_by_id" => to_guild_id( self.rentee, self.rentee_type),
         }
     }
-    fn from_row_opt(row: Row) -> Result<Self, FromRowError> where
+
+    fn from_row(row: Row) -> Result<Self, Error> where
         Self: Sized {
         let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id, book_state, state_since, rentee_type, rentee_member, rentee_guild) = mysql::from_row(row.clone());
         {
+            let owner_type: String = owner_type;
             let owner_type = EntityType::from_str(owner_type.as_str())?;
 
+            let rentee_type: String = rentee_type;
             let rentee_type = EntityType::from_str(rentee_type.as_str())?;
 
             let owner: EntityId = owner_type.select_entity_id(owner_member, owner_guild)?;
             let rentee: EntityId = rentee_type.select_entity_id(rentee_member, rentee_guild)?;
 
+            let book_state: String = book_state;
             let state: BookState = BookState::from_str(book_state.as_str())?;
 
             Ok(Book {
@@ -140,10 +147,7 @@ impl DMO for Book {
                 rentee,
                 rentee_type,
             })
-        }.map_err(|err| {
-            error!("{}", err);
-            FromRowError(row)
-        })
+        }
     }
 }
 

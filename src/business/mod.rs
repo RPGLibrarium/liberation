@@ -1,6 +1,7 @@
 use crate::api::*;
 use crate::auth::{Claims, KeycloakCache};
 use crate::database::*;
+use crate::database::dmo::DMO;
 use crate::error::Error;
 use std::collections::HashMap;
 
@@ -179,6 +180,9 @@ pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Erro
     }
     let titles_map = titles_map;
     let guilds_map = guilds_map;
+
+    let available = false; //TODO calculate from data
+    let rental = None; //TODO:
 
     Ok(GetBooks {
         books: books

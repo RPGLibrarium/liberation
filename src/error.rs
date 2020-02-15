@@ -3,7 +3,7 @@ use actix_web::{error, HttpResponse, ResponseError};
 use awc;
 use core::num::ParseIntError;
 use failure::Fail;
-use mysql::Error as MySqlError;
+use mysql::{Error as MySqlError, FromRowError};
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::RequestTokenError;
 use std::fmt;
@@ -44,6 +44,10 @@ pub enum Error {
     ActixError(error::Error),
     /// No item with given id found -> 404
     ItemNotFound,
+    /// Conversion done by mysql failed
+    MySqlConversionError(FromRowError),
+    /// Conversion from data to Struct failed
+    EnumFromStringError(String)
 }
 
 impl From<MySqlError> for Error {
@@ -74,6 +78,12 @@ impl From<ParseIntError> for Error {
 impl From<actix_web::error::JsonPayloadError> for Error {
     fn from(error: actix_web::error::JsonPayloadError) -> Self {
         Error::JsonPayloadError(error)
+    }
+}
+
+impl From<mysql::FromRowError> for Error{
+    fn from(error: mysql::FromRowError) -> Self {
+        Error::MySqlConversionError(error)
     }
 }
 
@@ -110,7 +120,9 @@ impl fmt::Display for Error {
             }
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
-            Error::InvalidState(ref msg) => write!(f, "ERROR: Invalid State: {}", msg),
+            Error::IllegalState(ref msg) => write!(f, "ERROR: Invalid State: {}", msg),
+            Error::MySqlConversionError(ref rowError) => write!(f, "{{ {} }}", rowError),
+            Error::EnumFromStringError(ref msg) => write!(f, "ERROR: Creating Enum from String failed with message: {}", msg ),
             //Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
             _ => write!(f, "ERROR: unknown error"),

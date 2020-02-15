@@ -2,7 +2,7 @@ use super::*;
 use std::string::String;
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
-use mysql::Value;
+use mysql::{Value, FromRowError, Row};
 
 /// Id type for RpgSystem
 pub type RpgSystemId = Id;
@@ -16,17 +16,6 @@ pub struct RpgSystem {
     pub name: String,
     /// Common abbreviation of the system name, e.g. D&D
     pub shortname: Option<String>,
-}
-
-impl RpgSystem {
-    /// Construct a new RpgSystem object with given parameters
-    pub fn new(id: Option<RpgSystemId>, name: String, shortname: Option<String>) -> RpgSystem {
-        RpgSystem {
-            id,
-            name,
-            shortname,
-        }
-    }
 }
 
 impl DMO for RpgSystem {
@@ -44,12 +33,22 @@ impl DMO for RpgSystem {
         "rpg_systems"
     }
 
-    fn insert_params(&self) -> HashMap<String, Value> {
-        params!{
+    fn insert_params(&self) -> Vec<(String, Value)> {
+        params! {
             "rpg_system_id" => self.id,
             "name" => self.name,
             "shortname" => self.shortname
         }
+    }
+
+    fn from_row(row: Row) -> Result<Self, Error> {
+        let (id, name, shortname) = mysql::from_row(row.clone());
+        Ok(
+            RpgSystem {
+                id,
+                name,
+                shortname,
+            })
     }
 }
 
