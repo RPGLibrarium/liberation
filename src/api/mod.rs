@@ -33,37 +33,34 @@ pub fn get_static() -> Scope {
 
 pub fn get_v1() -> Scope {
     web::scope("/v1")
-        /*
         .service(
             web::scope("/rpgsystems")
                 .service(
                     web::resource("")
                         .route(web::get().to(get_rpg_systems))
-                        .route(web::post().to(post_rpg_system)),
-                )
+//                        .route(web::post().to(post_rpg_system)),
+                )/*
                 .service(
                     web::resource("/{systemid}")
                         .route(web::get().to(get_rpg_system))
-                        .route(web::put().to(put_rpg_system))
-                        .route(web::delete().to(delete_rpg_system)),
-                ),
+//                        .route(web::put().to(put_rpg_system))
+//                        .route(web::delete().to(delete_rpg_system)),
+                ),*/
         )
-        */
-        /*
         .service(
             web::scope("/titles")
                 .service(
                     web::resource("")
                         .route(web::get().to(get_titles))
-                        .route(web::post().to(post_rpg_system)),
+//                        .route(web::post().to(post_rpg_system)),
                 )
-                .service(
+/*                .service(
                     web::resource("/{titleid}")
                         .route(web::get().to(get_title))
                         .route(web::put().to(put_title))
                         .route(web::delete().to(delete_title)),
-                ),
-        )*/
+                ),*/
+        )
         .service(
             web::scope("/books")
                 .service(
@@ -118,6 +115,44 @@ pub fn get_v1() -> Scope {
         */
 }
 
+/// Get all rpg systems
+fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+    assert_roles(&_req, vec![])?;
+
+    return bus::rpgsystems::get_rpgsystems(&state.db).and_then(|systems| Ok(HttpResponse::Ok().json(systems)));
+    // This works because of reasons:
+    // Response<Json<T>, Into<Error>> = impl Response
+}
+
+/*
+/// Get a requested rpg system
+fn get_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+    let claims: Option<Claims> = assert_roles(&_req, vec![])?;
+
+    let id: RpgSystemId = _req.match_info().query("systemid").parse::<RpgSystemId>()?;
+
+    bus::get_rpgsystem(&state.db, claims, id).and_then(|system| Ok(HttpResponse::Ok().json(system)))
+}
+*/
+
+/// Get all Titles (if authentification is successful)
+fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+    assert_roles(&_req, vec![])?;
+
+    bus::titles::get_titles(&state.db).and_then(|titles| Ok(HttpResponse::Ok().json(titles)))
+}
+
+/*
+/// Get a requested Title (if authentification is successful)
+fn get_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+    let claims = assert_roles(&_req, vec![])?;
+
+    let id: TitleId = _req.match_info().query("titleid").parse::<TitleId>()?;
+
+    bus::get_title(&state.db, claims, id).and_then(|title| Ok(HttpResponse::Ok().json(title)))
+}
+*/
+
 /// Get all Books (if authentification is successful)
 fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     // let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
@@ -133,21 +168,7 @@ fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpRespon
 // https://actix.rs/actix-web/actix_web/trait.Responder.html
 
 /*
-fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    assert_roles(&_req, vec![])?;
 
-    return bus::get_rpgsystems(&state.db).and_then(|systems| Ok(HttpResponse::Ok().json(systems)));
-    // This works because of reasons:
-    // Response<Json<T>, Into<Error>> = impl Response
-}
-
-fn get_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    let claims: Option<Claims> = assert_roles(&_req, vec![])?;
-
-    let id: RpgSystemId = _req.match_info().query("systemid").parse::<RpgSystemId>()?;
-
-    bus::get_rpgsystem(&state.db, claims, id).and_then(|system| Ok(HttpResponse::Ok().json(system)))
-}
 
 fn post_rpg_system(
     state: web::Data<AppState>,
@@ -189,21 +210,7 @@ fn delete_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<Ht
         .and_then(|_| Ok(HttpResponse::NoContent().finish()))
 }
 
-/// Get all Titles (if authentification is successful)
-fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    assert_roles(&_req, vec![])?;
 
-    bus::get_titles(&state.db).and_then(|titles| Ok(HttpResponse::Ok().json(titles)))
-}
-
-/// Get a requested Title (if authentification is successful)
-fn get_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    let claims = assert_roles(&_req, vec![])?;
-
-    let id: TitleId = _req.match_info().query("titleid").parse::<TitleId>()?;
-
-    bus::get_title(&state.db, claims, id).and_then(|title| Ok(HttpResponse::Ok().json(title)))
-}
 
 /// Insert a new Title (if authentification is successful)
 fn post_title(

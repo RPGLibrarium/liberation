@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use crate::database::dmo::DMO;
 use crate::business::vec_to_map;
 
+
 /// Get all books from database
 pub fn get_books(db: &Database, claims: Option<Claims>) -> Result<GetBooks, Error> {
     //TODO: authentication

@@ -1,3 +1,5 @@
+pub(crate) mod rpgsystems;
+pub(crate) mod titles;
 pub(crate) mod books;
 
 use crate::api::*;
@@ -20,14 +22,8 @@ pub fn vec_to_map<T : DMO>(vec: Vec<T>) -> HashMap<T::Id, T> {
     }
     map
 }
-/// Get all RPG systems from database
-pub fn get_rpgsystems(db: &Database) -> Result<GetRpgSystems, Error> {
-    match db.get_all::<RpgSystem>() {
-        Ok(rpgsystems) => Ok(GetRpgSystems { rpgsystems }),
-        Err(e) => Err(e),
-    }
-}
 
+/*
 /// Get an RPG system with given id from database
 /// Fills the stock and availability infos when user is logged in.
 pub fn get_rpgsystem(
@@ -81,23 +77,8 @@ pub fn delete_rpgsystem(
         Err(e) => Err(e),
     }
 }
+*/
 
-/// Get all titles from database
-pub fn get_titles(db: &Database) -> Result<GetTitles, Error> {
-    //TODO: authentication
-
-    //TODO Error mapping
-    let tuples = db.get_titles_with_details()?;
-
-    Ok(GetTitles {
-        titles: tuples
-            .into_iter()
-            .map(|(title, system, stock, available)| {
-                TitleWithSystem::new(title, system, stock, available)
-            })
-            .collect(),
-    })
-}
 
 /// Get a title with given id from database
 pub fn get_title(
