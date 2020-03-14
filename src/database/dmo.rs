@@ -95,6 +95,9 @@ pub trait DMO: Sized {
         }
     }
 
+    /// all dmos have a unique id.
+    fn get_id(&self) -> Option<Self::Id>;
+
     /// columns in database representation, without primary key/id.
     fn select_columns() -> Vec<&'static str>;
     /// column that contains the primary key/id.

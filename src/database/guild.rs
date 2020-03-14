@@ -22,6 +22,10 @@ pub struct Guild {
 impl DMO for Guild {
     type Id = GuildId;
 
+    fn get_id(&self) -> Option<Id> {
+        self.id
+    }
+
     fn select_columns() -> Vec<&'static str> {
         vec!["name", "address", "contact_by_member_id"]
     }

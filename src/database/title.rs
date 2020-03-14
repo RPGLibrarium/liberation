@@ -29,6 +29,10 @@ pub struct Title {
 impl DMO for Title {
     type Id = TitleId;
 
+    fn get_id(&self) -> Option<Id> {
+        self.id
+    }
+
     fn select_columns() -> Vec<&'static str> {
         vec!["name", "rpg_system_by_id", "language", "publisher", "year", "coverimage"]
     }

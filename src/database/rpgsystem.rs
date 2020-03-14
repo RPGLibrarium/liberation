@@ -21,6 +21,10 @@ pub struct RpgSystem {
 impl DMO for RpgSystem {
     type Id = RpgSystemId;
 
+    fn get_id(&self) -> Option<Id> {
+        self.id
+    }
+
     fn select_columns() -> Vec<&'static str> {
         vec!["name", "shortname"]
     }

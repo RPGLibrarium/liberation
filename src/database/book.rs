@@ -81,6 +81,10 @@ pub struct Book {
 impl DMO for Book {
     type Id = BookId;
 
+    fn get_id(&self) -> Option<Id> {
+       self.id
+    }
+
     fn select_columns() -> Vec<&'static str> {
         vec!["external_inventory_id",
              "title_by_id",

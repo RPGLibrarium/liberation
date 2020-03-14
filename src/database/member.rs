@@ -20,6 +20,10 @@ pub struct Member {
 impl DMO for Member {
     type Id = MemberId;
 
+    fn get_id(&self) -> Option<Id> {
+        self.id
+    }
+
     fn select_columns() -> Vec<&'static str> {
         vec!["external_id"]
     }
