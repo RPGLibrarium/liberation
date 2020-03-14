@@ -1,30 +1,9 @@
 #[macro_use]
 extern crate log;
-extern crate env_logger;
 #[macro_use]
 extern crate mysql;
 #[macro_use]
 extern crate serde_derive;
-extern crate actix;
-extern crate actix_files;
-extern crate actix_web;
-extern crate actix_service;
-extern crate awc;
-extern crate base64;
-extern crate chrono;
-extern crate config;
-extern crate core;
-extern crate failure;
-extern crate futures;
-extern crate jsonwebtoken;
-extern crate oauth2;
-extern crate openssl;
-extern crate rand;
-extern crate serde;
-extern crate serde_json;
-extern crate tokio;
-extern crate url;
-extern crate url_serde;
 
 mod api;
 mod auth;
@@ -34,14 +13,17 @@ mod error;
 mod serde_formats;
 mod settings;
 
-use actix::{Actor, System};
 use actix_web::{web, App, HttpServer};
 use api::{get_static, get_v1};
 use auth::KeycloakCache;
 use settings::Settings;
 use actix_web::middleware::Logger;
+use actix::{System, Actor};
+use mysql::prelude::TextQuery;
 
-fn main() {
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     info!("retrieving settings ...");
@@ -54,36 +36,23 @@ fn main() {
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
     let state = api::AppState {
-        db: db,
+        db,
         kc: kc.clone(),
     };
-
-    let sys = System::new("server");
-    kc_actor.start();
 
     let serve_static_files = settings.serve_static_files;
     HttpServer::new(move || {
         let mut app = App::new()
             .wrap(Logger::default())
-            .register_data(web::Data::new(state.clone()))
+            .data(state.clone())
             .service(get_v1());
         if serve_static_files {
             app = app.service(get_static());
         }
         app
     })
-    .bind(format!("0.0.0.0:{}", settings.port))
-    .unwrap()
-    .start();
-
-    info!("liberation ready");
-    sys.run();
+        .bind(format!("0.0.0.0:{}", settings.port))?
+        .run()
+        .await
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

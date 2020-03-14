@@ -46,6 +46,7 @@ pub use self::title::TitleId;
 
 use mysql;
 use crate::database::dmo::DMO;
+use mysql::prelude::Queryable;
 
 /// Type for ids
 pub type Id = u64;
@@ -80,24 +81,22 @@ pub struct Database {
 impl Database {
     /// Construct a new Database object from given settings
     pub fn from_settings(settings: &settings::Database) -> Result<Database, Error> {
-        let mut opts = mysql::OptsBuilder::default();
-        opts.ip_or_hostname(settings.hostname.clone())
+        let opts = mysql::OptsBuilder::default()
+            .ip_or_hostname(settings.hostname.clone())
             .user(settings.username.clone())
             .pass(settings.password.clone())
             .db_name(Some(settings.database.clone()))
             .prefer_socket(false);
 
-        match settings.port {
-            Some(port) => {
-                opts.tcp_port(port);
-            }
-            None => {}
-        }
+        let opts = match settings.port {
+            Some(port) => opts.tcp_port(port),
+            None => opts
+        };
 
         let pool = mysql::Pool::new(opts)?;
 
         let mut conn = pool.get_conn()?;
-        conn.query(INIT_DB_STRUCTURE)?;
+        conn.query_drop(INIT_DB_STRUCTURE)?;
 
         return Ok(Database { pool: pool });
     }
@@ -127,12 +126,14 @@ impl Database {
         T::delete(self, id)
     }
 
-    pub fn get_titles_by_rpg_system(
+    /*
+    TODO: this is a working example
+    pub async fn get_titles_by_rpg_system(
         &self,
         system_id: RpgSystemId,
     ) -> Result<Vec<(Title, u32, u32)>, Error> {
-        let results = self.pool
-        .prep_exec(
+        self.pool.get_conn()?
+        .exec_map(
             "select title_id, name, rpg_system_by_id, language, publisher, year, coverimage, count(b.book_id) as stock, ifnull(sum(b.available),0)
                 from titles left join (
                     select *, if(exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()), 0, 1 ) as available
@@ -142,34 +143,28 @@ impl Database {
                 group by titles.title_id;",
             params!{
                 "system_id" => system_id,
-            },
-        )
-        .map_err(|err| Error::DatabaseError(err))
-        .map(|result| {
-            result.map(|x| x.unwrap()).map(|row| {
-                let (id, name, system, language, publisher, year, coverimage, stock, available) = mysql::from_row(row);
+            },|(id, name, system, language, publisher, year, coverimage, stock, available)|
                 (
-                    Title {
-                        id: id,
-                        name: name,
-                        system: system,
-                        language: language,
-                        publisher: publisher,
-                        year: year,
-                        coverimage: coverimage,
-                    },
-                    stock,
-                    available
+                        Title {
+                            id,
+                            name,
+                            system,
+                            language,
+                            publisher,
+                            year,
+                            coverimage,
+                        },
+                        stock,
+                        available
                 )
-            }).collect::<Vec<(Title, u32, u32)>>()
-        });
-        return results;
+        ).map_err(|err| Error::DatabaseError(err)).await
     }
 
+    TODO: use exec_map (s.o)
     /// Gets Titles with additional information about availability and rentals of corresponding books
     pub fn get_titles_with_details(&self) -> Result<Vec<(Title, RpgSystem, u32, u32)>, Error> {
         let result = self.pool
-            .prep_exec(
+            .exec(
                 "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, rpg_systems.shortname, count(book_id) as stock, exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
                  from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
@@ -209,7 +204,7 @@ impl Database {
         title_id: TitleId,
     ) -> Result<Option<(Title, RpgSystem, u32, u32)>, Error> {
         let mut result = self.pool
-            .prep_exec(
+            .exec(
                 "select title_id, titles.name, language, publisher, year, coverimage, rpg_systems.rpg_system_id, rpg_systems.name, rpg_systems.shortname, count(book_id) as stock,     exists(select rentals.rental_id from rentals where rentals.book_by_id = books.book_id and rentals.to_date >= now()) available \
                  from titles join rpg_systems on titles.rpg_system_by_id = rpg_systems.rpg_system_id \
                     left outer join books on titles.title_id = books.title_by_id \
@@ -245,14 +240,13 @@ impl Database {
             })?;
         return Ok(result.pop());
     }
-
+*/
     //TODO: Unfinished
     /// Gets all Book objects associated with the given Title
     pub fn get_books_by_title(&self, id: TitleId) -> Result<Vec<Book>, Error> {
         return Ok(vec![]);
     }
 }
-
 
 
 #[deprecated(since = "0.0.0", note = "this is a stub for later oauth roles")]
@@ -372,6 +366,8 @@ mod test_util {
 mod tests {
     use database::test_util::*;
     use database::Database;
+    use crate::database::test_util::{setup, teardown};
+    use crate::database::Database;
     /*
     ████████ ███████ ███████ ████████ ███████
        ██    ██      ██         ██    ██

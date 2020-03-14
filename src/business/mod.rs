@@ -79,7 +79,7 @@ pub fn delete_rpgsystem(
 }
 */
 
-
+/*
 /// Get a title with given id from database
 pub fn get_title(
     db: &Database,
@@ -134,7 +134,7 @@ pub fn get_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(),
     //TODO: authentication
     Ok(())
 }
-
+*/
 /*
 pub fn post_book(
     db: &Database,

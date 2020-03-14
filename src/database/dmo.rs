@@ -4,6 +4,8 @@ use mysql::{FromRowError, Row, Params, Value};
 use crate::database::Error;
 use std::collections::HashMap;
 use std::hash::Hash;
+use mysql::prelude::Queryable;
+use futures::StreamExt;
 
 
 /// Implementing the DMO trait guarantees the provision of basic database functions
@@ -16,11 +18,11 @@ pub trait DMO: Sized {
 
         let query_string = format!("select {} from {};", all_columns.join(", "), Self::table_name());
 
-        let results = db.pool.prep_exec(query_string, ())?;
-
-        results.into_iter()
-            .map(|row| Self::from_row(row?))
+        db.pool.get_conn()?
+            .exec_map(query_string, (), Self::from_row)?
+            .into_iter()
             .collect()
+
     }
 
     /// Gets an object of self type with given id from the underlying database
@@ -29,12 +31,12 @@ pub trait DMO: Sized {
 
         let query_string = format!("select {} from {} where {} = :id;", all_columns.join(", "), Self::table_name(), Self::id_column());
 
-        let results = db.pool.prep_exec(query_string, params! { "id" => id.into() })?;
+        let row: Option<Row> = db.pool.get_conn()?.exec_first(query_string, params! { "id" => id.into() })?;
 
-        Ok(results.into_iter()
-            .map(|row| Self::from_row(row?))
-            .collect::<Result<Vec<Self>, Error>>()?
-            .pop())
+        Ok(match row {
+            Some(x) => Some(Self::from_row(x)?),
+            None => None
+        })
     }
 
     /// Inserts an object of self type into the underlying database
@@ -60,9 +62,11 @@ pub trait DMO: Sized {
 
         let query_string = format!("insert into {} ({}) values ({})", Self::table_name(), columns_string, named_params_string);
 
-        let results = db.pool.prep_exec(query_string, params)?;
+        let mut conn = db.pool.get_conn()?;
 
-        Ok(results.last_insert_id())
+        conn.exec_drop(query_string, params)?;
+
+        Ok(conn.last_insert_id())
     }
 
     /// Updates an object of self type in the underlying database
@@ -79,17 +83,18 @@ pub trait DMO: Sized {
 
         let query_string = format!("update {} {} where {}=:{}", Self::table_name(), assignments, Self::id_column(), Self::id_column());
 
-        db.pool.prep_exec(query_string, params)?;
-        Ok(())
+        Ok(db.pool.get_conn()?.exec_drop(query_string, params)?)
     }
 
     /// Deletes an object of self type from the underlying database
     fn delete(db: &Database, id: Self::Id) -> Result<bool, Error> {
         let query_string = format!("delete from {} where {}=:{}", Self::table_name(), Self::id_column(), Self::id_column());
 
-        let results = db.pool.prep_exec(query_string, params! { Self::id_column() => id.into() })?;
+        let mut conn = db.pool.get_conn()?;
 
-        match results.affected_rows() {
+        conn.exec_drop(query_string, params! { Self::id_column() => id.into() })?;
+
+        match conn.affected_rows() {
             1 => Ok(true),
             0 => Ok(false),
             _ => Err(Error::IllegalState("Delete affected no or more than one rows. This should not happen.")),

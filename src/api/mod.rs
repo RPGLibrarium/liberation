@@ -3,7 +3,6 @@ mod dto;
 pub use self::dto::*;
 
 use actix_files as fs;
-use actix_service::IntoNewService;
 use actix_web::body::Body;
 use actix_web::dev::HttpServiceFactory;
 use actix_web::error::DispatchError::Service;
@@ -116,7 +115,7 @@ pub fn get_v1() -> Scope {
 }
 
 /// Get all rpg systems
-fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+async fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     assert_roles(&_req, vec![])?;
 
     return bus::rpgsystems::get_rpgsystems(&state.db).and_then(|systems| Ok(HttpResponse::Ok().json(systems)));
@@ -136,7 +135,7 @@ fn get_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpR
 */
 
 /// Get all Titles (if authentification is successful)
-fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+async fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     assert_roles(&_req, vec![])?;
 
     bus::titles::get_titles(&state.db).and_then(|titles| Ok(HttpResponse::Ok().json(titles)))
@@ -154,7 +153,7 @@ fn get_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpRespon
 */
 
 /// Get all Books (if authentification is successful)
-fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+async fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     // let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
     let claims = assert_roles(&_req, vec![])?;
 

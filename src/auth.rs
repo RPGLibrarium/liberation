@@ -1,12 +1,10 @@
-use actix::prelude::*;
-use actix_service::ServiceExt;
 use actix_web::client::Client;
 use actix_web::{client, http, HttpMessage, HttpRequest};
 use crate::api::AppState;
 use base64;
 use crate::database::type_aliases::*;
 use crate::error::Error;
-use futures::{Future, future::lazy};
+use futures::{Future, future::lazy, TryFutureExt};
 use jsonwebtoken as jwt;
 use oauth2::basic::BasicClient;
 use oauth2::prelude::*;
@@ -18,6 +16,9 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
+use actix::{Actor, Context, AsyncContext, Arbiter};
+use actix::utils::IntervalFunc;
+use futures::executor::block_on;
 
 pub mod roles {
     pub const ROLE_ADMIN: &str = "admin";
@@ -178,12 +179,28 @@ impl Keycloak {
     }
 
     pub fn fetch(kc: &mut Self, _ctx: &mut Context<Keycloak>) {
+        let cloned_cache = kc.cache.clone();
+
+        let users = block_on(Self::fetch_users(kc))
+            .unwrap_or_else(|err| panic!("An unexpected error occurred when updating users from keycloak: {:?}", err));
+        trace!("kc users: {:?}", users);
+        for user in users
+        {
+            cloned_cache.insert_user(user);
+        }
+
+        let metainfo = block_on(Self::fetch_kc_metainfo(kc))
+            .unwrap_or_else(|err| panic!("An unexpected error occurred when updating keycloak meta information: {:?}", err));
+        trace!("kc meta: {:?}", metainfo);
+        cloned_cache.set_public_key(metainfo.public_key);
+    }
+
+    async fn fetch_users(kc: &Keycloak) -> Result<Vec<KeycloakUser>, Error> {
         debug!("authenticating with keycloak...");
         //Get token from Keycloak with credentials
         let token_result = kc.oauth_client.exchange_client_credentials();
 
-        let user_url = kc
-            .keycloak_url
+        let user_url = kc.keycloak_url
             .join("admin/realms/")
             .unwrap()
             .join(format!("{}/", kc.realm).as_str())
@@ -191,75 +208,46 @@ impl Keycloak {
             .join("users")
             .unwrap();
 
-        let cloned_cache = kc.cache.clone();
-
         debug!("updating user cache from keycloak...");
 
-        Arbiter::spawn(lazy(move || {
-            // Get user information with token
-            let mut client: Client = Client::build()
-                .bearer_auth(token_result.unwrap().access_token().secret())
-                .finish();
+        // Get user information with token
+        let mut client: Client = Client::build()
+            .bearer_auth(token_result.unwrap().access_token().secret())
+            .finish();
 
-            // let mut client = Client::build(); // Client::default();
-            client
-                .get(user_url.as_str()) // <- Create request builder
-                // .no_default_headers()
-                // .header(
-                //     "Authorization",
-                //     format!("Bearer {}", token_result.unwrap().access_token().secret()),
-                // ) // .header("host", "localhost:8081")
-                .send() // <- Send http request
-                .map_err(|err| {
-                    debug!("ERR: {:?}", err);
-                    Error::KeycloakConnectionError(err)
-                })
-                .and_then(|mut response| {
-                    debug!("{:?}", response);
-                    response.json().map_err(|err| Error::KeycloakJsonError(err))
-                })
-                .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))
-                .and_then(|users: Vec<KeycloakUser>| {
-                    //info!("users: {:?}", users);
-                    users.into_iter().for_each(move |user| {
-                        cloned_cache.insert_user(user);
-                    });
-                    //info!("users: {:?}", move cloned_cache2);
-                    Ok(())
-                })
-        }));
+        // let mut client = Client::build(); // Client::default();
+        client
+            .get(user_url.as_str()) // <- Create request builder
+            .send()
+            .await // <- Send http request
+            .map_err(|err| {
+                debug!("ERR: {:?}", err);
+                Error::KeycloakConnectionError(err)
+            })?
+            .json()
+            .map_err(|err| Error::KeycloakJsonError(err))
+            .await
+    }
+
+    async fn fetch_kc_metainfo(kc: &Keycloak) -> Result<KeycloakMetaInfo, Error> {
+
+        //info!("users: {:?}", move cloned_cache2);
 
         debug!("updating public key from keycloak...");
-        // Get public key information
-        let key_url = kc
-            .keycloak_url
+        let key_url = kc.keycloak_url
             .join("realms/")
             .unwrap()
             .join(format!("{}/", kc.realm).as_str())
             .unwrap();
 
-        let cloned_cache = kc.cache.clone();
-
-        Arbiter::spawn(lazy(move || {
-            // client
-            Client::default()
-                .get(key_url.as_str()) // <- Create request builder
-                // .no_default_headers()
-                // .header("host", "localhost:8081")
-                .send() // <- Send http request
-                .map_err(|err| Error::KeycloakConnectionError(err))
-                .and_then(|mut response| {
-                    response
-                        .json()
-                        .map_err(|err: awc::error::JsonPayloadError| Error::KeycloakJsonError(err))
-                })
-                .map_err(|err| panic!("Unexpected KeycloakError {}", err))
-                .and_then(move |response: KeycloakMetaInfo| {
-                    trace!("kc meta: {:?}", response);
-                    cloned_cache.set_public_key(response.public_key);
-                    Ok(())
-                })
-        }));
+        Client::default()
+            .get(key_url.as_str()) // <- Create request builder
+            .send() // <- Send http request
+            .await
+            .map_err(|err| Error::KeycloakConnectionError(err))?
+            .json()
+            .map_err(|err: awc::error::JsonPayloadError| Error::KeycloakJsonError(err))
+            .await
     }
 }
 
@@ -269,7 +257,7 @@ pub struct Claims {
     pub roles: Vec<String>,
     pub name: String,
     pub email: String,
-    // ... whatever!
+// ... whatever!
 }
 
 pub fn get_claims_for_req(req: &HttpRequest) -> Result<Option<Claims>, Error> {
@@ -330,7 +318,7 @@ pub fn assert_roles(req: &HttpRequest, roles: Vec<&str>) -> Result<Option<Claims
         false => match claims {
             Some(cl) => {
                 for role in roles.iter() {
-                    //let roleString = String::from(*role);
+//let roleString = String::from(*role);
                     if cl.roles.contains(&String::from(*role)) {
                         return Ok(Some(cl));
                     }
