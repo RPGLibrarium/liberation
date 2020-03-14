@@ -46,8 +46,8 @@ create table if not exists books (
   owner_type              enum('guild', 'member')
     as (if(owner_guild_by_id is not null, 'guild', 'member')) STORED,
   quality                 text not null,
-  state                   enum('free', 'rented', 'destroyed', 'lost', 'reserved'),
-  state_since             datetime,
+  state                    not null,
+  state_since             datetime not null,
   rentee_member_by_id      int null,
   rentee_guild_by_id       int null,
   rentee_type              enum('guild', 'member')
