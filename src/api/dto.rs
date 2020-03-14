@@ -115,11 +115,13 @@ pub struct GetBook {
     pub book: BookWithTitleWithOwnerWithRental,
 }
 
+/*
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub struct PutPostBook {
     pub book: db::Book,
 }
+*/
 
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -291,11 +293,11 @@ pub struct PartialTitle {
 pub struct BookWithTitleWithOwnerWithRental {
     pub id: db::BookId,
     pub title: TitleWithSystem,
-    pub owner: Entity,
+    // pub owner: Entity,
     pub quality: String,
-    pub available: bool,
+    // pub available: bool,
     pub external_inventory_id: db::ExternalInventoryId,
-    pub rental: Option<RentalWithRentee>,
+    // pub rental: Option<RentalWithRentee>,
 }
 
 #[derive(Deserialize)]

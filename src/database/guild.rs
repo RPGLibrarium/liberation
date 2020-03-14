@@ -41,8 +41,8 @@ impl DMO for Guild {
     fn insert_params(&self) -> Vec<(String, Value)> {
         params!{
             "guild_id" => self.id,
-            "name" => self.name,
-            "address" => self.address,
+            "name" => &self.name,
+            "address" => &self.address,
             "contact_by_member_id" => self.contact
         }
     }

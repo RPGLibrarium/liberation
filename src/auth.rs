@@ -215,6 +215,7 @@ impl Keycloak {
                     Error::KeycloakConnectionError(err)
                 })
                 .and_then(|mut response| {
+                    debug!("{:?}", response);
                     response.json().map_err(|err| Error::KeycloakJsonError(err))
                 })
                 .map_err(|err| panic!("Unexpected KeycloakError {:?}", err))

@@ -1,4 +1,4 @@
-mod books;
+pub(crate) mod books;
 
 use crate::api::*;
 use crate::auth::{Claims, KeycloakCache};
@@ -8,7 +8,7 @@ use crate::error::Error;
 use std::collections::HashMap;
 
 pub fn vec_to_map<T : DMO>(vec: Vec<T>) -> HashMap<T::Id, T> {
-    let mut map: HashMap<RpgSystemId, RpgSystem> = HashMap::new();
+    let mut map: HashMap<T::Id, T> = HashMap::new();
     for item in vec {
         match item.get_id() {
             Some(id) => {
@@ -154,6 +154,7 @@ pub fn get_book(db: &Database, claims: Option<Claims>, id: BookId) -> Result<(),
     Ok(())
 }
 
+/*
 pub fn post_book(
     db: &Database,
     claims: Option<Claims>,
@@ -219,3 +220,4 @@ pub fn delete_guild(db: &Database, claims: Option<Claims>, guild: GuildId) -> Re
     //TODO: Stub
     Ok(())
 }
+*/

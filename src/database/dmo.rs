@@ -3,12 +3,13 @@ use super::Id;
 use mysql::{FromRowError, Row, Params, Value};
 use crate::database::Error;
 use std::collections::HashMap;
+use std::hash::Hash;
 
 
 /// Implementing the DMO trait guarantees the provision of basic database functions
 pub trait DMO: Sized {
     /// Id
-    type Id: Into<Value>;
+    type Id: Into<Value> + Eq + Hash;
     /// Gets all objects of self type from the underlying database
     fn get_all(db: &Database) -> Result<Vec<Self>, Error> {
         let all_columns = [vec![Self::id_column()], Self::select_columns()].concat();
@@ -40,13 +41,13 @@ pub trait DMO: Sized {
     fn insert(db: &Database, dmo: &Self) -> Result<Id, Error> {
         let params = dmo.insert_params();
         // Convert into HashMap for convenience
-        let mut params_map: HashMap<String, Value> = params.into_iter().collect();
+        let mut params_map: HashMap<String, Value> = params.clone().into_iter().collect();
         // We need to remove the id, because it will be set by the database automatically
         params_map.remove(Self::id_column());
         let keys = params_map.keys();
 
         // Construct strings for the statement
-        let named_params_string = keys.into_iter()
+        let named_params_string = keys.clone().into_iter()
             .map(|name| format!(":{}", name))
             .collect::<Vec<String>>()
             .join(", ");
@@ -68,7 +69,7 @@ pub trait DMO: Sized {
     fn update(db: &Database, dmo: &Self) -> Result<(), Error> {
         let params = dmo.insert_params();
         // Convert into HashMap for convenience
-        let mut params_map: HashMap<String, Value> = params.into_iter().collect();
+        let mut params_map: HashMap<String, Value> = params.clone().into_iter().collect();
         // The id is used in the where part and is thus removed from the keys
         let keys_without_id = params_map.keys().filter(|key| key.as_str() != Self::id_column());
 

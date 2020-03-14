@@ -7,7 +7,7 @@ use crate::error::Error::{IllegalState, EnumFromStringError};
 pub type EntityId = Id;
 
 /// EntityType describes whether an entity is a person or an organisation
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum EntityType {
     /// Member of a guild
     Member,

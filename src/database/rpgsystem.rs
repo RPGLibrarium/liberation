@@ -40,8 +40,8 @@ impl DMO for RpgSystem {
     fn insert_params(&self) -> Vec<(String, Value)> {
         params! {
             "rpg_system_id" => self.id,
-            "name" => self.name,
-            "shortname" => self.shortname
+            "name" => &self.name,
+            "shortname" => &self.shortname
         }
     }
 

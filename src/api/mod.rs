@@ -33,6 +33,7 @@ pub fn get_static() -> Scope {
 
 pub fn get_v1() -> Scope {
     web::scope("/v1")
+        /*
         .service(
             web::scope("/rpgsystems")
                 .service(
@@ -47,6 +48,8 @@ pub fn get_v1() -> Scope {
                         .route(web::delete().to(delete_rpg_system)),
                 ),
         )
+        */
+        /*
         .service(
             web::scope("/titles")
                 .service(
@@ -60,21 +63,24 @@ pub fn get_v1() -> Scope {
                         .route(web::put().to(put_title))
                         .route(web::delete().to(delete_title)),
                 ),
-        )
+        )*/
         .service(
             web::scope("/books")
                 .service(
                     web::resource("")
                         .route(web::get().to(get_books))
-                        .route(web::post().to(post_book)),
+                        //.route(web::post().to(post_book)),
                 )
+                /*
                 .service(
                     web::resource("/{bookid}")
                         .route(web::get().to(get_book))
                         .route(web::put().to(put_book))
                         .route(web::delete().to(delete_book)),
                 ),
+                */
         )
+        /*
         .service(
             web::scope("/guilds")
                 .service(
@@ -109,6 +115,15 @@ pub fn get_v1() -> Scope {
                         ),
                 ),
         )
+        */
+}
+
+/// Get all Books (if authentification is successful)
+fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
+    // let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
+    let claims = assert_roles(&_req, vec![])?;
+
+    bus::books::get_books(&state.db, claims).and_then(|books| Ok(HttpResponse::Ok().json(books)))
 }
 
 // Responder<Item = Into<AsyncResult<HttpResponse>>, Error = Into<Error>>
@@ -117,6 +132,7 @@ pub fn get_v1() -> Scope {
 // - Json<T>
 // https://actix.rs/actix-web/actix_web/trait.Responder.html
 
+/*
 fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     assert_roles(&_req, vec![])?;
 
@@ -231,12 +247,7 @@ fn delete_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpRes
     bus::delete_title(&state.db, claims, id).and_then(|_| Ok(HttpResponse::NoContent().finish()))
 }
 
-/// Get all Books (if authentification is successful)
-fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
 
-    bus::get_books(&state.db, claims).and_then(|books| Ok(HttpResponse::Ok().json(books)))
-}
 
 /// Get a requested Book (if authentification is successful)
 fn get_book(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
@@ -380,3 +391,4 @@ fn get_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpRes
 fn post_guild_inventory(state: web::Data<AppState>, _req: HttpRequest) -> HttpResponse {
     HttpResponse::NotImplemented().finish()
 }
+*/

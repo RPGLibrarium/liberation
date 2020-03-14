@@ -39,7 +39,7 @@ impl DMO for Member {
     fn insert_params(&self) -> Vec<(String, Value)> {
         params! {
             "member_id" => self.id,
-            "external_id" => self.external_id
+            "external_id" => &self.external_id
         }
     }
 

@@ -115,7 +115,7 @@ impl DMO for Book {
             "title_by_id" => self.title,
             "owner_member_by_id" => to_member_id( self.owner, self.owner_type),
             "owner_guild_by_id" => to_guild_id( self.owner, self.owner_type),
-            "quality" => self.quality,
+            "quality" => &self.quality,
             "state" => self.state.to_string(),
             "state_since" => self.state_since,
             "rentee_member_by_id" => to_member_id( self.rentee, self.rentee_type),

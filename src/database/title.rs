@@ -8,7 +8,7 @@ use mysql::{Value, FromRowError, Row};
 pub type TitleId = Id;
 
 /// Describes an abstract book. Copys of the book are stored in the Book type.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub struct Title {
     /// Id
     pub id: Option<TitleId>,
@@ -48,12 +48,12 @@ impl DMO for Title {
     fn insert_params(&self) -> Vec<(String, Value)> {
         params! {
             "title_id" => self.id,
-            "name" => self.name,
+            "name" => &self.name,
             "rpg_system_by_id" => self.system,
-            "language" => self.language,
-            "publisher" => self.publisher,
+            "language" => &self.language,
+            "publisher" => &self.publisher,
             "year" => self.year,
-            "coverimage" => self.coverimage
+            "coverimage" => &self.coverimage
         }
     }
 
