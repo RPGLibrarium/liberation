@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
     let kc: KeycloakCache = KeycloakCache::new();
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
 
-    let state = api::AppState {
+   let state = api::AppState {
         db,
         kc: kc.clone(),
     };

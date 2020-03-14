@@ -125,7 +125,7 @@ impl DMO for Book {
 
     fn from_row(row: Row) -> Result<Self, Error> where
         Self: Sized {
-        let (id, title, owner_member, owner_guild, owner_type, quality, external_inventory_id, book_state, state_since, rentee_type, rentee_member, rentee_guild) = mysql::from_row(row.clone());
+        let (id, external_inventory_id, title, owner_member, owner_guild, owner_type, quality, book_state, state_since, rentee_member, rentee_guild, rentee_type) = mysql::from_row(row.clone());
         {
             let owner_type: String = owner_type;
             let owner_type = EntityType::from_str(owner_type.as_str())?;
