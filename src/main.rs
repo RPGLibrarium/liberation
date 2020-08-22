@@ -2,20 +2,17 @@
 extern crate log;
 #[macro_use]
 extern crate mysql;
-#[macro_use]
-extern crate serde_derive;
 
 mod api;
-mod auth;
+//mod auth;
 mod business;
 mod database;
+mod model;
 mod error;
-mod serde_formats;
 mod settings;
 
 use actix_web::{web, App, HttpServer};
 use api::{get_static, get_v1};
-use auth::KeycloakCache;
 use settings::Settings;
 use actix_web::middleware::Logger;
 use actix::{System, Actor};
@@ -26,18 +23,17 @@ use mysql::prelude::TextQuery;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    info!("retrieving settings ...");
     let settings = Settings::new().unwrap();
-    info!("initializing DB ...");
     let db = database::Database::from_settings(&settings.database).unwrap();
 
+    /*
     info!("initializing keycloak ...");
     let kc: KeycloakCache = KeycloakCache::new();
     let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
-
+    */
    let state = api::AppState {
         db,
-        kc: kc.clone(),
+        //kc: kc.clone(),
     };
 
     let serve_static_files = settings.serve_static_files;

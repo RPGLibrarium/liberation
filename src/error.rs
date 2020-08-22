@@ -3,7 +3,7 @@ use actix_web::{error, HttpResponse, ResponseError};
 use awc;
 use core::num::ParseIntError;
 use failure::Fail;
-use mysql::{Error as MySqlError, FromRowError};
+use mysql::{Error as MySqlError, FromRowError, FromValueError};
 use oauth2::basic::BasicErrorResponseType;
 use oauth2::RequestTokenError;
 use std::fmt;
@@ -14,16 +14,21 @@ type Field = String;
 #[derive(Debug)]
 /// An custom error type, that handles convertion to HTTP error codes
 pub enum Error {
+    // Database related errors
     /// Internal Database Errors -> 500
     DatabaseError(MySqlError),
+    /// Database is inconsistent -> 500
+    IllegalState(&'static str),
+    /// Conversion done by mysql failed
+    MySqlRowConversionError(FromRowError),
+    MySqlValueConversionError(FromValueError),
+    // User input related errors
     /// Database Constraints, usually from invalid User input -> 400 or 500
     ConstraintError(Option<Field>),
     /// User input is too long -> 400
     DataTooLong(Field),
     /// User input has wrong type -> 400
     IllegalValueForType(Field),
-    /// Database is inconsistent -> 500
-    IllegalState(&'static str),
     /// Invalid Json from user -> 400
     JsonPayloadError(actix_web::error::JsonPayloadError),
     /// Backend can not authenticate with the Keycloak server-> 500
@@ -44,8 +49,6 @@ pub enum Error {
     ActixError(error::Error),
     /// No item with given id found -> 404
     ItemNotFound,
-    /// Conversion done by mysql failed
-    MySqlConversionError(FromRowError),
     /// Conversion from data to Struct failed
     EnumFromStringError(String)
 }
@@ -83,10 +86,15 @@ impl From<actix_web::error::JsonPayloadError> for Error {
 
 impl From<mysql::FromRowError> for Error{
     fn from(error: mysql::FromRowError) -> Self {
-        Error::MySqlConversionError(error)
+        Error::MySqlRowConversionError(error)
     }
 }
 
+impl From<mysql::FromValueError> for Error{
+    fn from(error: mysql::FromValueError) -> Self {
+        Error::MySqlValueConversionError(error)
+    }
+}
 /*
 impl From<RequestTokenError<Fail, BasicErrorResponseType>> for Error {
     fn from(error: RequestTokenError<dyn Fail, BasicErrorResponseType>) -> Self {
@@ -121,7 +129,8 @@ impl fmt::Display for Error {
             Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
             Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
             Error::IllegalState(ref msg) => write!(f, "ERROR: Invalid State: {}", msg),
-            Error::MySqlConversionError(ref rowError) => write!(f, "{{ {} }}", rowError),
+            Error::MySqlRowConversionError(ref rowError) => write!(f, "{{ {} }}", rowError),
+            Error::MySqlValueConversionError(ref valueError) => write!(f, "{{ {} }}", valueError),
             Error::EnumFromStringError(ref msg) => write!(f, "ERROR: Creating Enum from String failed with message: {}", msg ),
             //Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
             // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),

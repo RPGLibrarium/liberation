@@ -1,6 +1,7 @@
 use config::{Config, ConfigError, Environment, File};
 use url::Url;
 use url_serde;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Database {
@@ -31,6 +32,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
+        info!("Reading settings");
         let mut s = Config::default();
 
         // Start off by merging in the "default" configuration file
@@ -71,7 +73,7 @@ impl TestSettings {
         s.merge(File::with_name("config/test").required(false))
             .unwrap();
 
-        s.set("database.database", "")?;
+        s.set("model.model", "")?;
 
         s.merge(Environment::with_prefix("LIBERATION").separator("_"))
             .unwrap();

@@ -35,7 +35,7 @@ cargo build
 2. Install liberation core as a service
 3. Configure
 <!-- Liberation will look for configurations in the environment and at `/etc/liberation/master.conf`.
-Set the database connection properties and keycloak client secret like in the [example config](res/config.yml)
+Set the model connection properties and keycloak client secret like in the [example config](res/config.yml)
 Make sure the config is only readable by the liberation-core service. -->
 #### Install Frontend to Webserver
 1. Build

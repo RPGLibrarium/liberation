@@ -6,8 +6,7 @@ edition = "2018"
 
 [dependencies]
 rand = "^0.7"
-serde = "^1.0"
-serde_derive = "^1.0"
+serde = {version="^1.0", features = ["derive"] }
 serde_json = "^1.0"
 chrono = {version="^0.4", features = ["serde"] }
 actix-web = { version = "2.0", features = ["openssl"] }
@@ -26,7 +25,7 @@ log = "*"
 env_logger = "*"
 base64 = "*"
 openssl = "^0.10"
-mysql = "18.0"
+mysql = "^18.0"
 
 [dev-dependencies]
 

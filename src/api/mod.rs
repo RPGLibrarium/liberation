@@ -8,21 +8,19 @@ use actix_web::dev::HttpServiceFactory;
 use actix_web::error::DispatchError::Service;
 use actix_web::web::{route, Json};
 use actix_web::{http, web, App, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
-use crate::auth::roles::*;
-use crate::auth::{assert_roles, Claims, KeycloakCache};
 use crate::business as bus;
 use crate::database::*;
-use crate::database::{Database, RpgSystemId, TitleId, BookId, GuildId, MemberId};
+use crate::database::Database;
 use crate::error::Error;
 //use futures::future::Future;
 
 /// Handling of external modules
 #[derive(Clone)]
 pub struct AppState {
-    /// Underlying database
+    /// Underlying model
     pub db: Database,
-    /// Keycloak for authentication
-    pub kc: KeycloakCache,
+    // Keycloak for authentication
+    //pub kc: KeycloakCache,
 }
 
 /// Getter for web folder
@@ -116,7 +114,7 @@ pub fn get_v1() -> Scope {
 
 /// Get all rpg systems
 async fn get_rpg_systems(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    assert_roles(&_req, vec![])?;
+    // assert_roles(&_req, vec![])?;
 
     return bus::rpgsystems::get_rpgsystems(&state.db).and_then(|systems| Ok(HttpResponse::Ok().json(systems)));
     // This works because of reasons:
@@ -136,7 +134,7 @@ fn get_rpg_system(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpR
 
 /// Get all Titles (if authentification is successful)
 async fn get_titles(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
-    assert_roles(&_req, vec![])?;
+    // assert_roles(&_req, vec![])?;
 
     bus::titles::get_titles(&state.db).and_then(|titles| Ok(HttpResponse::Ok().json(titles)))
 }
@@ -155,9 +153,8 @@ fn get_title(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpRespon
 /// Get all Books (if authentification is successful)
 async fn get_books(state: web::Data<AppState>, _req: HttpRequest) -> Result<HttpResponse, Error> {
     // let claims = assert_roles(&_req, vec![ROLE_ADMIN, ROLE_LIBRARIAN, ROLE_MEMBER])?;
-    let claims = assert_roles(&_req, vec![])?;
-
-    bus::books::get_books(&state.db, claims).and_then(|books| Ok(HttpResponse::Ok().json(books)))
+    // let claims = assert_roles(&_req, vec![])?;
+    bus::books::get_books(&state.db).and_then(|books| Ok(HttpResponse::Ok().json(books)))
 }
 
 // Responder<Item = Into<AsyncResult<HttpResponse>>, Error = Into<Error>>

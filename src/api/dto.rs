@@ -1,4 +1,6 @@
 use crate::database as db;
+use crate::model::{RpgSystem, Title, Book};
+use serde::Serialize;
 
 type ItemCount = u32;
 
@@ -10,9 +12,10 @@ type ItemCount = u32;
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetRpgSystems {
-    pub rpgsystems: Vec<db::RpgSystem>,
+    pub rpgsystems: Vec<RpgSystem>,
 }
 
+/*
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetRpgSystem {
@@ -59,13 +62,15 @@ impl GetRpgSystem {
 pub struct PutPostRpgSystem {
     pub rpgsystem: db::RpgSystem,
 }
+*/
 
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetTitles {
-    pub titles: Vec<TitleWithSystem>,
+    pub titles: Vec<Title>,
 }
 
+/*
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetTitle {
@@ -102,13 +107,15 @@ impl GetTitle {
 pub struct PutPostTitle {
     pub title: db::Title,
 }
+*/
 
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetBooks {
-    pub books: Vec<BookWithTitleWithOwnerWithRental>,
+    pub books: Vec<Book>,
 }
 
+/*
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct GetBook {
@@ -172,8 +179,10 @@ pub struct GetGuildInventory {
 pub struct PutPostGuild {
     pub guild: db::Guild,
 }
+*/
 
 // ############### Inner DTOS ############################
+/*
 #[derive(Serialize)]
 pub struct RpgSystemWithTitles {
     pub id: db::RpgSystemId,
@@ -342,3 +351,4 @@ pub struct PartialGuild {
     pub address: String,
     pub contact: db::MemberId,
 }
+*/

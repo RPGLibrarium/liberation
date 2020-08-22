@@ -435,7 +435,7 @@ communication:
   label: Communication
 computers:
   icons:
-    - database
+    - model
     - desktop
     - download
     - ethernet
@@ -864,7 +864,7 @@ interfaces:
     - cogs
     - copy
     - cut
-    - database
+    - model
     - dot-circle
     - download
     - edit

@@ -3,12 +3,11 @@ pub(crate) mod titles;
 pub(crate) mod books;
 
 use crate::api::*;
-use crate::auth::{Claims, KeycloakCache};
 use crate::database::*;
-use crate::database::dmo::DMO;
 use crate::error::Error;
 use std::collections::HashMap;
 
+/*
 pub fn vec_to_map<T : DMO>(vec: Vec<T>) -> HashMap<T::Id, T> {
     let mut map: HashMap<T::Id, T> = HashMap::new();
     for item in vec {
@@ -23,8 +22,7 @@ pub fn vec_to_map<T : DMO>(vec: Vec<T>) -> HashMap<T::Id, T> {
     map
 }
 
-/*
-/// Get an RPG system with given id from database
+/// Get an RPG system with given id from model
 /// Fills the stock and availability infos when user is logged in.
 pub fn get_rpgsystem(
     db: &Database,
@@ -44,7 +42,7 @@ pub fn get_rpgsystem(
     }
 }
 
-/// Insert a RPG system into database
+/// Insert a RPG system into model
 pub fn post_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -55,7 +53,7 @@ pub fn post_rpgsystem(
     Ok(db.insert::<RpgSystem>(&system.rpgsystem)?)
 }
 
-/// Update a specific system in database
+/// Update a specific system in model
 pub fn put_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -65,7 +63,7 @@ pub fn put_rpgsystem(
     Ok(db.update::<RpgSystem>(&system.rpgsystem)?)
 }
 
-/// Delete the RPG system with given id from database
+/// Delete the RPG system with given id from model
 pub fn delete_rpgsystem(
     db: &Database,
     claims: Option<Claims>,
@@ -80,7 +78,7 @@ pub fn delete_rpgsystem(
 */
 
 /*
-/// Get a title with given id from database
+/// Get a title with given id from model
 pub fn get_title(
     db: &Database,
     claims: Option<Claims>,
@@ -95,7 +93,7 @@ pub fn get_title(
     Ok(GetTitle::new(title, system, stock, available, books))
 }
 
-/// Insert a title into database
+/// Insert a title into model
 pub fn post_title(
     db: &Database,
     claims: Option<Claims>,
@@ -105,13 +103,13 @@ pub fn post_title(
     Ok(db.insert::<Title>(&title.title)?)
 }
 
-/// Update a specific title in database
+/// Update a specific title in model
 pub fn put_title(db: &Database, claims: Option<Claims>, title: PutPostTitle) -> Result<(), Error> {
     //TODO: Error handling
     Ok(db.update::<Title>(&title.title)?)
 }
 
-/// Delete the title with given id from database
+/// Delete the title with given id from model
 pub fn delete_title(db: &Database, claims: Option<Claims>, id: TitleId) -> Result<(), Error> {
     //TODO: Errorhandling
     db.delete::<Title>(id)?;

@@ -2,7 +2,6 @@ use actix_web::client::Client;
 use actix_web::{client, http, HttpMessage, HttpRequest};
 use crate::api::AppState;
 use base64;
-use crate::database::type_aliases::*;
 use crate::error::Error;
 use futures::{Future, future::lazy, TryFutureExt};
 use jsonwebtoken as jwt;
