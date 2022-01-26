@@ -1,5 +1,5 @@
 use std::future::{Ready, ready};
-use actix_web::{FromRequest, http, HttpRequest};
+use actix_web::{FromRequest, HttpRequest};
 use actix_web::dev::Payload;
 use jsonwebtoken::{Algorithm, decode, Validation};
 use serde::{Serialize, Deserialize};
@@ -88,9 +88,9 @@ impl FromRequest for Authentication {
                     return Err(UserFacingError::BadToken);
                 };
 
-                let decode_key = req.app_data::<AppState>()
+                let decode_key = &req.app_data::<AppState>()
                     .ok_or(Error::Internal(MissingAppState))?
-                    .jwt_key();
+                    .kc_public_key;
 
                 // TODO: require correct audience, subject, and issuer.
                 let token = decode::<Claims>(

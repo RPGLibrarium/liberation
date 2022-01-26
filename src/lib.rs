@@ -6,12 +6,11 @@ pub mod schema;
 pub mod models;
 pub mod claims;
 pub mod error;
+mod keycloak;
 
-use clap::App;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
 use diesel::mysql::MysqlConnection;
-use diesel::r2d2;
 use diesel::r2d2::ConnectionManager;
 use jsonwebtoken::DecodingKey;
 use crate::claims::Authentication;
@@ -21,19 +20,12 @@ use crate::schema::rpg_systems::dsl::rpg_systems;
 use crate::schema::titles::dsl::titles;
 use crate::UserFacingError::Internal;
 
-type DbPool = r2d2::Pool<ConnectionManager<MysqlConnection>>;
+type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 
 #[derive(Clone)]
 pub struct AppState {
     pub database: DbPool,
-    pub kc_public_key: Vec<u8>,
-}
-
-impl AppState {
-    pub fn jwt_key(&self) -> DecodingKey {
-        // TODO: select correct decoding not sure what we will use
-        return DecodingKey::from_rsa_der(self.kc_public_key.as_slice());
-    }
+    pub kc_public_key: DecodingKey,
 }
 
 pub fn list_rpg_systems(claims: Authentication, conn: &MysqlConnection) -> Result<Vec<RpgSystem>, UserFacingError> {

@@ -11,6 +11,17 @@ podman start liberation-dev-db
 ```
 
 2. Apply the latest migration
+One time and update when necessary
 ```shell
-diesel migration run
+cargo install diesel_cli
+```
+
+On first run and after each database change
+```shell
+diesel migration run --database-url mysql://liberation:liberation@127.0.0.1:3306/liberation
+```
+
+3. Run Liberation
+```shell
+cargo run -p liberation -- -d mysql://liberation:liberation@127.0.0.1:3306/liberation
 ```

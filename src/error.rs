@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use thiserror::Error;
 use actix_web::{HttpResponse, ResponseError};
 use actix_web::http::{header, StatusCode};
-use diesel::r2d2;
+use diesel::r2d2::{PoolError};
 use diesel::result::Error as DieselError;
 
 #[derive(Error, Debug)]
@@ -37,9 +37,9 @@ pub enum InternalError {
     #[error("data base connection failed")]
     DatabaseError(#[from] DieselError),
     #[error("getting a connection from the pool failed")]
-    DatabasePoolingError(#[from] r2d2::Error),
+    DatabasePoolingError(#[from] PoolError),
     #[error("could not find the app state during jwt checking")]
-    MissingAppState
+    MissingAppState,
 }
 
 /// actix uses this trait to decide on status codes.

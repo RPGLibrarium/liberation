@@ -1,10 +1,12 @@
 use super::schema::rpg_systems;
 use super::schema::titles;
+use serde::Deserialize;
+use serde::Serialize;
 
 pub type Year = i16;
 
-#[derive(Identifiable, Queryable, PartialEq, Debug)]
-#[table_name="rpg_systems"]
+#[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
+#[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
 pub struct RpgSystem {
     pub rpg_system_id: i32,
@@ -13,16 +15,16 @@ pub struct RpgSystem {
 }
 
 #[derive(Insertable)]
-#[table_name="rpg_systems"]
+#[table_name = "rpg_systems"]
 pub struct NewRpgSystem<'a> {
     pub name: &'a str,
     pub shortname: &'a str,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
-#[table_name="titles"]
+#[table_name = "titles"]
 #[primary_key(title_id)]
-#[belongs_to(RpgSystem, foreign_key="rpg_system_by_id")]
+#[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
 pub struct Title {
     pub title_id: i32,
     pub name: String,
