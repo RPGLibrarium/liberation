@@ -1,6 +1,3 @@
-config/local.toml
-config/test.toml
-
 .idea/
 /target/
 **/*.rs.bk

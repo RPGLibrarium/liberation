@@ -1,63 +1,119 @@
-#[macro_use] extern crate log;
+#![forbid(unsafe_code)]
 
-mod api;
-mod auth;
-mod business;
-mod database;
-mod error;
-mod serde_formats;
-mod settings;
+#[macro_use]
+extern crate clap;
 
-use actix::{Actor, System};
-use actix_web::{web, App, HttpServer};
-use api::{get_static, get_v1};
-use auth::KeycloakCache;
-use settings::Settings;
-use actix_web::middleware::Logger;
+use clap::{AppSettings, Parser};
 
-fn main() {
-    env_logger::init();
-
-    info!("retrieving settings ...");
-    let settings = Settings::new().unwrap();
-    info!("initializing DB ...");
-    let db = database::Database::from_settings(&settings.database).unwrap();
-
-    info!("initializing keycloak ...");
-    let kc: KeycloakCache = KeycloakCache::new();
-    let kc_actor = auth::Keycloak::from_settings(&settings.keycloak, kc.clone());
-
-    let state = api::AppState {
-        db,
-        kc: kc.clone(),
-    };
-
-    let sys = System::new("server");
-    kc_actor.start();
-
-    let serve_static_files = settings.serve_static_files;
-    HttpServer::new(move || {
-        let mut app = App::new()
-            .wrap(Logger::default())
-            .register_data(web::Data::new(state.clone()))
-            .service(get_v1());
-        if serve_static_files {
-            app = app.service(get_static());
-        }
-        app
-    })
-    .bind(format!("0.0.0.0:{}", settings.port))
-    .unwrap()
-    .start();
-
-    info!("liberation ready");
-    sys.run();
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+#[clap(global_setting(AppSettings::PropagateVersion))]
+#[clap(global_setting(AppSettings::UseLongFormatForHelpSubcommand))]
+struct Cli {
+    #[clap(short, long)]
+    pub database: String,
+    #[clap(subcommand)]
+    pub command: Commands,
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Serve {
+        #[clap(default_value_t = String::from("127.0.0.1:8080"))]
+        bind: String
+    },
+    Test,
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let cli = Cli::parse();
+
+
+    match cli.command {
+        Commands::Serve { bind } => {
+            use actix_web::{App, HttpServer, middleware, web};
+            use liberation::AppState;
+
+            let pool = {
+                use diesel::{MysqlConnection, r2d2};
+                use diesel::r2d2::ConnectionManager;
+
+                let manager = ConnectionManager::<MysqlConnection>::new(&cli.database);
+                r2d2::Pool::builder()
+                    .build(manager)
+                    .expect("Failed to create db pool.")
+            };
+
+            let app_state = AppState {
+                database: pool
+            };
+
+            // Start HTTP server
+            HttpServer::new(move || {
+                App::new()
+                    // set up DB pool to be used with web::Data<Pool> extractor
+                    .data(app_state.clone())
+                    .wrap(middleware::Logger::default())
+                    .service(
+                        web::scope("/rpgsystems")
+                            .route(web::get().to(api::get_rpg_systems))
+                    )
+            }).bind(&bind)?
+                .run()
+                .await
+        }
+        Commands::Test => {
+            // Function used for println debugging
+            use diesel::prelude::*;
+            use liberation::claims::Authentication;
+            use liberation::get_rpg_systems;
+            use liberation::models::Title;
+
+            let connection = MysqlConnection::establish(&cli.database)
+                .expect(&format!("Error connecting to {}", &cli.database));
+
+            let claims = Authentication::is_member(1);
+            let system = get_rpg_systems(claims, &connection, 2)
+                .expect("loading rpg system failed");
+
+            let titles = Title::belonging_to(&system)
+                .load::<Title>(&connection)
+                .expect("Error loading titles");
+
+            println!("Displaying {} titles", titles.len());
+            for title in titles {
+                println!("{:?}", title);
+            }
+            Ok(())
+        }
+    }
+}
+
+mod api {
+    use actix_web::{HttpRequest, web};
+    use diesel::RunQueryDsl;
+    use liberation::AppState;
+    use liberation::claims::Authentication;
+    use liberation::error::{InternalError, UserFacingError};
+    use liberation::error::UserFacingError::Internal;
+    use liberation::models::RpgSystem;
+    use liberation::schema::rpg_systems::dsl::rpg_systems;
+
+    // Don't ask to many questions about the arguments. With typing magic actix allows us to get the
+    // state or arguments from the request. We can use up to function arguments to get data auto
+    // magically out of the request.
+    // https://github.com/actix/actix-web/blob/2a12b41456f40b28c1efe0ec6947e8f50ba22006/src/handler.rs
+    // https://actix.rs/docs/extractors/
+    pub fn get_rpg_systems(app: web::Data<AppState>, authentication: Authentication) -> Result<Vec<RpgSystem>, UserFacingError> {
+        authentication.requires_nothing()
+            .and_then(|()| app.database.get()
+                .map_err(|e| Internal(InternalError::DatabasePoolingError(e)))
+            )
+            .and_then(|conn|
+                rpg_systems.load(&conn)
+                    .map_err(|e| Internal(InternalError::DatabaseError(e)))
+            )
     }
 }
