@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
 
     match cli.command {
         Commands::Serve { bind, kc_pub_key } => {
-            use actix_web::{App, HttpServer, middleware, web};
+            use actix_web::{App, HttpServer, middleware};
             use liberation::AppState;
 
             let pool = {
@@ -48,6 +48,7 @@ async fn main() -> std::io::Result<()> {
                     .build(manager)
                     .expect("Failed to create db pool.")
             };
+            println!("Started connection pool.");
 
             let key = {
                 use jsonwebtoken::DecodingKey;
@@ -59,8 +60,9 @@ async fn main() -> std::io::Result<()> {
                 database: pool,
                 kc_public_key: key,
             };
+            println!("Created app state.");
 
-            // Start HTTP server
+            println!("Starting Server...");
             HttpServer::new(move || {
                 App::new()
                     // set up DB pool to be used with web::Data<Pool> extractor

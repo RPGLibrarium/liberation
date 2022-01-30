@@ -21,12 +21,23 @@ pub struct NewRpgSystem {
     pub shortname: String,
 }
 
-#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, PartialEq, Debug)]
 #[table_name = "titles"]
 #[primary_key(title_id)]
 #[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
 pub struct Title {
     pub title_id: i32,
+    pub name: String,
+    pub rpg_system_by_id: i32,
+    pub language: String,
+    pub publisher: String,
+    pub year: Year,
+    pub coverimage: Option<String>,
+}
+
+#[derive(Insertable, Deserialize, Clone)]
+#[table_name = "titles"]
+pub struct NewTitle {
     pub name: String,
     pub rpg_system_by_id: i32,
     pub language: String,

@@ -1,6 +1,11 @@
 use actix_web::{HttpResponse, web};
 use liberation::error::UserFacingError;
 
+mod rpg_systems;
+mod titles;
+
+type MyResponder = Result<HttpResponse, UserFacingError>;
+
 pub fn v1(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api/v1")
@@ -27,20 +32,21 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                         // )
                     )
             )
-        // .service(
-        //     web::scope("/titles")
-        //         .service(
-        //             web::resource("")
-        //                 .route(web::get().to(get_titles))
-        //                 .route(web::post().to(post_title)),
-        //         )
-        //         .service(
-        //             web::resource("/{titleid}")
-        //                 .route(web::get().to(get_title))
-        //                 .route(web::put().to(put_title))
-        //                 .route(web::delete().to(delete_title)),
-        //         ),
-        // )
+            .service(
+                web::scope("/titles")
+                    .service(
+                        web::resource("")
+                            .route(web::get().to(titles::get_all))
+                            .route(web::post().to(titles::post)),
+                    )
+                    .service(
+                        web::resource("/{titleid}")
+                            .route(web::get().to(titles::get_one))
+                            .route(web::put().to(titles::put))
+                            // TODO: deletes would be nice, but seem complex
+                            //.route(web::delete().to(titles::delete)),
+                    ),
+            )
         // .service(
         //     web::scope("/books")
         //         .service(
@@ -92,6 +98,3 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
     );
 }
 
-type MyResponder = Result<HttpResponse, UserFacingError>;
-
-mod rpg_systems;
