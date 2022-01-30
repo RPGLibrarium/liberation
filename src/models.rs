@@ -14,11 +14,11 @@ pub struct RpgSystem {
     pub shortname: Option<String>,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Deserialize, Clone)]
 #[table_name = "rpg_systems"]
-pub struct NewRpgSystem<'a> {
-    pub name: &'a str,
-    pub shortname: &'a str,
+pub struct NewRpgSystem {
+    pub name: String,
+    pub shortname: String,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]

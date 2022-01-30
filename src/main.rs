@@ -4,7 +4,9 @@
 extern crate clap;
 
 use clap::{AppSettings, Parser};
-use crate::api::get_rpg_systems;
+use liberation::actions;
+
+mod api;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -64,13 +66,7 @@ async fn main() -> std::io::Result<()> {
                     // set up DB pool to be used with web::Data<Pool> extractor
                     .data(app_state.clone())
                     .wrap(middleware::Logger::default())
-                    .service(
-                        web::scope("/rpgsystems")
-                            .service(
-                                web::resource("")
-                                    .route(web::get().to(get_rpg_systems))
-                            )
-                    )
+                    .configure(api::v1)
             }).bind(&bind)?
                 .run()
                 .await
@@ -78,15 +74,12 @@ async fn main() -> std::io::Result<()> {
         Commands::Test => {
             // Function used for println debugging
             use diesel::prelude::*;
-            use liberation::claims::Authentication;
-            use liberation::get_rpg_systems;
             use liberation::models::Title;
 
             let connection = MysqlConnection::establish(&cli.database)
                 .expect(&format!("Error connecting to {}", &cli.database));
 
-            let claims = Authentication::authorized(false, vec![], 1);
-            let system = get_rpg_systems(claims, &connection, 2)
+            let system = actions::find_rpg_system(&connection, 2)
                 .expect("loading rpg system failed");
 
             let titles = Title::belonging_to(&system)
@@ -99,33 +92,5 @@ async fn main() -> std::io::Result<()> {
             }
             Ok(())
         }
-    }
-}
-
-mod api {
-    use actix_web::{Responder, web};
-    use actix_web::web::Json;
-    use diesel::RunQueryDsl;
-    use liberation::AppState;
-    use liberation::claims::Authentication;
-    use liberation::error::{InternalError};
-    use liberation::error::UserFacingError::Internal;
-    use liberation::models::RpgSystem;
-    use liberation::schema::rpg_systems::dsl::rpg_systems;
-
-    // Don't ask to many questions about the arguments. With typing magic actix allows us to get the
-    // state or arguments from the request. We can use up to function arguments to get data auto
-    // magically out of the request.
-    // https://github.com/actix/actix-web/blob/2a12b41456f40b28c1efe0ec6947e8f50ba22006/src/handler.rs
-    // https://actix.rs/docs/extractors/
-    pub async fn get_rpg_systems(app: web::Data<AppState>, authentication: Authentication) -> impl Responder {
-        authentication.requires_nothing()
-            .and_then(|()| app.database.get()
-                .map_err(|e| Internal(InternalError::DatabasePoolingError(e)))
-            )
-            .and_then(|conn|
-                rpg_systems.load::<RpgSystem>(&conn)
-                    .map_err(|e| Internal(InternalError::DatabaseError(e)))
-            ).map(Json)
     }
 }

@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use thiserror::Error;
 use actix_web::{HttpResponse, ResponseError};
 use actix_web::http::{header, StatusCode};
@@ -15,6 +14,8 @@ pub enum UserFacingError {
     BadToken,
     #[error("element was not found")]
     NotFound,
+    #[error("element already exists")]
+    AlreadyExists,
     #[error("an internal server error occured")]
     Internal(InternalError),
 }
@@ -66,6 +67,7 @@ impl ResponseError for UserFacingError {
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
             UE::BadToken => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
+            UE::AlreadyExists => StatusCode::CONFLICT,
             UE::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
