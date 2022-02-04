@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, web};
 use liberation::{actions, AppState, open_database_connection};
-use liberation::claims::Authentication;
+use liberation::auth::Authentication;
 use liberation::models::{NewRpgSystem, RpgSystem};
 use crate::api::MyResponder;
 

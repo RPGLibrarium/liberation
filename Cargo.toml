@@ -8,12 +8,17 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3", features = ["derive"] }
+log = "0.4"
+env_logger = "0.9"
 thiserror = "1.0"
-actix-web = "3"
+actix-web = "4.0.0-beta.21"
 dotenv = "0.15"
+tokio = { version = "1", features = ["macros"] }
+futures = "0.3"
 # in version 7 handling the key is super anoying, because it has no state.
 jsonwebtoken = "8.0.0-beta.7"
-serde = {version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 diesel = { version = "1.4", features = ["mysql", "r2d2"] }
 base64 = "0.13.0"
+oauth2 = { version = "4", features = ["reqwest"] }
 

@@ -1,8 +1,10 @@
+use std::io;
 use thiserror::Error;
-use actix_web::{HttpResponse, ResponseError};
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use actix_web::http::{header, StatusCode};
 use diesel::r2d2::{PoolError};
 use diesel::result::Error as DieselError;
+use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
 pub enum UserFacingError {
@@ -43,21 +45,24 @@ pub enum InternalError {
     DatabasePoolingError(#[from] PoolError),
     #[error("could not find the app state during jwt checking")]
     MissingAppState,
+    #[error("io error")]
+    IOError(#[from] io::Error),
+    #[error("join error")]
+    JoinError(#[from] JoinError),
 }
 
 /// actix uses this trait to decide on status codes.
 /// see here for more information https://actix.rs/docs/errors/
+// My IntelliJ thinks this is wrong, but it's not. Display is provided by thiserror.
 impl ResponseError for UserFacingError {
     fn error_response(&self) -> HttpResponse {
-        use actix_web::dev::HttpResponseBuilder;
-
         let mut response = HttpResponseBuilder::new(self.status_code());
 
         if let &UserFacingError::AuthenticationRequired = self {
-            response.set_header(header::WWW_AUTHENTICATE, format!("Bearer realm=\"{}\"", "liberation")); //TODO: Use config for realm name
+            response.insert_header((header::WWW_AUTHENTICATE, format!("Bearer realm=\"{}\"", "liberation"))); //TODO: Use config for realm name
         }
         response
-            .set_header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+            .insert_header((header::CONTENT_TYPE, "text/html; charset=utf-8"))
             .body(self.to_string())
     }
 
