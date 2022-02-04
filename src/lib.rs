@@ -29,7 +29,7 @@ impl AppState {
     }
 
     pub async fn update(&self) -> Result<(), InternalError> {
-        Ok(())
+        self.authenticator.update().await
     }
 }
 

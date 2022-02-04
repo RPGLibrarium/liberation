@@ -7,32 +7,61 @@ use futures::FutureExt;
 use jsonwebtoken::{Algorithm, decode, Validation};
 use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
-use crate::AppState;
+use crate::{AppState, InternalError};
+use crate::Authenticator::KeycloakLive;
 use crate::error::UserFacingError as UE;
-use crate::InternalError::MissingAppState;
+use crate::InternalError::{MissingAppState};
 
 type AccountId = u32;
 
+#[derive(Deserialize)]
+struct RealmMetadata {
+    realm: String,
+    public_key: String, // sic, Why Keycloak, why?
+    #[serde(rename = "token-service")]
+    token_service: String,
+    #[serde(rename = "account-service")]
+    account_service: String,
+    #[serde(rename = "tokens-not-before")]
+    tokens_not_before: u32,
+}
+
 pub enum Authenticator {
     KeycloakLive {
-        endpoint: String,
+        keycloak_url: String,
         public_key: Mutex<DecodingKey>,
     },
     OauthStatic { public_key: DecodingKey },
 }
 
 impl Authenticator {
-    pub async fn update(&self) {
+    pub async fn with_rotating_keys(keycloak_url: String) -> Self {
+        let key = Authenticator::fetch_key_from_keycloak(&keycloak_url).await
+            .expect("Fetching first key from keycloak failed.");
+        KeycloakLive {
+            keycloak_url,
+            public_key: Mutex::new(key),
+        }
+    }
+
+    pub fn with_static_key(static_key: String) -> Self {
+        let der_key = base64::decode(static_key).expect("No base64 key");
+        let static_key = DecodingKey::from_rsa_der(der_key.as_slice());
+        Authenticator::OauthStatic { public_key: static_key }
+    }
+
+    pub async fn update(&self) -> Result<(), InternalError> {
         match &self {
-            Authenticator::KeycloakLive { endpoint, public_key } => {
-                info!("Using rotating keys from keycloak.");
-                let key = todo!("not implemented");
+            Authenticator::KeycloakLive { keycloak_url, public_key } => {
+                info!("Updating rotating keys from keycloak.");
+                let key = Authenticator::fetch_key_from_keycloak(&keycloak_url).await?;
                 let mut lock = public_key.lock().await;
                 debug!("Setting new key in shared mutable state.");
                 *lock = key;
             }
-            Authenticator::OauthStatic { .. } => debug!("Avoiding regeneration of public key.")
+            Authenticator::OauthStatic { .. } => debug!("Key is static, not updating.")
         }
+        Ok(())
     }
 
     pub async fn verify_token(&self, token: &str) -> Result<Authentication, UE> {
@@ -50,6 +79,18 @@ impl Authenticator {
             todo!("librarian mapping not implemented"),
             todo!("account id mapping not implemented"),
         ))
+    }
+
+    async fn fetch_key_from_keycloak(keycloak_url: &str) -> Result<DecodingKey, InternalError> {
+        debug!("Contacting '{}' for key", keycloak_url);
+        let raw_key = reqwest::get(keycloak_url)
+            .await.map_err(InternalError::KeycloakNotReachable)?
+            .json::<RealmMetadata>()
+            .await?
+            .public_key;
+
+        let key_der = base64::decode(raw_key).map_err(InternalError::KeycloakKeyHasBadFormat)?;
+        Ok(DecodingKey::from_rsa_der(key_der.as_slice()))
     }
 }
 

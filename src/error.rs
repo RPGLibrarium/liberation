@@ -49,6 +49,10 @@ pub enum InternalError {
     IOError(#[from] io::Error),
     #[error("join error")]
     JoinError(#[from] JoinError),
+    #[error("keycloak is not reachable")]
+    KeycloakNotReachable(#[from] reqwest::Error),
+    #[error("keycloak returned a bad key")]
+    KeycloakKeyHasBadFormat(#[from] base64::DecodeError),
 }
 
 /// actix uses this trait to decide on status codes.

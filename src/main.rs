@@ -5,7 +5,7 @@ extern crate clap;
 
 use std::time::Duration;
 use actix_web::web::Data;
-use clap::{AppSettings, Parser};
+use clap::{App, AppSettings, ArgGroup};
 use futures::TryFutureExt;
 use log::{debug, error, info};
 use tokio::time;
@@ -14,63 +14,63 @@ use liberation::error::InternalError;
 
 mod api;
 
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-#[clap(global_setting(AppSettings::PropagateVersion))]
-#[clap(global_setting(AppSettings::UseLongFormatForHelpSubcommand))]
-struct Cli {
-    #[clap(short, long)]
-    pub database: String,
-    #[clap(subcommand)]
-    pub command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Serve {
-        public_key: String,
-        #[clap(short, long, default_value_t = String::from("127.0.0.1:8080"))]
-        bind: String,
-    },
-    Test,
-}
-
 #[actix_web::main]
 async fn main() -> Result<(), InternalError> {
     env_logger::init();
-    let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Serve { bind, public_key } => {
+    let matches = app_from_crate!()
+        .global_setting(AppSettings::PropagateVersion)
+        .global_setting(AppSettings::UseLongFormatForHelpSubcommand)
+        .arg(arg!(-d --database <DB> "set database, ex. 'mysql://USER:PASSWORD@localhost:3306/DATABASE'"))
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand(App::new("serve")
+            .about("start the liberation service")
+            .arg(arg!(-k --keycloak [URL] "use keycloak, ex. 'https://sso.rpg-librarium.de/auth/realms/Liberation/"))
+            .arg(arg!(-K --"static-key" [KEY] "set the key manually"))
+            .group(
+                ArgGroup::new("authenticator")
+                    .required(true)
+                    //.multiple(false)
+                    .args(&["keycloak", "static-key"])
+            )
+            .arg(arg!(-b --bind [ADDR] "bind on this address and port").default_value("127.0.0.1:8080"))
+        )
+        .subcommand(App::new("test")
+            .about("run whatever was programed")
+        )
+        .get_matches();
+
+    info!("Creating database pool.");
+    let pool = {
+        use diesel::{MysqlConnection, r2d2};
+        use diesel::r2d2::ConnectionManager;
+
+        let database_url = matches.value_of_t_or_exit::<String>("database");
+        let manager = ConnectionManager::<MysqlConnection>::new(&database_url);
+        r2d2::Pool::builder()
+            .build(manager)
+            .expect("Failed to create db pool.")
+    };
+
+    match matches.subcommand() {
+        Some(("serve", submatches)) => {
             use actix_web::{App, HttpServer, middleware};
             use actix_web::rt::spawn;
             use liberation::AppState;
 
-            let pool = {
-                use diesel::{MysqlConnection, r2d2};
-                use diesel::r2d2::ConnectionManager;
-
-                let manager = ConnectionManager::<MysqlConnection>::new(&cli.database);
-                r2d2::Pool::builder()
-                    .build(manager)
-                    .expect("Failed to create db pool.")
+            debug!("Creating authenticator.");
+            let authenticator = if let Some(keycloak_url) = submatches.value_of("keycloak") {
+                Authenticator::with_rotating_keys(keycloak_url.to_string()).await
+            } else {
+                let static_key = submatches.value_of_t_or_exit::<String>("static-key");
+                Authenticator::with_static_key(static_key)
             };
-            info!("Started connection pool.");
 
-            let authenticator = {
-                use jsonwebtoken::DecodingKey;
-                let der_key = base64::decode(public_key).expect("No base64 key");
-                let static_key = DecodingKey::from_rsa_der(der_key.as_slice());
-                Authenticator::OauthStatic { public_key: static_key }
-            };
-            info!("Created key provider.");
-
+            debug!("Creating app state.");
             let app_state = Data::new(AppState::new(
                 pool,
                 authenticator,
             ));
-            info!("Created app state.");
 
             info!("Starting Keycloak Worker.");
             let keycloak_worker = {
@@ -86,6 +86,7 @@ async fn main() -> Result<(), InternalError> {
                 })
             };
 
+            let bind_address = submatches.value_of_t_or_exit::<String>("bind");
 
             info!("Starting Server...");
             HttpServer::new(move || {
@@ -93,7 +94,7 @@ async fn main() -> Result<(), InternalError> {
                     .app_data(app_state.clone())
                     .wrap(middleware::Logger::default())
                     .configure(api::v1)
-            }).bind(&bind)
+            }).bind(bind_address)
                 .map_err(InternalError::IOError)?
                 .run()
                 .map_err(InternalError::IOError)
@@ -106,7 +107,7 @@ async fn main() -> Result<(), InternalError> {
             info!("Bye!");
             Ok(())
         }
-        Commands::Test => {
+        Some(("test", _submatches)) => {
             // use oauth2::basic::BasicClient;
             // use oauth2::reqwest::async_http_client;
             // use oauth2::{ClientId, ClientSecret, AuthUrl, TokenUrl};
@@ -130,5 +131,6 @@ async fn main() -> Result<(), InternalError> {
             //     .await?;
             Ok(())
         }
+        _ => unreachable!()
     }
 }
