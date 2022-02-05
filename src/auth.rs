@@ -11,35 +11,28 @@ use crate::{AppState, InternalError};
 use crate::Authenticator::KeycloakLive;
 use crate::error::UserFacingError as UE;
 use crate::InternalError::{MissingAppState};
+use crate::keycloak::RealmMetadata;
 
 type AccountId = u32;
-
-#[derive(Deserialize)]
-struct RealmMetadata {
-    realm: String,
-    public_key: String, // sic, Why Keycloak, why?
-    #[serde(rename = "token-service")]
-    token_service: String,
-    #[serde(rename = "account-service")]
-    account_service: String,
-    #[serde(rename = "tokens-not-before")]
-    tokens_not_before: u32,
-}
 
 pub enum Authenticator {
     KeycloakLive {
         keycloak_url: String,
+        realm: String,
         public_key: Mutex<DecodingKey>,
     },
     OauthStatic { public_key: DecodingKey },
 }
 
 impl Authenticator {
-    pub async fn with_rotating_keys(keycloak_url: String) -> Self {
-        let key = Authenticator::fetch_key_from_keycloak(&keycloak_url).await
-            .expect("Fetching first key from keycloak failed.");
+    pub async fn with_rotating_keys(keycloak_url: String, realm: String) -> Self {
+        let key = RealmMetadata::fetch_new(&keycloak_url, &realm).await
+            .expect("Fetching fist realm metadata failed.")
+            .decoding_key()
+            .expect("Decoding first public key from keycloak faile.");
         KeycloakLive {
             keycloak_url,
+            realm,
             public_key: Mutex::new(key),
         }
     }
@@ -52,9 +45,10 @@ impl Authenticator {
 
     pub async fn update(&self) -> Result<(), InternalError> {
         match &self {
-            Authenticator::KeycloakLive { keycloak_url, public_key } => {
+            Authenticator::KeycloakLive { keycloak_url, realm, public_key } => {
                 info!("Updating rotating keys from keycloak.");
-                let key = Authenticator::fetch_key_from_keycloak(&keycloak_url).await?;
+                let key = RealmMetadata::fetch_new(keycloak_url, realm).await?
+                    .decoding_key()?;
                 let mut lock = public_key.lock().await;
                 debug!("Setting new key in shared mutable state.");
                 *lock = key;
@@ -81,17 +75,6 @@ impl Authenticator {
         ))
     }
 
-    async fn fetch_key_from_keycloak(keycloak_url: &str) -> Result<DecodingKey, InternalError> {
-        debug!("Contacting '{}' for key", keycloak_url);
-        let raw_key = reqwest::get(keycloak_url)
-            .await.map_err(InternalError::KeycloakNotReachable)?
-            .json::<RealmMetadata>()
-            .await?
-            .public_key;
-
-        let key_der = base64::decode(raw_key).map_err(InternalError::KeycloakKeyHasBadFormat)?;
-        Ok(DecodingKey::from_rsa_der(key_der.as_slice()))
-    }
 }
 
 pub enum Authentication {

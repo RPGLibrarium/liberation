@@ -4,6 +4,7 @@ use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use actix_web::http::{header, StatusCode};
 use diesel::r2d2::{PoolError};
 use diesel::result::Error as DieselError;
+use oauth2::RequestTokenError;
 use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
@@ -53,6 +54,9 @@ pub enum InternalError {
     KeycloakNotReachable(#[from] reqwest::Error),
     #[error("keycloak returned a bad key")]
     KeycloakKeyHasBadFormat(#[from] base64::DecodeError),
+    #[error("authenticating with keycloak failed")]
+    KeycloakAuthenticationFailed(#[from] Box<dyn std::error::Error>),
+
 }
 
 /// actix uses this trait to decide on status codes.

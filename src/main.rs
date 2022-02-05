@@ -25,7 +25,8 @@ async fn main() -> Result<(), InternalError> {
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(App::new("serve")
             .about("start the liberation service")
-            .arg(arg!(-k --keycloak [URL] "use keycloak, ex. 'https://sso.rpg-librarium.de/auth/realms/Liberation/"))
+            .arg(arg!(-k --keycloak [URL] "set keycloak url, ex. 'https://sso.rpg-librarium.de/").requires("realm"))
+            .arg(arg!(-r --realm [REALM] "set keycloak realm, ex. 'liberation'").requires("keycloak"))
             .arg(arg!(-K --"static-key" [KEY] "set the key manually"))
             .group(
                 ArgGroup::new("authenticator")
@@ -34,6 +35,8 @@ async fn main() -> Result<(), InternalError> {
                     .args(&["keycloak", "static-key"])
             )
             .arg(arg!(-b --bind [ADDR] "bind on this address and port").default_value("127.0.0.1:8080"))
+            .arg(arg!(-c --"client-id" [ID] "authenticated access to keycloak").requires_all(&["keycloak", "client-secret"]))
+            .arg(arg!(-s --"client-secret" [ID] "authenticated access to keycloak").requires_all(&["keycloak", "client-id"]))
         )
         .subcommand(App::new("test")
             .about("run whatever was programed")
@@ -60,16 +63,31 @@ async fn main() -> Result<(), InternalError> {
 
             debug!("Creating authenticator.");
             let authenticator = if let Some(keycloak_url) = submatches.value_of("keycloak") {
-                Authenticator::with_rotating_keys(keycloak_url.to_string()).await
+                let realm = submatches.value_of_t_or_exit("realm");
+                Authenticator::with_rotating_keys(keycloak_url.to_string(), realm).await
             } else {
                 let static_key = submatches.value_of_t_or_exit::<String>("static-key");
                 Authenticator::with_static_key(static_key)
             };
 
+            let live_users = if let Some(client_id) = submatches.value_of("client-id") {
+                use liberation::user::LiveUsers;
+                debug!("Creating live users.");
+                let keycloak_url = submatches.value_of_t_or_exit("keycloak");
+                let realm = submatches.value_of_t_or_exit("realm");
+                let client_secret = submatches.value_of_t_or_exit("client-secret");
+                LiveUsers::new(keycloak_url, realm, client_id.to_string(), client_secret).await?
+            } else {
+                debug!("No live users configured");
+                todo!()
+            };
+
+
             debug!("Creating app state.");
             let app_state = Data::new(AppState::new(
                 pool,
                 authenticator,
+                live_users
             ));
 
             info!("Starting Keycloak Worker.");
@@ -108,27 +126,6 @@ async fn main() -> Result<(), InternalError> {
             Ok(())
         }
         Some(("test", _submatches)) => {
-            // use oauth2::basic::BasicClient;
-            // use oauth2::reqwest::async_http_client;
-            // use oauth2::{ClientId, ClientSecret, AuthUrl, TokenUrl};
-
-            // // TODO: load from settings
-            // let keycloak_url = "https://sso.rpg-librarium.de/";
-            // let realm = "Liberation";
-            // let client_id = "liberation-backend";
-            // let client_secret = "f7948706-ed9a-4107-9da6-f0076d444cbe";
-
-            // let client = BasicClient::new(
-            //     ClientId::new(client_id.to_string()),
-            //     Some(ClientSecret::new(client_secret.to_string())),
-            //     AuthUrl::new(format!("{}/realms/{}/protocol/openid-connect/auth", keycloak_url, realm)).expect("Invalid url"),
-            //     Some(TokenUrl::new(format!("{}/realms/{}/protocol/openid-connect/auth", keycloak_url, realm)).expect("Invalid url"))
-            // );
-
-            // let token_result = client
-            //     .exchange_client_credentials()
-            //     .request_async(async_http_client)
-            //     .await?;
             Ok(())
         }
         _ => unreachable!()
