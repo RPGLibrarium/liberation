@@ -6,3 +6,5 @@
 
 /webhooks-cargo/build/
 /webhooks-cargo/webhook/secret
+
+/config/

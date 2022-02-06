@@ -2,6 +2,7 @@ use std::io;
 use thiserror::Error;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use actix_web::http::{header, StatusCode};
+use config::ConfigError;
 use diesel::r2d2::{PoolError};
 use diesel::result::Error as DieselError;
 use oauth2::RequestTokenError;
@@ -40,6 +41,8 @@ pub enum UserFacingError {
 
 #[derive(Error, Debug)]
 pub enum InternalError {
+    #[error("config is invalid")]
+    ConfigError(#[from] ConfigError),
     #[error("data base connection failed")]
     DatabaseError(#[from] DieselError),
     #[error("getting a connection from the pool failed")]

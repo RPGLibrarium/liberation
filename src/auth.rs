@@ -25,14 +25,14 @@ pub enum Authenticator {
 }
 
 impl Authenticator {
-    pub async fn with_rotating_keys(keycloak_url: String, realm: String) -> Self {
-        let key = RealmMetadata::fetch_new(&keycloak_url, &realm).await
+    pub async fn with_rotating_keys(keycloak_url: &str, realm: &str) -> Self {
+        let key = RealmMetadata::fetch_new(keycloak_url, realm).await
             .expect("Fetching fist realm metadata failed.")
             .decoding_key()
             .expect("Decoding first public key from keycloak faile.");
         KeycloakLive {
-            keycloak_url,
-            realm,
+            keycloak_url: keycloak_url.to_string(),
+            realm: realm.to_string(),
             public_key: Mutex::new(key),
         }
     }

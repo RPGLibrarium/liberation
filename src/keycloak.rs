@@ -1,4 +1,3 @@
-use std::fmt::format;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
 use crate::InternalError;
@@ -13,7 +12,7 @@ pub struct RealmMetadata {
     #[serde(rename = "account-service")]
     pub account_service: String,
     #[serde(rename = "tokens-not-before")]
-    tokens_not_before: u32,
+    _tokens_not_before: u32,
 }
 
 impl RealmMetadata {
