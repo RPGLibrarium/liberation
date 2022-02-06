@@ -109,6 +109,7 @@ async fn main() -> Result<(), InternalError> {
                 App::new()
                     .app_data(app_state.clone())
                     .wrap(middleware::Logger::default())
+                    .wrap(middleware::NormalizePath::trim())
                     .configure(api::v1)
             }).bind(settings.bind).map_err(InternalError::IOError)?
                 .run().map_err(InternalError::IOError).await?;
