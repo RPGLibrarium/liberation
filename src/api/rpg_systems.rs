@@ -1,7 +1,8 @@
 use actix_web::{HttpResponse, web};
-use liberation::{actions, AppState, open_database_connection};
-use liberation::auth::Authentication;
-use liberation::models::{NewRpgSystem, RpgSystem};
+use crate::actions;
+use crate::app::AppState;
+use crate::auth::Authentication;
+use crate::models::{NewRpgSystem, RpgSystem};
 use crate::api::MyResponder;
 
 
@@ -12,7 +13,7 @@ use crate::api::MyResponder;
 // https://actix.rs/docs/extractors/
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
     authentication.requires_nothing()?;
-    let conn = open_database_connection(&app)?;
+    let conn = app.open_database_connection()?;
     let rpg_systems = actions::list_rpg_systems(&conn)?;
     Ok(HttpResponse::Ok().json(rpg_systems))
 }
@@ -23,7 +24,7 @@ pub async fn post(
     new_rpg_system: web::Json<NewRpgSystem>,
 ) -> MyResponder {
     authentication.requires_any_librarian()?;
-    let conn = open_database_connection(&app)?;
+    let conn = app.open_database_connection()?;
     let created = actions::create_rpg_system(&conn, new_rpg_system.into_inner())?;
     Ok(HttpResponse::Created().json(created))
 }
@@ -34,7 +35,7 @@ pub async fn get_one(
     id: web::Path<i32>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
-    let conn = open_database_connection(&app)?;
+    let conn = app.open_database_connection()?;
     let rpg_system = actions::find_rpg_system(&conn, *id)?;
     Ok(HttpResponse::Ok().json(rpg_system))
 }
@@ -45,7 +46,7 @@ pub async fn put(
     updated_rpg_system: web::Json<RpgSystem>,
 ) -> MyResponder {
     authentication.requires_any_librarian()?;
-    let conn = open_database_connection(&app)?;
+    let conn = app.open_database_connection()?;
     let updated = actions::update_rpg_system(&conn, updated_rpg_system.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
 }

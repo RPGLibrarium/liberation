@@ -5,7 +5,7 @@ use oauth2::{ClientId, ClientSecret, TokenResponse};
 use reqwest::Client;
 use serde::Deserialize;
 use tokio::sync::Mutex;
-use crate::{InternalError};
+use crate::error::InternalError;
 use crate::keycloak::RealmMetadata;
 
 pub struct LiveUsers {

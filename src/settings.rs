@@ -1,7 +1,7 @@
 use config::Config;
 use oauth2::{ClientId, ClientSecret};
 use serde::Deserialize;
-use liberation::error::InternalError;
+use crate::error::InternalError;
 
 const DEFAULT_BIND: &str = "127.0.0.1:8080";
 

@@ -5,7 +5,6 @@ use actix_web::http::{header, StatusCode};
 use config::ConfigError;
 use diesel::r2d2::{PoolError};
 use diesel::result::Error as DieselError;
-use oauth2::RequestTokenError;
 use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
@@ -25,19 +24,6 @@ pub enum UserFacingError {
     #[error("an internal server error occurred")]
     Internal(InternalError),
 }
-
-// impl Display for UserFacingError {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-//         use UserFacingError as UE;
-//
-//         match *self {
-//             UE::AuthenticationRequired => write!(f, "Authentication is needed for this operation."),
-//             UE::YouShallNotPass => write!(f, "You shall not pass, you are not important enough for this operation."),
-//             UE::NotFound => write!(f, "We couldn't find what you are looking for."),
-//             UE::Internal(_) => write!(f, "It's not you. It's us. We probably did something stupid."),
-//         }
-//     }
-// }
 
 #[derive(Error, Debug)]
 pub enum InternalError {

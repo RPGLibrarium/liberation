@@ -2,6 +2,8 @@
 
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate diesel;
 
 use std::time::Duration;
 use actix_web::web::Data;
@@ -9,12 +11,20 @@ use clap::{App, AppSettings};
 use futures::TryFutureExt;
 use log::{debug, error, info, warn};
 use tokio::time;
-use liberation::auth::Authenticator;
-use liberation::error::InternalError;
+use auth::Authenticator;
+use error::InternalError;
 use crate::settings::Settings;
 
+mod schema;
+mod models;
+mod error;
+mod auth;
+mod actions;
+mod user;
+mod keycloak;
 mod api;
 mod settings;
+mod app;
 
 #[actix_web::main]
 async fn main() -> Result<(), InternalError> {
@@ -35,7 +45,7 @@ async fn main() -> Result<(), InternalError> {
         Some(("serve", _submatches)) => {
             use actix_web::{App, HttpServer, middleware};
             use actix_web::rt::spawn;
-            use liberation::AppState;
+            use app::AppState;
 
             info!("Creating database pool.");
             let pool = {
@@ -60,7 +70,7 @@ async fn main() -> Result<(), InternalError> {
             debug!("Creating live user provider.");
             let live_users = if let Some(keycloak) = settings.keycloak {
                 if let (Some(client_id), Some(client_secret)) = (&keycloak.client_id, &keycloak.client_secret) {
-                    use liberation::user::LiveUsers;
+                    use user::LiveUsers;
                     debug!("Creating live users.");
                     LiveUsers::new(&keycloak.url, &keycloak.realm, client_id.clone(), client_secret.clone()).await?
                 } else {

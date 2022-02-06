@@ -1,15 +1,3 @@
-#![forbid(unsafe_code)]
-#[macro_use]
-extern crate diesel;
-
-pub mod schema;
-pub mod models;
-pub mod error;
-pub mod auth;
-pub mod actions;
-pub mod user;
-mod keycloak;
-
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
 use crate::auth::Authenticator;
@@ -37,10 +25,11 @@ impl AppState {
         self.authenticator.update().await?;
         self.live_users.update().await
     }
+
+    pub fn open_database_connection(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>, UserFacingError> {
+        self.database.get()
+            .map_err(|e| UserFacingError::Internal(InternalError::DatabasePoolingError(e)))
+    }
 }
 
-pub fn open_database_connection(app: &AppState) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>, UserFacingError> {
-    app.database.get()
-        .map_err(|e| UserFacingError::Internal(InternalError::DatabasePoolingError(e)))
-}
 

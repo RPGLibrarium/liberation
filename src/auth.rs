@@ -7,10 +7,10 @@ use futures::FutureExt;
 use jsonwebtoken::{Algorithm, decode, Validation};
 use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
-use crate::{AppState, InternalError};
+use crate::app::AppState;
 use crate::Authenticator::KeycloakLive;
 use crate::error::UserFacingError as UE;
-use crate::InternalError::{MissingAppState};
+use crate::error::InternalError as IE;
 use crate::keycloak::RealmMetadata;
 
 type AccountId = u32;
@@ -43,7 +43,7 @@ impl Authenticator {
         Authenticator::OauthStatic { public_key: static_key }
     }
 
-    pub async fn update(&self) -> Result<(), InternalError> {
+    pub async fn update(&self) -> Result<(), IE> {
         match &self {
             Authenticator::KeycloakLive { keycloak_url, realm, public_key } => {
                 info!("Updating rotating keys from keycloak.");
@@ -74,7 +74,6 @@ impl Authenticator {
             todo!("account id mapping not implemented"),
         ))
     }
-
 }
 
 pub enum Authentication {
@@ -159,7 +158,7 @@ impl FromRequest for Authentication {
                 };
 
                 let authenticator = &req.app_data::<AppState>()
-                    .ok_or(UE::Internal(MissingAppState))?
+                    .ok_or(UE::Internal(IE::MissingAppState))?
                     .authenticator;
 
                 authenticator.verify_token(&unvalidated).await

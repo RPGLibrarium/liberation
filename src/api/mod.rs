@@ -1,5 +1,5 @@
 use actix_web::{HttpResponse, web};
-use liberation::error::UserFacingError;
+use crate::error::UserFacingError;
 
 mod rpg_systems;
 mod titles;
