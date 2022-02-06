@@ -1,12 +1,9 @@
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 use diesel::result::DatabaseErrorKind::{UniqueViolation, ForeignKeyViolation};
 use diesel::result::Error as DE;
-use log::info;
 use crate::models::*;
 use crate::error::UserFacingError as UE;
 use crate::InternalError as IE;
-use crate::InternalError::DatabaseError;
-use crate::schema::members::dsl::members;
 
 pub fn list_rpg_systems(conn: &MysqlConnection) -> Result<Vec<RpgSystem>, UE> {
     use crate::schema::rpg_systems::dsl::*;
@@ -170,4 +167,61 @@ pub fn update_members(conn: &MysqlConnection, member: Member) -> Result<Member, 
         })?;
 
     find_member(conn, member.member_id)
+}
+
+pub fn list_guilds(conn: &MysqlConnection) -> Result<Vec<Guild>, UE> {
+    use crate::schema::guilds::dsl::*;
+    guilds.load::<Guild>(conn)
+        .map_err(|e| UE::Internal(IE::DatabaseError(e)))
+}
+
+pub fn create_guild(conn: &MysqlConnection, new_guild: NewGuild) -> Result<Guild, UE> {
+    use crate::schema::guilds::dsl::*;
+    diesel::insert_into(guilds)
+        .values(new_guild.clone())
+        .execute(conn)
+        .map_err(|e| match e {
+            DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    // TODO: this would be nicer with postgres
+    let matching = guilds.filter(external_guild_name.eq(new_guild.external_guild_name))
+        .first::<Guild>(conn)
+        .map_err(|e| match e {
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    Ok(matching)
+}
+
+pub fn find_guild(conn: &MysqlConnection, id: i32) -> Result<Guild, UE> {
+    use crate::schema::guilds::dsl::*;
+    guilds.find(id)
+        .first(conn)
+        .map_err(|e| match e {
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })
+}
+
+pub fn update_guild(conn: &MysqlConnection, guild: Guild) -> Result<Guild, UE> {
+    use crate::schema::guilds::dsl::*;
+
+    diesel::update(guilds.find(guild.guild_id))
+        .set((
+            external_guild_name.eq(guild.external_guild_name),
+            name.eq(guild.name),
+            address.eq(guild.address),
+            contact_by_member_id.eq(guild.contact_by_member_id))
+        )
+        .execute(conn)
+        .map_err(|e| match e {
+            DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    find_guild(conn, guild.guild_id)
 }

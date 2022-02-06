@@ -1,6 +1,7 @@
 use super::schema::rpg_systems;
 use super::schema::titles;
 use super::schema::members;
+use super::schema::guilds;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -59,4 +60,24 @@ pub struct Member{
 #[table_name = "members"]
 pub struct NewMember {
     pub external_id: String,
+}
+
+#[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
+#[table_name = "guilds"]
+#[primary_key(guild_id)]
+pub struct Guild {
+    pub guild_id: i32,
+    pub external_guild_name: String,
+    pub name: String,
+    pub address: String,
+    pub contact_by_member_id: i32,
+}
+
+#[derive(Insertable, Deserialize, Clone)]
+#[table_name = "guilds"]
+pub struct NewGuild {
+    pub external_guild_name: String,
+    pub name: String,
+    pub address: String,
+    pub contact_by_member_id: i32,
 }

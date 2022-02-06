@@ -12,6 +12,7 @@ table! {
 table! {
     guilds (guild_id) {
         guild_id -> Integer,
+        external_guild_name -> Varchar,
         name -> Varchar,
         address -> Text,
         contact_by_member_id -> Integer,

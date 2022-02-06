@@ -55,28 +55,25 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
         //                 .route(web::delete().to(delete_book)),
         //         ),
         // )
-        // .service(
-        //     web::scope("/guilds")
-        //         .service(
-        //             web::resource("")
-        //                 .route(web::get().to(get_guilds))
-        //                 .route(web::post().to(post_guild)),
-        //         )
-        //         .service(
-        //             web::scope("/{guildid}")
-        //                 .service(
-        //                     web::resource("")
-        //                         .route(web::get().to(get_guild))
-        //                         .route(web::put().to(put_guild)),
-        //                 )
-        //                 .service(
-        //                     web::resource("/inventory")
-        //                         .route(web::get().to(get_guild_inventory))
-        //                         .route(web::post().to(post_guild_inventory)),
-        //                 ),
-        //         ),
-        // )
-        // .service(
+        .service(
+            web::scope("/guilds")
+                .service(web::resource("")
+                        .route(web::get().to(guilds::get_all))
+                        .route(web::post().to(guilds::post)),
+                )
+                .service(web::scope("/{guildid}")
+                        .service(
+                            web::resource("")
+                                .route(web::get().to(guilds::get_one))
+                                .route(web::put().to(guilds::put)),
+                        )
+                        // .service(
+                        //     web::resource("/inventory")
+                        //         .route(web::get().to(get_guild_inventory))
+                        //         .route(web::post().to(post_guild_inventory)),
+                        // ),
+                ),
+        )
         .service(web::scope("members")
             .service(web::resource("")
                 .route(web::get().to(members::get_all))
@@ -99,3 +96,55 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
 // @formatter:on
 
 
+mod guilds {
+    use actix_web::{HttpResponse, web};
+    use crate::actions;
+    use crate::api::MyResponder;
+    use crate::app::AppState;
+    use crate::auth::Authentication;
+    use crate::models::{Guild, NewGuild};
+
+    pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
+        authentication.requires_aristocrat()
+            .or(authentication.requires_any_librarian().map(|_| ()))
+            .or(authentication.requires_any_member().map(|_| ()))?;
+        let conn = app.open_database_connection()?;
+        let guilds = actions::list_guilds(&conn)?;
+        Ok(HttpResponse::Ok().json(guilds))
+    }
+
+    pub async fn post(
+        app: web::Data<AppState>,
+        authentication: Authentication,
+        new_guild: web::Json<NewGuild>,
+    ) -> MyResponder {
+        authentication.requires_aristocrat()?;
+        let conn = app.open_database_connection()?;
+        let created = actions::create_guild(&conn, new_guild.into_inner())?;
+        Ok(HttpResponse::Created().json(created))
+    }
+
+    pub async fn get_one(
+        app: web::Data<AppState>,
+        authentication: Authentication,
+        id: web::Path<i32>,
+    ) -> MyResponder {
+        authentication.requires_aristocrat()
+            .or(authentication.requires_any_librarian().map(|_| ()))
+            .or(authentication.requires_any_member().map(|_| ()))?;
+        let conn = app.open_database_connection()?;
+        let guild = actions::find_guild(&conn, *id)?;
+        Ok(HttpResponse::Ok().json(guild))
+    }
+
+    pub async fn put(
+        app: web::Data<AppState>,
+        authentication: Authentication,
+        updated_guild: web::Json<Guild>,
+    ) -> MyResponder {
+        authentication.requires_aristocrat()?;
+        let conn = app.open_database_connection()?;
+        let updated = actions::update_guild(&conn, updated_guild.into_inner())?;
+        Ok(HttpResponse::Ok().json(updated))
+    }
+}

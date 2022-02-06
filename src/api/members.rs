@@ -16,11 +16,11 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -
 pub async fn post(
     app: web::Data<AppState>,
     authentication: Authentication,
-    new_rpg_system: web::Json<NewMember>,
+    new_member: web::Json<NewMember>,
 ) -> MyResponder {
     authentication.requires_aristocrat()?;
     let conn = app.open_database_connection()?;
-    let created = actions::create_member(&conn, new_rpg_system.into_inner())?;
+    let created = actions::create_member(&conn, new_member.into_inner())?;
     Ok(HttpResponse::Created().json(created))
 }
 
