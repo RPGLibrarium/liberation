@@ -1,5 +1,6 @@
 use super::schema::rpg_systems;
 use super::schema::titles;
+use super::schema::members;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -44,4 +45,18 @@ pub struct NewTitle {
     pub publisher: String,
     pub year: Year,
     pub coverimage: Option<String>,
+}
+
+#[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
+#[table_name = "members"]
+#[primary_key(member_id)]
+pub struct Member{
+    pub member_id: i32,
+    pub external_id: String,
+}
+
+#[derive(Insertable, Deserialize, Clone)]
+#[table_name = "members"]
+pub struct NewMember {
+    pub external_id: String,
 }

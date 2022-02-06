@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use log::{debug, info};
 use oauth2::basic::BasicClient;
 use oauth2::{ClientId, ClientSecret, TokenResponse};
@@ -14,8 +15,8 @@ pub struct LiveUsers {
     users: Mutex<HashMap<String, User>>,
 }
 
-#[derive(Debug, Deserialize)]
-struct User {
+#[derive(Debug, Deserialize, Clone)]
+pub struct User {
     pub id: String,
     pub username: String,
     #[serde(rename = "firstName")]
@@ -23,6 +24,9 @@ struct User {
     #[serde(rename = "lastName")]
     pub last_name: String,
     pub email: String,
+    pub enabled: bool,
+    // #[serde(rename = "realmRoles")]
+    // pub realm_roles: Vec<String>
 }
 
 impl LiveUsers {
@@ -55,7 +59,7 @@ impl LiveUsers {
         Ok(live_users)
     }
 
-    pub async fn update(&self) -> Result<(), InternalError> {
+    pub async fn update(&self) -> Result<Vec<User>, InternalError> {
         use oauth2::reqwest::async_http_client;
         let token_result = self.oauth_client
             .exchange_client_credentials()
@@ -63,18 +67,24 @@ impl LiveUsers {
             .map_err(|e| InternalError::KeycloakAuthenticationFailed(Box::new(e)))?;
 
         let client = Client::new();
-        let keycloak_users = client.get(self.users_endpoint.as_str())
+        let keycloak_users= client.get(self.users_endpoint.as_str())
             .bearer_auth(token_result.access_token().secret())
             .send().await
             .map_err(InternalError::KeycloakNotReachable)?
             .json::<Vec<User>>().await?;
 
-        let user_map = keycloak_users.into_iter()
-            .map(|user| (user.id.clone(), user))
+        let user_map= keycloak_users.iter()
+            .filter(|user| user.enabled)
+            .map(|user| (user.id.clone(), user.clone()))
             .collect::<HashMap<String, User>>();
 
         info!("Updating user cache.");
         (*self.users.lock().await) = user_map;
-        Ok(())
+        Ok(keycloak_users)
+    }
+
+    pub async fn get(&self, uid: String) -> Option<User> {
+        self.users.lock().await.get(&uid).map(|user| user.clone())
     }
 }
+

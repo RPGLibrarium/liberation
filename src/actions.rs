@@ -1,9 +1,12 @@
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 use diesel::result::DatabaseErrorKind::{UniqueViolation, ForeignKeyViolation};
 use diesel::result::Error as DE;
+use log::info;
 use crate::models::*;
 use crate::error::UserFacingError as UE;
 use crate::InternalError as IE;
+use crate::InternalError::DatabaseError;
+use crate::schema::members::dsl::members;
 
 pub fn list_rpg_systems(conn: &MysqlConnection) -> Result<Vec<RpgSystem>, UE> {
     use crate::schema::rpg_systems::dsl::*;
@@ -115,4 +118,56 @@ pub fn update_title(conn: &MysqlConnection, title: Title) -> Result<Title, UE> {
         })?;
 
     find_title(conn, title.title_id)
+}
+
+pub fn list_members(conn: &MysqlConnection) -> Result<Vec<Member>, UE> {
+    use crate::schema::members::dsl::*;
+    members.load::<Member>(conn)
+        .map_err(|e| UE::Internal(IE::DatabaseError(e)))
+}
+
+pub fn create_member(conn: &MysqlConnection, new_member: NewMember) -> Result<Member, UE> {
+    use crate::schema::members::dsl::*;
+    diesel::insert_into(members)
+        .values(new_member.clone())
+        .execute(conn)
+        .map_err(|e| match e {
+            DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    // TODO: this would be nicer with postgres
+    let matching = members.filter(external_id.eq(new_member.external_id))
+        .first::<Member>(conn)
+        .map_err(|e| match e {
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    Ok(matching)
+}
+
+pub fn find_member(conn: &MysqlConnection, id: i32) -> Result<Member, UE> {
+    use crate::schema::members::dsl::*;
+    members.find(id)
+        .first(conn)
+        .map_err(|e| match e {
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })
+}
+
+pub fn update_members(conn: &MysqlConnection, member: Member) -> Result<Member, UE> {
+    use crate::schema::members::dsl::*;
+
+    diesel::update(members.find(member.member_id))
+        .set(external_id.eq(member.external_id))
+        .execute(conn)
+        .map_err(|e| match e {
+            DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+
+    find_member(conn, member.member_id)
 }
