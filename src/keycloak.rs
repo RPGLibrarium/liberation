@@ -26,8 +26,8 @@ impl RealmMetadata {
     }
 
     pub fn decoding_key(&self) -> Result<DecodingKey, InternalError> {
-        let key_der = base64::decode(&self.public_key)
-            .map_err(InternalError::KeycloakKeyHasBadFormat)?;
-        Ok(DecodingKey::from_rsa_der(key_der.as_slice()))
+        let key_with_headers = format!("-----BEGIN PUBLIC KEY-----{}-----END PUBLIC KEY-----", self.public_key);
+        DecodingKey::from_rsa_pem(key_with_headers.as_bytes())
+            .map_err(InternalError::KeycloakKeyHasBadFormat)
     }
 }

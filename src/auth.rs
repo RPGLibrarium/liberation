@@ -1,7 +1,8 @@
 use jsonwebtoken::DecodingKey;
-use log::{debug, info};
+use log::{debug, error, info};
 use actix_web::{FromRequest, HttpRequest};
 use actix_web::dev::Payload;
+use actix_web::web::Data;
 use futures::future::{LocalBoxFuture};
 use futures::FutureExt;
 use jsonwebtoken::{Algorithm, decode, Validation};
@@ -12,20 +13,22 @@ use crate::Authenticator::KeycloakLive;
 use crate::error::UserFacingError as UE;
 use crate::error::InternalError as IE;
 use crate::keycloak::RealmMetadata;
+use crate::settings::RoleMapping;
 
-type AccountId = u32;
+type AccountId = String;
 
 pub enum Authenticator {
     KeycloakLive {
         keycloak_url: String,
         realm: String,
         public_key: Mutex<DecodingKey>,
+        role_mapping: RoleMapping,
     },
-    OauthStatic { public_key: DecodingKey },
+    OauthStatic { public_key: DecodingKey, role_mapping: RoleMapping },
 }
 
 impl Authenticator {
-    pub async fn with_rotating_keys(keycloak_url: &str, realm: &str) -> Self {
+    pub async fn with_rotating_keys(keycloak_url: &str, realm: &str, role_mapping: RoleMapping) -> Self {
         let key = RealmMetadata::fetch_new(keycloak_url, realm).await
             .expect("Fetching fist realm metadata failed.")
             .decoding_key()
@@ -34,18 +37,19 @@ impl Authenticator {
             keycloak_url: keycloak_url.to_string(),
             realm: realm.to_string(),
             public_key: Mutex::new(key),
+            role_mapping,
         }
     }
 
-    pub fn with_static_key(static_key: String) -> Self {
-        let der_key = base64::decode(static_key).expect("No base64 key");
-        let static_key = DecodingKey::from_rsa_der(der_key.as_slice());
-        Authenticator::OauthStatic { public_key: static_key }
+    pub fn with_static_key(static_key: String, role_mapping: RoleMapping) -> Self {
+        let static_key = DecodingKey::from_rsa_pem(static_key.as_bytes())
+            .expect("The static key is not a valid pem key.");
+        Authenticator::OauthStatic { public_key: static_key, role_mapping }
     }
 
     pub async fn update(&self) -> Result<(), IE> {
         match &self {
-            Authenticator::KeycloakLive { keycloak_url, realm, public_key } => {
+            Authenticator::KeycloakLive { keycloak_url, realm, public_key, .. } => {
                 info!("Updating rotating keys from keycloak.");
                 let key = RealmMetadata::fetch_new(keycloak_url, realm).await?
                     .decoding_key()?;
@@ -58,24 +62,45 @@ impl Authenticator {
         Ok(())
     }
 
+    fn role_mapping(&self) -> &RoleMapping {
+        match self {
+            Authenticator::KeycloakLive { role_mapping, .. } => role_mapping,
+            Authenticator::OauthStatic { role_mapping, .. } => role_mapping,
+        }
+    }
+
     pub async fn verify_token(&self, token: &str) -> Result<Authentication, UE> {
         let key = match &self {
             Authenticator::KeycloakLive { public_key, .. } => (*public_key.lock().await).clone(),
-            Authenticator::OauthStatic { public_key } => public_key.clone(),
+            Authenticator::OauthStatic { public_key, .. } => public_key.clone(),
         };
 
-        // TODO: require correct audience, subject, and issuer.
-        let validated = decode::<Claims>(&token, &key, &Validation::new(Algorithm::RS256))
-            .map_err(|_e| UE::BadToken)?; // TODO: log the error
+        let role_mapping = self.role_mapping();
 
-        Ok(Authentication::authorized(
-            validated.claims.roles.contains(&"aristocrat".to_string()),
-            todo!("librarian mapping not implemented"),
-            todo!("account id mapping not implemented"),
-        ))
+        // TODO: require correct audience, subject, and issuer.
+        // the jwt library checks exp and
+        let validated = decode::<Claims>(&token, &key, &Validation::new(Algorithm::RS256))
+            .map_err(|e| {
+                UE::BadToken(format!("validation failed for token '{}' with error {}", token, e))
+            })?;
+
+        let validated_roles = validated.claims.realm_access.roles;
+        let is_aristocrat = validated_roles.contains(&role_mapping.aristocrat_role);
+        let account_id = if validated_roles.contains(&role_mapping.member_role) {
+            validated.claims.sub
+        } else {
+            return Err(UE::BadToken(format!("missing claim '{}' in given '{:?}'", role_mapping.member_role, validated_roles)));
+        };
+
+        let librarian_for = validated_roles.into_iter()
+            .filter_map(|token| token.strip_prefix(&role_mapping.librarian_role_prefix).map(str::to_string))
+            .collect();
+
+        Ok(Authentication::authorized(is_aristocrat, librarian_for, account_id))
     }
 }
 
+#[derive(Debug)]
 pub enum Authentication {
     Authorized {
         is_aristocrat: bool,
@@ -87,11 +112,13 @@ pub enum Authentication {
 
 impl Authentication {
     pub fn authorized(is_aristocrat: bool, librarian_for: Vec<AccountId>, account_id: AccountId) -> Self {
-        return Authentication::Authorized {
+        let authentication = Authentication::Authorized {
             is_aristocrat,
             librarian_for,
             account_id,
         };
+        debug!("Authenticated: {:?}", authentication);
+        authentication
     }
 
     pub fn requires_aristocrat(&self) -> Result<(), UE> {
@@ -128,7 +155,7 @@ impl Authentication {
 
     pub fn requires_any_member(&self) -> Result<AccountId, UE> {
         match self {
-            Authentication::Authorized { account_id, .. } => Ok(*account_id),
+            Authentication::Authorized { account_id, .. } => Ok(account_id.clone()),
             Authentication::Anonymous => Err(UE::AuthenticationRequired)
         }
     }
@@ -149,15 +176,15 @@ impl FromRequest for Authentication {
         // It appears as if this a restriction of rust traits which don't support async functions.
         async move {
             if let Some(header) = req.headers().get("Authorization") {
-                let raw_token = header.to_str().map_err(|_| UE::BadToken)?;
+                let raw_token = header.to_str().map_err(|_| UE::BadToken("not a valid string".to_string()))?;
 
                 let unvalidated = if raw_token.starts_with("Bearer ") {
                     raw_token.replacen("Bearer ", "", 1)
                 } else {
-                    return Err(UE::BadToken);
+                    return Err(UE::BadToken(raw_token.to_string()));
                 };
 
-                let authenticator = &req.app_data::<AppState>()
+                let authenticator = &req.app_data::<Data<AppState>>()
                     .ok_or(UE::Internal(IE::MissingAppState))?
                     .authenticator;
 
@@ -168,21 +195,29 @@ impl FromRequest for Authentication {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    pub aud: String,
-    // Optional. Audience
+struct Claims {
+    /// Audience
+    // pub aud: String,
+    /// Expires at (UTC timestamp)
     pub exp: usize,
-    // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+    /// Issued at (UTC timestamp)
     pub iat: usize,
-    // Optional. Issued at (as UTC timestamp)
+    /// Issuer
     pub iss: String,
-    // Optional. Issuer
-    pub nbf: usize,
-    // Optional. Not Before (as UTC timestamp)
+    /// Not Before (UTC timestamp)
+    pub nbf: Option<usize>,
+    /// Subject (the userid from keycloak)
     pub sub: String,
-    // Optional. Subject (whom token refers to)
-    pub roles: Vec<String>,
+    // Keycloak specific properties
+    /// Roles (added manually in keycloak)
+    pub realm_access: RealmAccess,
     pub name: String,
+    pub given_name: String,
+    pub family_name: String,
     pub email: String,
-    // ... whatever!
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct RealmAccess {
+    pub roles: Vec<String>,
 }

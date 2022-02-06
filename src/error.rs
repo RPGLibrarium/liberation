@@ -14,7 +14,7 @@ pub enum UserFacingError {
     #[error("authentication was successful, but you shall not path.")]
     YouShallNotPass,
     #[error("your token smells bad, go away.")]
-    BadToken,
+    BadToken(String),
     #[error("element was not found")]
     NotFound,
     #[error("element already exists")]
@@ -42,7 +42,7 @@ pub enum InternalError {
     #[error("keycloak is not reachable")]
     KeycloakNotReachable(#[from] reqwest::Error),
     #[error("keycloak returned a bad key")]
-    KeycloakKeyHasBadFormat(#[from] base64::DecodeError),
+    KeycloakKeyHasBadFormat(#[from] jsonwebtoken::errors::Error),
     #[error("authenticating with keycloak failed")]
     KeycloakAuthenticationFailed(#[from] Box<dyn std::error::Error>),
 
@@ -69,7 +69,7 @@ impl ResponseError for UserFacingError {
         match *self {
             UE::AuthenticationRequired => StatusCode::UNAUTHORIZED,
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
-            UE::BadToken => StatusCode::BAD_REQUEST,
+            UE::BadToken(_) => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
             UE::AlreadyExists => StatusCode::CONFLICT,
             UE::InvalidForeignKey => StatusCode::BAD_REQUEST,

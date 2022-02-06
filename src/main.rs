@@ -60,9 +60,9 @@ async fn main() -> Result<(), InternalError> {
 
             debug!("Creating authenticator.");
             let authenticator = if let Some(jwt_public_key) = settings.jwt_public_key {
-                Authenticator::with_static_key(jwt_public_key)
+                Authenticator::with_static_key(jwt_public_key, settings.role_mapping)
             } else if let Some(keycloak) = &settings.keycloak {
-                Authenticator::with_rotating_keys(&keycloak.url, &keycloak.realm).await
+                Authenticator::with_rotating_keys(&keycloak.url, &keycloak.realm, settings.role_mapping).await
             } else {
                 todo!("keycloak or jwt_public_key are mandatory.");
             };
@@ -110,11 +110,8 @@ async fn main() -> Result<(), InternalError> {
                     .app_data(app_state.clone())
                     .wrap(middleware::Logger::default())
                     .configure(api::v1)
-            }).bind(settings.bind)
-                .map_err(InternalError::IOError)?
-                .run()
-                .map_err(InternalError::IOError)
-                .await?;
+            }).bind(settings.bind).map_err(InternalError::IOError)?
+                .run().map_err(InternalError::IOError).await?;
 
             info!("Stopping update worker");
             keycloak_worker.abort();
