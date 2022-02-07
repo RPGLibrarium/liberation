@@ -3,7 +3,7 @@ use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::auth::Authentication;
-use crate::auth::roles::{GUILDS_EDIT, GUILDS_READ};
+use crate::auth::roles::{GUILDS_CREATE, GUILDS_EDIT, GUILDS_READ};
 use crate::models::{Guild, NewGuild};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
@@ -18,7 +18,7 @@ pub async fn post(
     authentication: Authentication,
     new_guild: web::Json<NewGuild>,
 ) -> MyResponder {
-    authentication.requires_role(GUILDS_EDIT)?;
+    authentication.requires_role(GUILDS_CREATE)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_guild(&conn, new_guild.into_inner())?;
     Ok(HttpResponse::Created().json(created))

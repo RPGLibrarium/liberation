@@ -30,8 +30,13 @@ pub mod roles {
     pub const TITLES_CREATE: &'static str = "liberation:titles:create";
     pub const TITLES_DELETE: &'static str = "liberation:titles:delete";
     pub const USERS_READ: &'static str = "liberation:users:read";
+    pub const GUILDS_CREATE: &'static str = "liberation:guilds:create";
     pub const GUILDS_READ: &'static str = "liberation:guilds:read";
     pub const GUILDS_EDIT: &'static str = "liberation:guilds:edit";
+    pub const BOOKS_CREATE: &'static str = "liberation:books:read";
+    pub const BOOKS_READ: &'static str = "liberation:books:read";
+    pub const BOOKS_EDIT: &'static str = "liberation:books:edit";
+    pub const BOOKS_DELETE: &'static str = "liberation:books:edit";
 }
 
 /// Content of a JWT.

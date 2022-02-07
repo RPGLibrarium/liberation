@@ -7,22 +7,41 @@ mod guilds;
 mod rpg_systems;
 mod titles;
 mod users;
+mod books;
 
 type MyResponder = Result<HttpResponse, UserFacingError>;
 
 // @formatter:off
 pub fn v1(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/api/v1")
-        .service(web::resource("/me")
-            .route(web::get().to(me::get))
-            .route(web::post().to(me::post))
-            // .route(web::patch().to(me::patch))
-            .route(web::delete().to(me::delete))
+        .service(web::scope("/me")
+            .service(web::resource("")
+                .route(web::get().to(me::get))
+                .route(web::post().to(me::post))
+                // .route(web::patch().to(me::patch))
+                .route(web::delete().to(me::delete))
+            )
+            // .service(web::scope("/inventory")
+            //     .service(web::resource("")
+            //         .route(web::get().to(inventory::get_all))
+            //     )
+            //     .service(web::resource("/{id}")
+            //         .route(web::get().to(inventory::get_one))
+            //         .route(web::put().to(inventory::put))
+            //         .route(web::delete().to(inventory::delete))
+            //     )
+            // )
+            .service(web::scope("/books")
+                .service(web::resource("")
+                    .route(web::get().to(me::books::get_all))
+                    .route(web::post().to(me::books::post))
+                )
+                .service(web::resource("/{id}")
+                    .route(web::get().to(me::books::get_one))
+                    .route(web::delete().to(me::books::delete))
+                )
+            )
         )
-        // .service(web::resource("/inventory")
-        //              .route(web::get().to(member))
-        //              .route(web::post().to(post_member_inventory)),
-        // ),
         .service(web::scope("/accounts")
             .service(web::resource("")
                 .route(web::get().to(accounts::get_all))
@@ -32,10 +51,6 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                 .route(web::put().to(accounts::put))
                 .route(web::delete().to(accounts::delete))
             )
-                 // .service(web::resource("/inventory")
-                 //              .route(web::get().to(member))
-                 //              .route(web::post().to(post_member_inventory)),
-                 // ),
         )
         .service(web::scope("/user")
             .service(web::resource("")
@@ -55,11 +70,16 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                      .route(web::get().to(guilds::get_one))
                      .route(web::put().to(guilds::put)),
                  )
-             // .service(
-             //     web::resource("/inventory")
-             //         .route(web::get().to(get_guild_inventory))
-             //         .route(web::post().to(post_guild_inventory)),
-             // ),
+                 .service(web::scope("/books")
+                    // .service(web::resource("")
+                    //     .route(web::get().to(guilds::books::get_all))
+                    //     .route(web::post().to(guilds::books::post))
+                    // )
+                    // .service(web::resource("/{id}")
+                    //     .route(web::get().to(guilds::books::get_one))
+                    //     .route(web::delete().to(guilds::books::delete))
+                    // )
+                 )
             ),
         )
         .service(web::scope("/rpgsystems")
@@ -93,23 +113,21 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
              // .route(web::delete().to(titles::delete)),
             ),
         )
-        // .service(
-        //     web::scope("/books")
-        //         .service(
-        //             web::resource("")
-        //                 .route(web::get().to(get_books))
-        //                 .route(web::post().to(post_book)),
-        //         )
-        //         .service(
-        //             web::resource("/{bookid}")
-        //                 .route(web::get().to(get_book))
-        //                 .route(web::put().to(put_book))
-        //                 .route(web::delete().to(delete_book)),
-        //         ),
-        // )
+        .service(web::scope("/books")
+            .service(web::resource("")
+                .route(web::get().to(books::get_all))
+                .route(web::post().to(books::post)),
+            )
+            .service(web::resource("/{bookid}")
+                .route(web::get().to(books::get_one))
+                .route(web::put().to(books::put))
+                .route(web::delete().to(books::delete)),
+            ),
+        )
     );
 }
 // @formatter:on
+
 
 
 
