@@ -7,7 +7,7 @@ use serde::Serialize;
 
 pub type Year = i16;
 
-#[derive(Identifiable, AsChangeset, Queryable, PartialEq, Serialize, Deserialize, Debug, Clone)]
+#[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug, Clone)]
 #[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
 pub struct RpgSystem {
@@ -16,14 +16,14 @@ pub struct RpgSystem {
     pub shortname: Option<String>,
 }
 
-#[derive(Insertable, Deserialize, Clone)]
+#[derive(Insertable, AsChangeset, Deserialize, Clone)]
 #[table_name = "rpg_systems"]
 pub struct NewRpgSystem {
     pub name: String,
     pub shortname: String,
 }
 
-#[derive(Identifiable, AsChangeset, Queryable, Associations, Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[table_name = "titles"]
 #[primary_key(title_id)]
 #[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
@@ -37,7 +37,7 @@ pub struct Title {
     pub coverimage: Option<String>,
 }
 
-#[derive(Insertable, Deserialize, Clone)]
+#[derive(Insertable, AsChangeset, Deserialize, Clone)]
 #[table_name = "titles"]
 pub struct NewTitle {
     pub name: String,
@@ -48,7 +48,7 @@ pub struct NewTitle {
     pub coverimage: Option<String>,
 }
 
-#[derive(Identifiable, AsChangeset, Queryable, Deserialize, PartialEq, Serialize, Debug, Clone)]
+#[derive(Identifiable, Queryable, Deserialize, PartialEq, Serialize, Debug, Clone)]
 #[table_name = "accounts"]
 #[primary_key(account_id)]
 pub struct Account {
@@ -74,13 +74,13 @@ impl From<Account> for User {
     fn from(account: Account) -> Self {
         User {
             id: account.account_id,
-            active:account.active,
-            full_name: account.full_name
+            active: account.active,
+            full_name: account.full_name,
         }
     }
 }
 
-#[derive(Insertable, Clone)]
+#[derive(Insertable, AsChangeset, Deserialize, Clone)]
 #[table_name = "accounts"]
 pub struct NewAccount {
     pub active: bool,
@@ -94,7 +94,7 @@ pub struct NewAccount {
 
 #[derive(Deserialize, Clone)]
 pub struct NewAccountPost {
-    pub username: String
+    pub username: String,
 }
 
 // TODO: Unsure which info should be modifiable
@@ -107,22 +107,22 @@ pub struct NewAccountPost {
 //     pub email: String,
 // }
 
-// #[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
-// #[table_name = "guilds"]
-// #[primary_key(guild_id)]
-// pub struct Guild {
-//     pub guild_id: i32,
-//     pub external_guild_name: String,
-//     pub name: String,
-//     pub address: String,
-//     pub contact_by_member_id: i32,
-// }
-//
-// #[derive(Insertable, Deserialize, Clone)]
-// #[table_name = "guilds"]
-// pub struct NewGuild {
-//     pub external_guild_name: String,
-//     pub name: String,
-//     pub address: String,
-//     pub contact_by_member_id: i32,
-// }
+#[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
+#[table_name = "guilds"]
+#[primary_key(guild_id)]
+pub struct Guild {
+    pub guild_id: i32,
+    pub external_id: String,
+    pub name: String,
+    pub address: String,
+    pub contact_by_account_id: i32,
+}
+
+#[derive(Insertable, AsChangeset, Deserialize, Clone)]
+#[table_name = "guilds"]
+pub struct NewGuild {
+    pub external_id: String,
+    pub name: String,
+    pub address: String,
+    pub contact_by_account_id: i32,
+}

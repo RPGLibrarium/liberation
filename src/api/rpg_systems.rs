@@ -1,11 +1,10 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::app::AppState;
-use crate::auth::{Authentication};
+use crate::auth::Authentication;
 use crate::auth::roles::*;
-use crate::models::{NewRpgSystem, RpgSystem};
+use crate::models::NewRpgSystem;
 use crate::api::MyResponder;
-
 
 // Don't ask to many questions about the arguments. With typing magic actix allows us to get the
 // state or arguments from the request. We can use up to 12 arguments to get data auto-
@@ -33,21 +32,22 @@ pub async fn post(
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Authentication,
-    id: web::Path<i32>,
+    search_id: web::Path<i32>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
-    let rpg_system = actions::find_rpg_system(&conn, *id)?;
+    let rpg_system = actions::find_rpg_system(&conn, *search_id)?;
     Ok(HttpResponse::Ok().json(rpg_system))
 }
 
 pub async fn put(
     app: web::Data<AppState>,
     authentication: Authentication,
-    updated_rpg_system: web::Json<RpgSystem>,
+    write_to_id: web::Path<i32>,
+    new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
     authentication.requires_role(RPGSYSTEMS_EDIT)?;
     let conn = app.open_database_connection()?;
-    let updated = actions::update_rpg_system(&conn, updated_rpg_system.into_inner())?;
+    let updated = actions::update_rpg_system(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
 }

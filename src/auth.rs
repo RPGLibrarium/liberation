@@ -31,6 +31,7 @@ pub mod roles {
     pub const TITLES_DELETE: &'static str = "liberation:titles:delete";
     pub const USERS_READ: &'static str = "liberation:users:read";
     pub const GUILDS_READ: &'static str = "liberation:guilds:read";
+    pub const GUILDS_EDIT: &'static str = "liberation:guilds:edit";
 }
 
 /// Content of a JWT.
@@ -137,12 +138,6 @@ impl Authentication {
             Authentication::Authorized { external_account_id, .. } => Ok(external_account_id.clone()),
             Authentication::Anonymous => Err(UE::AuthenticationRequired)
         }
-    }
-
-    /// Utility function to require member privileges for certain member account.
-    pub fn requires_member(&self, required_member_id: ExternalAccountId) -> Result<(), UE> {
-        let actual_account_id = self.requires_any_member()?;
-        if *actual_account_id == required_member_id { Ok(()) } else { Err(UE::YouShallNotPass) }
     }
 
     pub fn requires_nothing(&self) -> Result<(), UE> { Ok(()) }
