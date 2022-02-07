@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::ops::Deref;
 use log::{debug, info};
 use oauth2::basic::BasicClient;
 use oauth2::{ClientId, ClientSecret, TokenResponse};

@@ -60,9 +60,9 @@ async fn main() -> Result<(), InternalError> {
 
             debug!("Creating authenticator.");
             let authenticator = if let Some(jwt_public_key) = settings.jwt_public_key {
-                Authenticator::with_static_key(jwt_public_key, settings.role_mapping)
+                Authenticator::with_static_key(jwt_public_key)
             } else if let Some(keycloak) = &settings.keycloak {
-                Authenticator::with_rotating_keys(&keycloak.url, &keycloak.realm, settings.role_mapping).await
+                Authenticator::with_rotating_keys(&keycloak.url, &keycloak.realm).await
             } else {
                 todo!("keycloak or jwt_public_key are mandatory.");
             };

@@ -1,4 +1,17 @@
 table! {
+    accounts (account_id) {
+        account_id -> Integer,
+        active -> Bool,
+        external_id -> Varchar,
+        username -> Varchar,
+        full_name -> Varchar,
+        given_name -> Varchar,
+        family_name -> Varchar,
+        email -> Varchar,
+    }
+}
+
+table! {
     books (book_id) {
         book_id -> Integer,
         title_by_id -> Integer,
@@ -12,17 +25,10 @@ table! {
 table! {
     guilds (guild_id) {
         guild_id -> Integer,
-        external_guild_name -> Varchar,
+        external_id -> Varchar,
         name -> Varchar,
         address -> Text,
-        contact_by_member_id -> Integer,
-    }
-}
-
-table! {
-    members (member_id) {
-        member_id -> Integer,
-        external_id -> Varchar,
+        contact_by_account_id -> Integer,
     }
 }
 
@@ -46,16 +52,16 @@ table! {
     }
 }
 
+joinable!(books -> accounts (owner_member_by_id));
 joinable!(books -> guilds (owner_guild_by_id));
-joinable!(books -> members (owner_member_by_id));
 joinable!(books -> titles (title_by_id));
-joinable!(guilds -> members (contact_by_member_id));
+joinable!(guilds -> accounts (contact_by_account_id));
 joinable!(titles -> rpg_systems (rpg_system_by_id));
 
 allow_tables_to_appear_in_same_query!(
+    accounts,
     books,
     guilds,
-    members,
     rpg_systems,
     titles,
 );

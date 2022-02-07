@@ -1,7 +1,8 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::app::AppState;
-use crate::auth::Authentication;
+use crate::auth::{Authentication};
+use crate::auth::roles::*;
 use crate::models::{NewRpgSystem, RpgSystem};
 use crate::api::MyResponder;
 
@@ -23,7 +24,7 @@ pub async fn post(
     authentication: Authentication,
     new_rpg_system: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.requires_any_librarian()?;
+    authentication.requires_role(RPGSYSTEMS_CREATE)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_rpg_system(&conn, new_rpg_system.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -45,7 +46,7 @@ pub async fn put(
     authentication: Authentication,
     updated_rpg_system: web::Json<RpgSystem>,
 ) -> MyResponder {
-    authentication.requires_any_librarian()?;
+    authentication.requires_role(RPGSYSTEMS_EDIT)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_rpg_system(&conn, updated_rpg_system.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
