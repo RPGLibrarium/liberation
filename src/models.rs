@@ -194,9 +194,13 @@ impl<'insert> Insertable<books::table> for &'insert Owner {
     }
 }
 
-#[derive(Identifiable, Serialize, Debug)]
+#[derive(Identifiable, Associations, Serialize, Debug)]
 #[table_name = "books"]
 #[primary_key(book_id)]
+// Associations seem buggy, they dont generate code, when there are multiple belongs_to.
+// Perhaps its also because of the foreign key being part of an embedded field.
+#[belongs_to(Account, foreign_key=owner_member_by_id)]
+//#[belongs_to(Guild, foreign_key=owner_guild_by_id)]
 pub struct Book {
     pub book_id: i32,
     pub title_by_id: i32,
@@ -222,7 +226,6 @@ impl Queryable<books::SqlType, Mysql> for Book {
 #[derive(Insertable, Deserialize, Clone)]
 #[table_name = "books"]
 pub struct NewBook {
-    pub book_id: i32,
     pub title_by_id: i32,
     #[diesel(embed)]
     pub owner: Owner,
@@ -231,10 +234,29 @@ pub struct NewBook {
     pub external_inventory_id: i32,
 }
 
+/// Allows creation of books, where the owner is derived from the token or endpoint.
+#[derive(Deserialize, Clone)]
+pub struct PostOwnedBook {
+    pub title_by_id: i32,
+    pub quality: String,
+    pub external_inventory_id: i32,
+}
+
+impl PostOwnedBook {
+    pub fn owned_by(self, owner: Owner) -> NewBook {
+        NewBook {
+            title_by_id: self.title_by_id,
+            owner,
+            quality: self.quality,
+            external_inventory_id: self.external_inventory_id,
+        }
+    }
+
+}
+
 impl AsChangeset for NewBook {
     type Target = books::table;
     type Changeset = <(
-        diesel::dsl::Eq<books::book_id, i32>,
         diesel::dsl::Eq<books::title_by_id, i32>,
         diesel::dsl::Eq<books::owner_member_by_id, Option<i32>>,
         diesel::dsl::Eq<books::owner_guild_by_id, Option<i32>>,
@@ -246,7 +268,6 @@ impl AsChangeset for NewBook {
         use crate::schema::books::dsl::*;
         let (member_id, guild_id) = self.owner.into();
         (
-            book_id.eq(self.book_id),
             title_by_id.eq(self.title_by_id),
             owner_member_by_id.eq(member_id),
             owner_guild_by_id.eq(guild_id),

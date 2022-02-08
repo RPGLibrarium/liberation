@@ -16,6 +16,10 @@ curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/users
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/users/1
 
 ## Book Management
+curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/books
+curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me/books -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
+curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/books/1
+curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/me/books/1
 
 # Librarian
 ## Book Management

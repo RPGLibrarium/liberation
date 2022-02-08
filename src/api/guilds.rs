@@ -4,7 +4,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::auth::Authentication;
 use crate::auth::roles::{GUILDS_CREATE, GUILDS_EDIT, GUILDS_READ};
-use crate::models::{Guild, NewGuild};
+use crate::models::NewGuild;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
     authentication.requires_role(GUILDS_READ)?;
@@ -45,4 +45,8 @@ pub async fn put(
     let conn = app.open_database_connection()?;
     let updated = actions::update_guild(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
+}
+
+mod books {
+
 }

@@ -3,6 +3,7 @@ use diesel::mysql::Mysql;
 use diesel::result::DatabaseErrorKind::{UniqueViolation, ForeignKeyViolation};
 use diesel::result::Error as DE;
 use diesel::sql_types::Bool;
+use futures::StreamExt;
 use log::debug;
 use crate::error::UserFacingError as UE;
 use crate::InternalError as IE;
@@ -280,10 +281,12 @@ pub fn create_book(conn: &MysqlConnection, new_book: NewBook) -> Result<Book, UE
             DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
             _ => UE::Internal(IE::DatabaseError(e))
         })?;
+    debug!("creating books affected {} books", affected);
     assert_eq!(affected, 1, "create books must affect only a single row.");
 
     // TODO: this would be A FUCKING LOT nicer with postgres
     let (member_id, guild_id) = new_book.owner.into();
+    debug!("memberid {:?}, guildid {:?}", member_id, guild_id);
 
     let matching = books.filter(with_inventory_key(
         new_book.external_inventory_id, member_id, guild_id,
@@ -307,13 +310,13 @@ fn with_inventory_key(ext_inventory_id: i32, member_id: Option<i32>, guild_id: O
     };
 
     let matches_guild_id: Box<dyn BoxableExpression<crate::schema::books::table, Mysql, SqlType=Bool>>
-        = if let Some(id) = member_id {
+        = if let Some(id) = guild_id {
         Box::new(owner_guild_by_id.eq(id))
     } else {
         Box::new(owner_guild_by_id.is_null())
     };
 
-    Box::new(external_inventory_id.eq(external_inventory_id)
+    Box::new(external_inventory_id.eq(ext_inventory_id)
         .and(matches_member_id)
         .and(matches_guild_id))
 }
@@ -356,4 +359,64 @@ pub fn delete_book(conn: &MysqlConnection, delete_id: i32) -> Result<(), UE> {
         })?;
     assert_eq!(affected, 1, "delete books must affect only a single row.");
     Ok(())
+}
+
+pub fn list_books_owned_by_member(conn: &MysqlConnection, account_external_id: String) -> Result<Vec<Book>, UE> {
+    use crate::schema::books::dsl::*;
+
+    // Non-registered accounts will be caught here.
+    let account = find_account_by_external_id(conn, account_external_id)?;
+    books.filter(owner_member_by_id.eq(account.account_id))
+        .load(conn)
+        .map_err(|e| UE::Internal(IE::DatabaseError(e)))
+}
+
+pub fn create_book_owned_by_member(conn: &MysqlConnection, account_external_id: String, partial_book: PostOwnedBook) -> Result<Book, UE> {
+    // Non-registered accounts will be caught here.
+    let account = find_account_by_external_id(conn, account_external_id)?;
+    debug!("found account {:?}", account);
+    let new_book = partial_book.owned_by(Owner::Member { id: account.account_id });
+    create_book(&conn, new_book)
+}
+
+
+pub fn find_book_owned_by_member(conn: &MysqlConnection, account_external_id: String, search_id: i32) -> Result<Book, UE> {
+    use crate::schema::books::dsl::*;
+
+    // Non-registered accounts will be caught here.
+    let account = find_account_by_external_id(conn, account_external_id)?;
+    books.filter(owner_member_by_id.eq(account.account_id))
+        .find(search_id)
+        .first(conn)
+        .map_err(|e| match e {
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })
+}
+
+pub fn delete_book_owned_by_member(conn: &MysqlConnection, account_external_id: String, delete_id: i32) -> Result<(), UE> {
+    use crate::schema::books::dsl::*;
+
+    // Non-registered accounts will be caught here.
+    let account = find_account_by_external_id(conn, account_external_id)?;
+    let affected = diesel::delete(
+        books.filter(owner_member_by_id.eq(account.account_id))
+            .find(delete_id)
+    )
+        .execute(conn)
+        .map_err(|e| match e {
+            DE::DatabaseError(UniqueViolation, _) => UE::AlreadyExists,
+            DE::NotFound => UE::NotFound,
+            _ => UE::Internal(IE::DatabaseError(e))
+        })?;
+    assert_eq!(affected, 1, "delete books must affect only a single row.");
+    Ok(())
+}
+
+pub fn list_books_owned_by_guild(conn: &MysqlConnection, search_guild_id: i32) -> Result<Vec<Book>, UE> {
+    use crate::schema::books::dsl::*;
+
+    books.filter(owner_member_by_id.eq(search_guild_id))
+        .load(conn)
+        .map_err(|e| UE::Internal(IE::DatabaseError(e)))
 }

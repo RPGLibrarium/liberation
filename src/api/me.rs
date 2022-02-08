@@ -55,30 +55,32 @@ pub async fn delete(app: web::Data<AppState>, authentication: Authentication) ->
 }
 
 pub mod books {
-    use actix_web::web;
+    use actix_web::{HttpResponse, web};
+    use log::debug;
+    use crate::actions;
+    use crate::actions::{delete_book_owned_by_member, find_account_by_external_id, find_book_owned_by_member};
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::auth::Authentication;
-    use crate::models::NewBook;
+    use crate::models::{NewBook, Owner, PostOwnedBook};
 
     pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
         let member_id = authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        todo!("")
-        // let books = actions::list_books(&conn)?;
-        // Ok(HttpResponse::Ok().json(books))
+        let books = actions::list_books_owned_by_member(&conn, member_id)?;
+        Ok(HttpResponse::Ok().json(books))
     }
 
     pub async fn post(
         app: web::Data<AppState>,
         authentication: Authentication,
-        new_book: web::Json<NewBook>,
+        posted_book: web::Json<PostOwnedBook>,
     ) -> MyResponder {
-        let member_id = authentication.requires_any_member()?;
+        let external_account_id = authentication.requires_any_member()?;
+        debug!("adding book for user {}", external_account_id);
         let conn = app.open_database_connection()?;
-        todo!("")
-        // let created = actions::create_book(&conn, new_book.into_inner())?;
-        // Ok(HttpResponse::Created().json(created))
+        let created_book= actions::create_book_owned_by_member(&conn, external_account_id, posted_book.into_inner())?;
+        Ok(HttpResponse::Created().json(created_book))
     }
 
     pub async fn get_one(
@@ -86,24 +88,10 @@ pub mod books {
         authentication: Authentication,
         search_id: web::Path<i32>,
     ) -> MyResponder {
-        let member_id = authentication.requires_any_member()?;
+        let external_account_id= authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        todo!("")
-        // let title = actions::find_book(&conn, *search_id)?;
-        // Ok(HttpResponse::Ok().json(title))
-    }
-
-    pub async fn put(
-        app: web::Data<AppState>,
-        authentication: Authentication,
-        write_to_id: web::Path<i32>,
-        new_info: web::Json<NewBook>,
-    ) -> MyResponder {
-        let member_id = authentication.requires_any_member()?;
-        let conn = app.open_database_connection()?;
-        todo!("")
-        // let updated = actions::update_book(&conn, *write_to_id, new_info.into_inner())?;
-        // Ok(HttpResponse::Ok().json(updated))
+        let book = find_book_owned_by_member(&conn, external_account_id, *search_id)?;
+        Ok(HttpResponse::Created().json(book))
     }
 
     pub async fn delete(
@@ -111,12 +99,10 @@ pub mod books {
         authentication: Authentication,
         delete_id: web::Path<i32>,
     ) -> MyResponder {
-        let member_id = authentication.requires_any_member()?;
+        let external_account_id = authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        todo!("")
+        delete_book_owned_by_member(&conn, external_account_id, *delete_id)?;
         // let updated = actions::delete_book(&conn, *delete_id)?;
-        // Ok(HttpResponse::Ok().json(updated))
+        Ok(HttpResponse::Ok().finish())
     }
-
-
 }
