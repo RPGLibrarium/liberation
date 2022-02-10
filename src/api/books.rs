@@ -3,7 +3,7 @@ use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::auth::Authentication;
-use crate::auth::roles::{BOOKS_DELETE, BOOKS_EDIT, BOOKS_READ};
+use crate::auth::roles::{BOOKS_CREATE, BOOKS_DELETE, BOOKS_EDIT, BOOKS_READ};
 use crate::models::NewBook;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
@@ -18,7 +18,7 @@ pub async fn post(
     authentication: Authentication,
     new_book: web::Json<NewBook>,
 ) -> MyResponder {
-    authentication.requires_role(BOOKS_EDIT)?;
+    authentication.requires_role(BOOKS_CREATE)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_book(&conn, new_book.into_inner())?;
     Ok(HttpResponse::Created().json(created))

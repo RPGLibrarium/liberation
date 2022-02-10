@@ -4,8 +4,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::auth::Authentication;
 use crate::auth::roles::{ACCOUNTS_DELETE, ACCOUNTS_EDIT, ACCOUNTS_READ};
-use crate::error::UserFacingError;
-use crate::models::{Account, NewAccount, NewAccountPost};
+use crate::models::NewAccount;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
     authentication.requires_role(ACCOUNTS_READ)?;

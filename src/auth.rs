@@ -25,15 +25,15 @@ pub mod roles {
     pub const MEMBER_ROLE: &'static str = "liberation:member";
     pub const RPGSYSTEMS_EDIT: &'static str = "liberation:rpgsystems:edit";
     pub const RPGSYSTEMS_CREATE: &'static str = "liberation:rpgsystems:create";
-    pub const RPGSYSTEMS_DELETE: &'static str = "liberation:rpgsystems:delete";
+    // pub const RPGSYSTEMS_DELETE: &'static str = "liberation:rpgsystems:delete";
     pub const TITLES_EDIT: &'static str = "liberation:titles:edit";
     pub const TITLES_CREATE: &'static str = "liberation:titles:create";
-    pub const TITLES_DELETE: &'static str = "liberation:titles:delete";
+    // pub const TITLES_DELETE: &'static str = "liberation:titles:delete";
     pub const USERS_READ: &'static str = "liberation:users:read";
     pub const GUILDS_CREATE: &'static str = "liberation:guilds:create";
     pub const GUILDS_READ: &'static str = "liberation:guilds:read";
     pub const GUILDS_EDIT: &'static str = "liberation:guilds:edit";
-    pub const BOOKS_CREATE: &'static str = "liberation:books:read";
+    pub const BOOKS_CREATE: &'static str = "liberation:books:create";
     pub const BOOKS_READ: &'static str = "liberation:books:read";
     pub const BOOKS_EDIT: &'static str = "liberation:books:edit";
     pub const BOOKS_DELETE: &'static str = "liberation:books:edit";
@@ -130,8 +130,8 @@ impl Authentication {
     }
 
     /// Utility function to require librarian privileges for a certain guild.
-    pub fn requires_librarian(&self, required_guild_id: ExternalGuildId) -> Result<(), UE> {
-        if self.requires_any_librarian()?.contains(&required_guild_id) {
+    pub fn requires_librarian(&self, required_guild_id: &ExternalGuildId) -> Result<(), UE> {
+        if self.requires_any_librarian()?.contains(required_guild_id) {
             Ok(())
         } else { Err(UE::YouShallNotPass) }
     }

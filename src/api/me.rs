@@ -54,20 +54,22 @@ pub async fn delete(app: web::Data<AppState>, authentication: Authentication) ->
     Ok(HttpResponse::Ok().finish())
 }
 
-pub mod books {
+pub mod collection {
     use actix_web::{HttpResponse, web};
-    use log::debug;
     use crate::actions;
-    use crate::actions::{delete_book_owned_by_member, find_account_by_external_id, find_book_owned_by_member};
+    use crate::actions::{delete_book_owned_by_member, find_book_owned_by_member};
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::auth::Authentication;
-    use crate::models::{NewBook, Owner, PostOwnedBook};
+    use crate::models::{PostOwnedBook};
 
     pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
-        let member_id = authentication.requires_any_member()?;
+        let external_account_id= authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        let books = actions::list_books_owned_by_member(&conn, member_id)?;
+        // Non-registered accounts will be caught here.
+        // TODO: figure out what todo with deactivated accounts
+        let account = actions::find_account_by_external_id(&conn, external_account_id)?;
+        let books = actions::list_books_owned_by_member(&conn, account)?;
         Ok(HttpResponse::Ok().json(books))
     }
 
@@ -77,9 +79,9 @@ pub mod books {
         posted_book: web::Json<PostOwnedBook>,
     ) -> MyResponder {
         let external_account_id = authentication.requires_any_member()?;
-        debug!("adding book for user {}", external_account_id);
         let conn = app.open_database_connection()?;
-        let created_book= actions::create_book_owned_by_member(&conn, external_account_id, posted_book.into_inner())?;
+        let account = actions::find_account_by_external_id(&conn, external_account_id)?;
+        let created_book= actions::create_book_owned_by_member(&conn, account, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
     }
 
@@ -90,7 +92,8 @@ pub mod books {
     ) -> MyResponder {
         let external_account_id= authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        let book = find_book_owned_by_member(&conn, external_account_id, *search_id)?;
+        let account = actions::find_account_by_external_id(&conn, external_account_id)?;
+        let book = find_book_owned_by_member(&conn, account, *search_id)?;
         Ok(HttpResponse::Created().json(book))
     }
 
@@ -101,8 +104,8 @@ pub mod books {
     ) -> MyResponder {
         let external_account_id = authentication.requires_any_member()?;
         let conn = app.open_database_connection()?;
-        delete_book_owned_by_member(&conn, external_account_id, *delete_id)?;
-        // let updated = actions::delete_book(&conn, *delete_id)?;
+        let account = actions::find_account_by_external_id(&conn, external_account_id)?;
+        delete_book_owned_by_member(&conn, account, *delete_id)?;
         Ok(HttpResponse::Ok().finish())
     }
 }
