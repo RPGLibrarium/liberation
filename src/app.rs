@@ -9,21 +9,21 @@ type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 pub struct AppState {
     pub database: DbPool,
     pub authenticator: Authenticator,
-    pub live_users: LiveUsers,
+    // pub live_users: LiveUsers,
 }
 
 impl AppState {
-    pub fn new(database: DbPool, authenticator: Authenticator, live_users: LiveUsers) -> Self {
+    pub fn new(database: DbPool, authenticator: Authenticator, /*live_users: LiveUsers*/) -> Self {
         AppState {
             database,
             authenticator,
-            live_users,
+            // live_users,
         }
     }
 
     pub async fn update(&self) -> Result<(), InternalError> {
         self.authenticator.update().await?;
-        let _all_users = self.live_users.update().await?;
+        // let _all_users = self.live_users.update().await?;
         Ok(())
 
         // let conn = self.database.get()

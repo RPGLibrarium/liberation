@@ -67,26 +67,26 @@ async fn main() -> Result<(), InternalError> {
                 todo!("keycloak or jwt_public_key are mandatory.");
             };
 
-            debug!("Creating live user provider.");
-            let live_users = if let Some(keycloak) = settings.keycloak {
-                if let (Some(client_id), Some(client_secret)) = (&keycloak.client_id, &keycloak.client_secret) {
-                    use user::LiveUsers;
-                    debug!("Creating live users.");
-                    LiveUsers::new(&keycloak.url, &keycloak.realm, client_id.clone(), client_secret.clone()).await?
-                } else {
-                    warn!("Missing keycloak.client_id, or keycloak.client_secret. Live user update is deactivated.");
-                    todo!("not implemented")
-                }
-            } else {
-                warn!("Missing keycloak. Live user update is deactivated.");
-                todo!("not implemented")
-            };
+            // debug!("Creating live user provider.");
+            // let live_users = if let Some(keycloak) = settings.keycloak {
+            //     if let (Some(client_id), Some(client_secret)) = (&keycloak.client_id, &keycloak.client_secret) {
+            //         use user::LiveUsers;
+            //         debug!("Creating live users.");
+            //         LiveUsers::new(&keycloak.url, &keycloak.realm, client_id.clone(), client_secret.clone()).await?
+            //     } else {
+            //         warn!("Missing keycloak.client_id, or keycloak.client_secret. Live user update is deactivated.");
+            //         todo!("not implemented")
+            //     }
+            // } else {
+            //     warn!("Missing keycloak. Live user update is deactivated.");
+            //     todo!("not implemented")
+            // };
 
             debug!("Creating app state.");
             let app_state = Data::new(AppState::new(
                 pool,
                 authenticator,
-                live_users,
+                // live_users,
             ));
 
             info!("Starting Keycloak Worker.");
