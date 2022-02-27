@@ -1,5 +1,6 @@
+use std::sync::Arc;
 use jsonwebtoken::DecodingKey;
-use log::{debug, info, warn};
+use log::{debug, error, info, Metadata, warn};
 use actix_web::{FromRequest, HttpRequest};
 use actix_web::dev::Payload;
 use actix_web::web::Data;
@@ -8,11 +9,93 @@ use futures::FutureExt;
 use jsonwebtoken::{Algorithm, decode, Validation};
 use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use crate::app::AppState;
-use crate::Authenticator::KeycloakLive;
+use crate::Authenticator::Keycloak;
 use crate::error::UserFacingError as UE;
 use crate::error::InternalError as IE;
+use crate::InternalError;
 use crate::keycloak::RealmMetadata;
+
+pub enum Authenticator {
+    Keycloak {
+        keycloak_url: String,
+        realm: String,
+        public_key: Arc<Mutex<DecodingKey>>,
+    },
+    Static { public_key: DecodingKey },
+}
+
+impl Authenticator {
+    /// Creates a new authenticator which updates the key from keycloak periodically. Use the
+    /// JoinHandle to stop the key updates.
+    pub async fn with_rotating_keys(keycloak_url: String, realm: String, renewal_interval_s: u64) -> (Self, Option<JoinHandle<()>>) {
+        use actix_web::rt::spawn;
+        use std::time::Duration;
+        use tokio::time;
+
+        let public_key = Arc::new(Mutex::new(
+            RealmMetadata::fetch_new(&keycloak_url, &realm).await
+                .expect("Fetching fist realm metadata failed.")
+                .decoding_key()
+                .expect("Decoding first public key from keycloak failed.")
+        ));
+
+        let authenticator = Keycloak {
+            keycloak_url: keycloak_url.to_string(),
+            realm: realm.to_string(),
+            public_key: public_key.clone(),
+        };
+
+        info!("Starting Keycloak Worker.");
+        let worker = spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(renewal_interval_s));
+
+            // Wrapping this in a function makes futures easier to handle
+            async fn fetch_key(keycloak_url: &str, realm: &str) -> Result<DecodingKey, InternalError> {
+                info!("Updating rotating keys from keycloak.");
+                RealmMetadata::fetch_new(keycloak_url, realm).await?
+                    .decoding_key()
+            }
+
+            loop {
+                interval.tick().await;
+                match fetch_key(&keycloak_url, &realm).await {
+                    Ok(new_key) => {
+                        debug!("Setting new key in shared mutable state.");
+                        let mut lock = public_key.lock().await;
+                        *lock = new_key;
+                    }
+                    Err(e) => error!("Could not public key: {:?}", e)
+                }
+            }
+        });
+        (authenticator, Some(worker))
+    }
+
+    /// Creates a new authenticator which uses a static key.
+    pub fn with_static_key(static_key: String) -> Self {
+        let static_key = DecodingKey::from_rsa_pem(static_key.as_bytes())
+            .expect("The static key is not a valid pem key.");
+        Authenticator::Static { public_key: static_key }
+    }
+
+    pub async fn verify_token(&self, token: &str) -> Result<Authentication, UE> {
+        let key = match &self {
+            Authenticator::Keycloak { public_key, .. } => (*public_key.lock().await).clone(),
+            Authenticator::Static { public_key, .. } => public_key.clone(),
+        };
+
+        // TODO: require correct audience, subject, and issuer.
+        // the jwt library checks exp and
+        let validated = decode::<Claims>(&token, &key, &Validation::new(Algorithm::RS256))
+            .map_err(|e| {
+                UE::BadToken(format!("validation failed for token '{}' with error {}", token, e))
+            })?;
+
+        Ok(Authentication::from(validated.claims))
+    }
+}
 
 type ExternalAccountId = String;
 type ExternalGuildId = String;
@@ -66,15 +149,6 @@ struct Claims {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct RealmAccess {
     pub roles: Vec<String>,
-}
-
-pub enum Authenticator {
-    KeycloakLive {
-        keycloak_url: String,
-        realm: String,
-        public_key: Mutex<DecodingKey>,
-    },
-    OauthStatic { public_key: DecodingKey },
 }
 
 /// Represents a valid authentication.
@@ -192,53 +266,3 @@ impl FromRequest for Authentication {
     }
 }
 
-impl Authenticator {
-    pub async fn with_rotating_keys(keycloak_url: &str, realm: &str) -> Self {
-        let key = RealmMetadata::fetch_new(keycloak_url, realm).await
-            .expect("Fetching fist realm metadata failed.")
-            .decoding_key()
-            .expect("Decoding first public key from keycloak faile.");
-        KeycloakLive {
-            keycloak_url: keycloak_url.to_string(),
-            realm: realm.to_string(),
-            public_key: Mutex::new(key),
-        }
-    }
-
-    pub fn with_static_key(static_key: String) -> Self {
-        let static_key = DecodingKey::from_rsa_pem(static_key.as_bytes())
-            .expect("The static key is not a valid pem key.");
-        Authenticator::OauthStatic { public_key: static_key }
-    }
-
-    pub async fn update(&self) -> Result<(), IE> {
-        match &self {
-            Authenticator::KeycloakLive { keycloak_url, realm, public_key, .. } => {
-                info!("Updating rotating keys from keycloak.");
-                let key = RealmMetadata::fetch_new(keycloak_url, realm).await?
-                    .decoding_key()?;
-                let mut lock = public_key.lock().await;
-                debug!("Setting new key in shared mutable state.");
-                *lock = key;
-            }
-            Authenticator::OauthStatic { .. } => debug!("Key is static, not updating.")
-        }
-        Ok(())
-    }
-
-    pub async fn verify_token(&self, token: &str) -> Result<Authentication, UE> {
-        let key = match &self {
-            Authenticator::KeycloakLive { public_key, .. } => (*public_key.lock().await).clone(),
-            Authenticator::OauthStatic { public_key, .. } => public_key.clone(),
-        };
-
-        // TODO: require correct audience, subject, and issuer.
-        // the jwt library checks exp and
-        let validated = decode::<Claims>(&token, &key, &Validation::new(Algorithm::RS256))
-            .map_err(|e| {
-                UE::BadToken(format!("validation failed for token '{}' with error {}", token, e))
-            })?;
-
-        Ok(Authentication::from(validated.claims))
-    }
-}

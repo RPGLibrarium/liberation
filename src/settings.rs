@@ -1,5 +1,4 @@
 use config::Config;
-use oauth2::{ClientId, ClientSecret};
 use serde::Deserialize;
 use crate::error::InternalError;
 
@@ -8,20 +7,55 @@ fn default_bind() -> String { "127.0.0.1:8080".to_string() }
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
+    /// The server uses this database. Only mysql is supported a the moment.
+    ///
+    /// ```toml
+    /// database = "mysql://liberation:liberation@127.0.0.1:3306/liberation"
+    /// ```
     pub database: String,
+
+    /// The server binds to this address. Defaults to `127.0.0.1:8080`.
+    ///
+    /// ```toml
+    /// bind = 127.0.0.1:8080
+    /// ```
     #[serde(default = "default_bind")]
     pub bind: String,
-    /// Set's the public key for verification manually
-    pub jwt_public_key: Option<String>,
-    pub keycloak: Option<Keycloak>,
+
+    /// See [AuthenticationSettings] for more details.
+    pub authentication: AuthenticationSettings,
 }
 
+/// The authentication is done with [JWT tokens](https://jwt.io/) that must be signed by the
+/// authorization server (probably Keycloak). Only one of the following variants is accepted.
+///
+/// ## Keycloak
+/// The public key is fetched automatically from keycloak and renewed periodically.
+///
+/// ```toml
+/// [authentication.keycloak]
+/// url = "https://sso.rpg-librarium.de/"
+/// realm = "Liberation"
+/// ```
+///
+/// ## Static
+/// The public key is set constant at runtime. This might be helpful when testing or migrating to
+/// another authentication server.
+///
+/// ```toml
+/// [authentication.static]
+/// public_key = "MIIBIjANBgkqhkiG9w0BAQEFAA..."
+/// ```
 #[derive(Debug, Deserialize)]
-pub struct Keycloak {
-    pub url: String,
-    pub realm: String,
-    pub client_id: Option<ClientId>,
-    pub client_secret: Option<ClientSecret>,
+#[serde(rename_all = "lowercase")]
+pub enum AuthenticationSettings {
+    Static { public_key: String },
+    Keycloak {
+        url: String,
+        realm: String,
+        /// the key is renewed every so often (in seconds)
+        renew_interval_s: u64,
+    },
 }
 
 impl Settings {

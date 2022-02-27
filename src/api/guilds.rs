@@ -2,8 +2,8 @@ use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::auth::Authentication;
-use crate::auth::roles::{GUILDS_CREATE, GUILDS_EDIT, GUILDS_READ};
+use crate::authentication::Authentication;
+use crate::authentication::roles::{GUILDS_CREATE, GUILDS_EDIT, GUILDS_READ};
 use crate::models::NewGuild;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
@@ -53,8 +53,8 @@ pub mod collection {
     use crate::actions::find_guild;
     use crate::api::MyResponder;
     use crate::app::AppState;
-    use crate::auth::Authentication;
-    use crate::auth::roles::GUILDS_READ;
+    use crate::authentication::Authentication;
+    use crate::authentication::roles::GUILDS_READ;
     use crate::models::PostOwnedBook;
 
     pub async fn get_all(app: web::Data<AppState>, authentication: Authentication, guild_id: web::Path<i32>) -> MyResponder {

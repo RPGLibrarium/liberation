@@ -5,20 +5,18 @@ extern crate clap;
 #[macro_use]
 extern crate diesel;
 
-use std::time::Duration;
 use actix_web::web::Data;
 use clap::{App, AppSettings};
 use futures::TryFutureExt;
 use log::{debug, error, info, warn};
-use tokio::time;
-use auth::Authenticator;
+use authentication::Authenticator;
 use error::InternalError;
-use crate::settings::Settings;
+use crate::settings::{AuthenticationSettings, Settings};
 
 mod schema;
 mod models;
 mod error;
-mod auth;
+mod authentication;
 mod actions;
 mod user;
 mod keycloak;
@@ -34,7 +32,7 @@ async fn main() -> Result<(), InternalError> {
         .global_setting(AppSettings::PropagateVersion)
         .global_setting(AppSettings::UseLongFormatForHelpSubcommand)
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .arg(arg!(-c --config <CONFIG> "define the config file"))
+        .arg(arg!(-c --config <CONFIG> "Define the config file"))
         .subcommand(App::new("serve").about("start the liberation service"))
         .subcommand(App::new("test").about("run whatever was programed"))
         .get_matches();
@@ -44,7 +42,6 @@ async fn main() -> Result<(), InternalError> {
     match matches.subcommand() {
         Some(("serve", _submatches)) => {
             use actix_web::{App, HttpServer, middleware};
-            use actix_web::rt::spawn;
             use app::AppState;
 
             info!("Creating database pool.");
@@ -59,52 +56,21 @@ async fn main() -> Result<(), InternalError> {
             };
 
             debug!("Creating authenticator.");
-            let authenticator = if let Some(jwt_public_key) = settings.jwt_public_key {
-                Authenticator::with_static_key(jwt_public_key)
-            } else if let Some(keycloak) = &settings.keycloak {
-                Authenticator::with_rotating_keys(&keycloak.url, &keycloak.realm).await
-            } else {
-                todo!("keycloak or jwt_public_key are mandatory.");
-            };
-
-            debug!("Creating live user provider.");
-            let live_users = if let Some(keycloak) = settings.keycloak {
-                if let (Some(client_id), Some(client_secret)) = (&keycloak.client_id, &keycloak.client_secret) {
-                    use user::LiveUsers;
-                    debug!("Creating live users.");
-                    LiveUsers::new(&keycloak.url, &keycloak.realm, client_id.clone(), client_secret.clone()).await?
-                } else {
-                    warn!("Missing keycloak.client_id, or keycloak.client_secret. Live user update is deactivated.");
-                    todo!("not implemented")
+            let (authenticator, worker) = match settings.authentication {
+                AuthenticationSettings::Static { public_key } =>
+                    (Authenticator::with_static_key(public_key), None),
+                AuthenticationSettings::Keycloak { url, realm, renew_interval_s } => {
+                    Authenticator::with_rotating_keys(url, realm, renew_interval_s).await
                 }
-            } else {
-                warn!("Missing keycloak. Live user update is deactivated.");
-                todo!("not implemented")
             };
 
             debug!("Creating app state.");
             let app_state = Data::new(AppState::new(
                 pool,
                 authenticator,
-                live_users,
             ));
 
-            info!("Starting Keycloak Worker.");
-            let keycloak_worker = {
-                let app_state = app_state.clone();
-                spawn(async move {
-                    let mut interval = time::interval(Duration::from_secs(320));
-                    loop {
-                        interval.tick().await;
-                        if let Err(e) = app_state.update().await {
-                            error!("Could not update state {:?}", e)
-                        }
-                    };
-                })
-            };
-
-
-            info!("Starting Server...");
+            info!("Starting Server.");
             HttpServer::new(move || {
                 App::new()
                     .app_data(app_state.clone())
@@ -114,9 +80,12 @@ async fn main() -> Result<(), InternalError> {
             }).bind(settings.bind).map_err(InternalError::IOError)?
                 .run().map_err(InternalError::IOError).await?;
 
-            info!("Stopping update worker");
-            keycloak_worker.abort();
-            debug!("Update worker stopped with {:?}", keycloak_worker.await);
+            if let Some(handle) = worker {
+                info!("Stopping update worker");
+                handle.abort();
+                debug!("Update worker stopped with {:?}", handle.await);
+            }
+
             info!("Bye!");
             Ok(())
         }

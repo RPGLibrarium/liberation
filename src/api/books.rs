@@ -2,8 +2,8 @@ use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::auth::Authentication;
-use crate::auth::roles::{BOOKS_CREATE, BOOKS_DELETE, BOOKS_EDIT, BOOKS_READ};
+use crate::authentication::Authentication;
+use crate::authentication::roles::{BOOKS_CREATE, BOOKS_DELETE, BOOKS_EDIT, BOOKS_READ};
 use crate::models::NewBook;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {

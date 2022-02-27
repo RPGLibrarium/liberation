@@ -1,10 +1,10 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
-use crate::auth::Authentication;
+use crate::authentication::Authentication;
 use crate::models::NewTitle;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::auth::roles::*;
+use crate::authentication::roles::*;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
     authentication.requires_nothing()?;

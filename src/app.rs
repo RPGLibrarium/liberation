@@ -1,6 +1,6 @@
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
-use crate::auth::Authenticator;
+use crate::authentication::Authenticator;
 use crate::error::{InternalError, UserFacingError};
 use crate::user::LiveUsers;
 
@@ -9,31 +9,17 @@ type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 pub struct AppState {
     pub database: DbPool,
     pub authenticator: Authenticator,
-    pub live_users: LiveUsers,
+    // pub live_users: LiveUsers,
 }
 
 impl AppState {
-    pub fn new(database: DbPool, authenticator: Authenticator, live_users: LiveUsers) -> Self {
+    pub fn new(database: DbPool, authenticator: Authenticator /*, live_users: LiveUsers*/) -> Self {
         AppState {
             database,
             authenticator,
-            live_users,
+            // live_users,
         }
     }
-
-    pub async fn update(&self) -> Result<(), InternalError> {
-        self.authenticator.update().await?;
-        let _all_users = self.live_users.update().await?;
-        Ok(())
-
-        // let conn = self.database.get()
-        //     .map_err(|e| InternalError::DatabasePoolingError(e))?;
-        // Self::insert_ignore_members(
-        //     &conn,
-        //     all_users,
-        // )
-    }
-
 
     // fn insert_ignore_members(conn: &MysqlConnection, all_users: Vec<User>) -> Result<(), InternalError> {
     //     use crate::schema::accounts::dsl::*;

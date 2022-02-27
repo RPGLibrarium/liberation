@@ -2,7 +2,7 @@ use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::auth::Authentication;
+use crate::authentication::Authentication;
 use crate::error::UserFacingError;
 use crate::models::{NewAccount, NewAccountPost};
 
@@ -60,7 +60,7 @@ pub mod collection {
     use crate::actions::{delete_book_owned_by_member, find_book_owned_by_member};
     use crate::api::MyResponder;
     use crate::app::AppState;
-    use crate::auth::Authentication;
+    use crate::authentication::Authentication;
     use crate::models::{PostOwnedBook};
 
     pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {

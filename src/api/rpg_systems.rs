@@ -1,8 +1,8 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::app::AppState;
-use crate::auth::Authentication;
-use crate::auth::roles::*;
+use crate::authentication::Authentication;
+use crate::authentication::roles::*;
 use crate::models::NewRpgSystem;
 use crate::api::MyResponder;
 

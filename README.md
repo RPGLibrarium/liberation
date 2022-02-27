@@ -1,9 +1,14 @@
 # Liberation Backend
 
 ## Development setup
+Dependencies (Ubuntu):
+- gcc
+- libssl-dev
+- libmysqlclient-dev
+
 1. Install mariadb container
 ```shell
-podman run -dt -p 127.0.0.1:3306:3306  --name liberation-dev-db  --env MARIADB_USER=liberation --env MARIADB_PASSWORD=liberation --env MARIADB_ROOT_PASSWORD=root --env MARIADB_DATABASE=liberation docker.io/mariadb:lates
+podman run -dt -p 127.0.0.1:3306:3306  --name liberation-dev-db  --env MARIADB_USER=liberation --env MARIADB_PASSWORD=liberation --env MARIADB_ROOT_PASSWORD=root --env MARIADB_DATABASE=liberation docker.io/mariadb:latest
 ```
 Or start container
 ```shell
