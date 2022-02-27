@@ -4,7 +4,7 @@ curl -X GET localhost:8080/api/v1/titles
 
 # Members
 ## Account management
-curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me -d '{"username": "maxmusterman"}'
+curl -H "Authorization: Bearer $TOKEN" -X POST localhost:8080/api/v1/me
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me 
 ## This requires manual deletion from the database, as of now, or reactivation by an aristocrat.
 curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/me 
@@ -17,9 +17,16 @@ curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/users/1
 
 ## Collection Management
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/collection
-curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me/books -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
+curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me/collection -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/collection/1
 curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/me/collection/1
+
+# Librarian
+## Collection Management
+curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/guilds/1/collection
+curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/guilds/1/collection -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
+curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/guilds/1/collection/1
+curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/guilds/1/collection/1
 
 # Aristocrats
 ## Account management
