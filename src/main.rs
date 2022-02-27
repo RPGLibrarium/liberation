@@ -8,8 +8,8 @@ extern crate diesel;
 use actix_web::web::Data;
 use clap::{App, AppSettings};
 use futures::TryFutureExt;
-use log::{debug, error, info, warn};
-use authentication::Authenticator;
+use log::{debug, info};
+use authentication::Authentication;
 use error::InternalError;
 use crate::settings::{AuthenticationSettings, Settings};
 
@@ -18,7 +18,6 @@ mod models;
 mod error;
 mod authentication;
 mod actions;
-mod user;
 mod keycloak;
 mod api;
 mod settings;
@@ -58,9 +57,9 @@ async fn main() -> Result<(), InternalError> {
             debug!("Creating authenticator.");
             let (authenticator, worker) = match settings.authentication {
                 AuthenticationSettings::Static { public_key } =>
-                    (Authenticator::with_static_key(public_key), None),
+                    (Authentication::with_static_key(public_key), None),
                 AuthenticationSettings::Keycloak { url, realm, renew_interval_s } => {
-                    Authenticator::with_rotating_keys(url, realm, renew_interval_s).await
+                    Authentication::with_rotating_keys(url, realm, renew_interval_s).await
                 }
             };
 

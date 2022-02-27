@@ -17,6 +17,8 @@ pub enum UserFacingError {
     BadToken(String),
     #[error("element was not found")]
     NotFound,
+    #[error("deactivated")]
+    Deactivated,
     #[error("element already exists")]
     AlreadyExists,
     #[error("invalid foreign key")]
@@ -71,6 +73,7 @@ impl ResponseError for UserFacingError {
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
             UE::BadToken(_) => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
+            UE::Deactivated => StatusCode::NOT_FOUND,
             UE::AlreadyExists => StatusCode::CONFLICT,
             UE::InvalidForeignKey => StatusCode::BAD_REQUEST,
             UE::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

@@ -1,19 +1,18 @@
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, PooledConnection};
-use crate::authentication::Authenticator;
+use crate::authentication::Authentication;
 use crate::error::{InternalError, UserFacingError};
-use crate::user::LiveUsers;
 
 type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 
 pub struct AppState {
     pub database: DbPool,
-    pub authenticator: Authenticator,
+    pub authenticator: Authentication,
     // pub live_users: LiveUsers,
 }
 
 impl AppState {
-    pub fn new(database: DbPool, authenticator: Authenticator /*, live_users: LiveUsers*/) -> Self {
+    pub fn new(database: DbPool, authenticator: Authentication /*, live_users: LiveUsers*/) -> Self {
         AppState {
             database,
             authenticator,

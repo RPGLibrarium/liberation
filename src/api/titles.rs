@@ -1,12 +1,12 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
-use crate::authentication::Authentication;
+use crate::authentication::Claims;
 use crate::models::NewTitle;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::authentication::roles::*;
+use crate::authentication::scopes::*;
 
-pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
+pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
     let titles = actions::list_titles(&conn)?;
@@ -15,10 +15,10 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -
 
 pub async fn post(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     new_title: web::Json<NewTitle>,
 ) -> MyResponder {
-    authentication.requires_role(TITLES_CREATE)?;
+    authentication.require_scope(TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_title(&conn, new_title.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -26,7 +26,7 @@ pub async fn post(
 
 pub async fn get_one(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     search_id: web::Path<i32>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
@@ -37,13 +37,23 @@ pub async fn get_one(
 
 pub async fn put(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     write_to_id: web::Path<i32>,
     new_info: web::Json<NewTitle>,
 ) -> MyResponder {
-    authentication.requires_role(TITLES_EDIT)?;
+    authentication.require_scope(TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_title(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
 }
 
+pub async fn delete(
+    app: web::Data<AppState>,
+    authentication: Claims,
+    delete_id: web::Path<i32>,
+) -> MyResponder {
+    authentication.require_scope(TITLES_MODIFY)?;
+    let conn = app.open_database_connection()?;
+    actions::delete_title(&conn, *delete_id)?;
+    Ok(HttpResponse::Ok().finish())
+}

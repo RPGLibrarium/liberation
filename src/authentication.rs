@@ -1,9 +1,9 @@
 use std::sync::Arc;
 use jsonwebtoken::DecodingKey;
-use log::{debug, error, info, Metadata, warn};
+use log::{debug, error, info, warn};
 use actix_web::{FromRequest, HttpRequest};
 use actix_web::dev::Payload;
-use actix_web::web::Data;
+use actix_web::web::{Data};
 use futures::future::{LocalBoxFuture};
 use futures::FutureExt;
 use jsonwebtoken::{Algorithm, decode, Validation};
@@ -11,13 +11,13 @@ use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use crate::app::AppState;
-use crate::Authenticator::Keycloak;
+use crate::Authentication::Keycloak;
 use crate::error::UserFacingError as UE;
 use crate::error::InternalError as IE;
 use crate::InternalError;
 use crate::keycloak::RealmMetadata;
 
-pub enum Authenticator {
+pub enum Authentication {
     Keycloak {
         keycloak_url: String,
         realm: String,
@@ -26,7 +26,7 @@ pub enum Authenticator {
     Static { public_key: DecodingKey },
 }
 
-impl Authenticator {
+impl Authentication {
     /// Creates a new authenticator which updates the key from keycloak periodically. Use the
     /// JoinHandle to stop the key updates.
     pub async fn with_rotating_keys(keycloak_url: String, realm: String, renewal_interval_s: u64) -> (Self, Option<JoinHandle<()>>) {
@@ -77,54 +77,61 @@ impl Authenticator {
     pub fn with_static_key(static_key: String) -> Self {
         let static_key = DecodingKey::from_rsa_pem(static_key.as_bytes())
             .expect("The static key is not a valid pem key.");
-        Authenticator::Static { public_key: static_key }
+        Authentication::Static { public_key: static_key }
     }
 
-    pub async fn verify_token(&self, token: &str) -> Result<Authentication, UE> {
+    pub async fn verify_token(&self, token: &str) -> Result<Claims, UE> {
         let key = match &self {
-            Authenticator::Keycloak { public_key, .. } => (*public_key.lock().await).clone(),
-            Authenticator::Static { public_key, .. } => public_key.clone(),
+            Authentication::Keycloak { public_key, .. } => (*public_key.lock().await).clone(),
+            Authentication::Static { public_key, .. } => public_key.clone(),
         };
 
         // TODO: require correct audience, subject, and issuer.
         // the jwt library checks exp and
-        let validated = decode::<Claims>(&token, &key, &Validation::new(Algorithm::RS256))
+        let validated = decode::<JwtClaims>(&token, &key, &Validation::new(Algorithm::RS256))
             .map_err(|e| {
                 UE::BadToken(format!("validation failed for token '{}' with error {}", token, e))
             })?;
 
-        Ok(Authentication::from(validated.claims))
+        Ok(Claims::from(validated.claims))
     }
 }
 
 type ExternalAccountId = String;
-type ExternalGuildId = String;
 
-pub mod roles {
-    pub const ACCOUNTS_READ: &'static str = "liberation:accounts:read";
-    pub const ACCOUNTS_EDIT: &'static str = "liberation:accounts:edit";
-    pub const ACCOUNTS_DELETE: &'static str = "liberation:accounts:delete";
-    pub const LIBRARIAN_ROLE_PREFIX: &'static str = "liberation:librarian:";
-    pub const MEMBER_ROLE: &'static str = "liberation:member";
-    pub const RPGSYSTEMS_EDIT: &'static str = "liberation:rpgsystems:edit";
-    pub const RPGSYSTEMS_CREATE: &'static str = "liberation:rpgsystems:create";
-    // pub const RPGSYSTEMS_DELETE: &'static str = "liberation:rpgsystems:delete";
-    pub const TITLES_EDIT: &'static str = "liberation:titles:edit";
-    pub const TITLES_CREATE: &'static str = "liberation:titles:create";
-    // pub const TITLES_DELETE: &'static str = "liberation:titles:delete";
-    pub const USERS_READ: &'static str = "liberation:users:read";
-    pub const GUILDS_CREATE: &'static str = "liberation:guilds:create";
-    pub const GUILDS_READ: &'static str = "liberation:guilds:read";
-    pub const GUILDS_EDIT: &'static str = "liberation:guilds:edit";
-    pub const BOOKS_CREATE: &'static str = "liberation:books:create";
-    pub const BOOKS_READ: &'static str = "liberation:books:read";
-    pub const BOOKS_EDIT: &'static str = "liberation:books:edit";
-    pub const BOOKS_DELETE: &'static str = "liberation:books:edit";
+pub mod scopes {
+    // Global scopes
+    pub const USERS_READ: &'static str = "users:read";
+    pub const GUILDS_READ: &'static str = "guilds:read";
+
+    // Personal scopes
+    pub const ACCOUNT_READ: &'static str = "account:read";
+    pub const ACCOUNT_REGISTER: &'static str = "account:register";
+    //pub const ACCOUNT_DELETE: &'static str = "account:delete";
+
+    pub const COLLECTION_READ: &'static str = "collection:read";
+    pub const COLLECTION_MODIFY: &'static str = "collection:modify";
+
+    // pub const INVENTORY_READ: &'static str = "inventory:read";
+    // pub const INVENTORY_MODIFY: &'static str = "inventory:modify";
+
+    // Librarian specific scopes
+    pub const LIBRARIAN_COLLECTION_MODIFY: &'static str = "librarian:collection:modify";
+    // pub const LIBRARIAN_INVENTORY_MODIFY: &'static str = "librarian:inventory:modify";
+    pub const RPGSYSTEMS_MODIFY: &'static str = "rpgsystems:modify";
+    pub const TITLES_MODIFY: &'static str = "titles:modify";
+
+    // Privileged scopes
+    pub const ARISTOCRAT_ACCOUNTS_READ: &'static str = "aristocrat:accounts:read";
+    pub const ARISTOCRAT_ACCOUNTS_MODIFY: &'static str = "aristocrat:accounts:modify";
+    pub const ARISTOCRAT_BOOKS_READ: &'static str = "aristocrat:books:read";
+    pub const ARISTOCRAT_BOOKS_MODIFY: &'static str = "aristocrat:books:modify";
+    pub const ARISTOCRAT_GUILDS_MODIFY: &'static str = "aristocrat:guilds:modify";
 }
 
-/// Content of a JWT.
+/// Content of a JWT used by the library to deserialize the content.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct Claims {
+struct JwtClaims {
     /// Audience
     // pub aud: String,
     /// Expires at (UTC timestamp)
@@ -137,107 +144,95 @@ struct Claims {
     nbf: Option<usize>,
     /// Subject (the userid from keycloak)
     pub sub: ExternalAccountId,
-    // Keycloak specific properties
-    /// Roles (added manually in keycloak)
-    pub realm_access: RealmAccess,
-    pub name: String,
+    /// space separated list of scopes
+    pub scope: String,
+
+    // the following properties are only added when the account:register scope is requested.
+    pub name: Option<String>,
+    pub given_name: Option<String>,
+    pub family_name: Option<String>,
+    pub email: Option<String>,
+}
+
+/// Represents a valid authentication.
+#[derive(Debug)]
+pub enum Claims {
+    Authorized {
+        scopes: Vec<String>,
+        external_account_id: ExternalAccountId,
+        account_info: Option<AccountInfo>,
+    },
+    Anonymous,
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountInfo {
+    pub full_name: String,
     pub given_name: String,
     pub family_name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct RealmAccess {
-    pub roles: Vec<String>,
-}
-
-/// Represents a valid authentication.
-#[derive(Debug)]
-pub enum Authentication {
-    Authorized {
-        roles: Vec<String>,
-        external_account_id: ExternalAccountId,
-        full_name: String,
-        given_name: String,
-        family_name: String,
-        email: String,
-    },
-    Anonymous,
-}
-
-impl Authentication {
-    /// Returns an error, when a role is not fulfilled.
-    pub fn requires_role(&self, required_role: &str) -> Result<(), UE> {
+impl Claims {
+    /// Returns an error when a scope is not available
+    pub fn require_scope(&self, required_scope: &str) -> Result<(), UE> {
         match self {
-            Authentication::Authorized { roles, .. }
-            if roles.into_iter().any(|role| role == required_role) => Ok(()),
-            Authentication::Authorized { roles, .. } => {
-                warn!("Authentication failed! Role '{}' was required, but only '{:?}' were given.", required_role, roles);
+            Claims::Authorized { scopes, .. }
+            if scopes.into_iter().any(|scope| scope == required_scope) => Ok(()),
+            Claims::Authorized { scopes, .. } => {
+                warn!("Authentication failed! Role '{}' was required, but only '{:?}' were given.", required_scope, scopes);
                 Err(UE::YouShallNotPass)
             }
-            Authentication::Anonymous => Err(UE::AuthenticationRequired)
+            Claims::Anonymous => Err(UE::AuthenticationRequired)
         }
     }
 
-    /// Finds roles prefixed with a given prefix and returns their suffixes. Drops all roles
-    /// which don't match the prefix.
-    /// Returns an error, if prefixed role is found.
-    pub fn requires_prefixed_role(&self, prefix: &str) -> Result<Vec<String>, UE> {
+    /// Asserts that authentication was successful and returns the subject.
+    pub fn external_account_id(&self) -> Result<ExternalAccountId, UE> {
         match self {
-            Authentication::Authorized { roles, .. } => {
-                let suffixes: Vec<String> = roles.into_iter()
-                    .filter_map(|role| role.strip_prefix(&prefix))
-                    .map(str::to_string)
-                    .collect();
-                if suffixes.is_empty() {
-                    warn!("Authentication failed! Role prefixed by '{}' was required, but only '{:?}' were given.", prefix, roles);
-                    Err(UE::YouShallNotPass)
-                } else { Ok(suffixes) }
+            Claims::Authorized { external_account_id, .. } => Ok(external_account_id.to_string()),
+            _ => {
+                warn!("Authentication failed! No token was provided.");
+                Err(UE::YouShallNotPass)
             }
-            Authentication::Anonymous => Err(UE::AuthenticationRequired)
         }
     }
 
-    /// Utility function to require librarian privileges for any guild.
-    pub fn requires_any_librarian(&self) -> Result<Vec<ExternalAccountId>, UE> {
-        self.requires_prefixed_role(roles::LIBRARIAN_ROLE_PREFIX)
-    }
-
-    /// Utility function to require librarian privileges for a certain guild.
-    pub fn requires_librarian(&self, required_guild_id: &ExternalGuildId) -> Result<(), UE> {
-        if self.requires_any_librarian()?.contains(required_guild_id) {
-            Ok(())
-        } else { Err(UE::YouShallNotPass) }
-    }
-
-    /// Utility function to require member privileges for any member account.
-    pub fn requires_any_member(&self) -> Result<ExternalAccountId, UE> {
-        self.requires_role(roles::MEMBER_ROLE)?;
+    /// Returns the account information that are provided with the account:register scope.
+    pub fn account_info(&self) -> Result<AccountInfo, UE> {
         match self {
-            Authentication::Authorized { external_account_id, .. } => Ok(external_account_id.clone()),
-            Authentication::Anonymous => Err(UE::AuthenticationRequired)
+            Claims::Authorized { account_info: Some(info), .. } => Ok(info.clone()),
+            _ => {
+                warn!("Authentication failed! No account info was provided.");
+                Err(UE::YouShallNotPass)
+            }
         }
     }
 
+    /// Special case that always succeeds.
     pub fn requires_nothing(&self) -> Result<(), UE> { Ok(()) }
 }
 
-impl From<Claims> for Authentication {
-    fn from(claims: Claims) -> Self {
-        Authentication::Authorized {
-            roles: claims.realm_access.roles,
+impl From<JwtClaims> for Claims {
+    fn from(claims: JwtClaims) -> Self {
+        Claims::Authorized {
+            scopes: claims.scope.split(" ").map(String::from).collect(),
             external_account_id: claims.sub,
-            full_name: claims.name,
-            given_name: claims.given_name,
-            family_name: claims.family_name,
-            email: claims.email,
+            account_info: if let (Some(full_name), Some(given_name), Some(family_name), Some(email)) = (claims.name, claims.given_name, claims.family_name, claims.email) {
+                Some(AccountInfo {
+                    full_name,
+                    given_name,
+                    family_name,
+                    email,
+                })
+            } else { None },
         }
     }
 }
 
-impl FromRequest for Authentication {
+impl FromRequest for Claims {
     type Error = UE;
-    type Future = LocalBoxFuture<'static, Result<Authentication, UE>>;
+    type Future = LocalBoxFuture<'static, Result<Claims, UE>>;
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         let req = req.clone();
@@ -261,7 +256,7 @@ impl FromRequest for Authentication {
                     .authenticator;
 
                 authenticator.verify_token(&unvalidated).await
-            } else { Ok(Authentication::Anonymous) }
+            } else { Ok(Claims::Anonymous) }
         }.boxed_local()
     }
 }

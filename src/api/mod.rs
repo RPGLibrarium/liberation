@@ -18,8 +18,8 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
             .service(web::resource("")
                 .route(web::get().to(me::get))
                 .route(web::post().to(me::post))
-                // .route(web::patch().to(me::patch))
-                .route(web::delete().to(me::delete))
+                .route(web::patch().to(me::patch))
+                // .route(web::delete().to(me::delete))
             )
             .service(web::scope("/collection")
                 .service(web::resource("")
@@ -91,8 +91,7 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                 .service(web::resource("")
                     .route(web::get().to(rpg_systems::get_one))
                     .route(web::put().to(rpg_systems::put))
-                 // TODO: deletes would be nice, but seem complex
-                 // .route(web::delete().to(delete_rpg_system)),
+                    .route(web::delete().to(rpg_systems::delete)),
                 )
              // TODO: could be useful
              // .service(
@@ -109,8 +108,7 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
             .service(web::resource("/{titleid}")
                 .route(web::get().to(titles::get_one))
                 .route(web::put().to(titles::put))
-             // TODO: deletes would be nice, but seem complex
-             // .route(web::delete().to(titles::delete)),
+                .route(web::delete().to(titles::delete)),
             ),
         )
         .service(web::scope("/books")

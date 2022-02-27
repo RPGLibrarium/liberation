@@ -1,17 +1,17 @@
 use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::app::AppState;
-use crate::authentication::Authentication;
-use crate::authentication::roles::*;
+use crate::authentication::Claims;
 use crate::models::NewRpgSystem;
 use crate::api::MyResponder;
+use crate::authentication::scopes::RPGSYSTEMS_MODIFY;
 
 // Don't ask to many questions about the arguments. With typing magic actix allows us to get the
 // state or arguments from the request. We can use up to 12 arguments to get data auto-
 // magically out of the request.
 // https://github.com/actix/actix-web/blob/2a12b41456f40b28c1efe0ec6947e8f50ba22006/src/handler.rs
 // https://actix.rs/docs/extractors/
-pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -> MyResponder {
+pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
     let rpg_systems = actions::list_rpg_systems(&conn)?;
@@ -20,10 +20,10 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Authentication) -
 
 pub async fn post(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     new_rpg_system: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.requires_role(RPGSYSTEMS_CREATE)?;
+    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_rpg_system(&conn, new_rpg_system.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -31,7 +31,7 @@ pub async fn post(
 
 pub async fn get_one(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     search_id: web::Path<i32>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
@@ -42,12 +42,23 @@ pub async fn get_one(
 
 pub async fn put(
     app: web::Data<AppState>,
-    authentication: Authentication,
+    authentication: Claims,
     write_to_id: web::Path<i32>,
     new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.requires_role(RPGSYSTEMS_EDIT)?;
+    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_rpg_system(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
+}
+
+pub async fn delete(
+    app: web::Data<AppState>,
+    authentication: Claims,
+    delete_id: web::Path<i32>,
+) -> MyResponder {
+    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
+    let conn = app.open_database_connection()?;
+    actions::delete_rpgsystem(&conn, *delete_id)?;
+    Ok(HttpResponse::Ok().finish())
 }

@@ -33,6 +33,14 @@ table! {
 }
 
 table! {
+    librarians (permission_id) {
+        permission_id -> Integer,
+        guild_id -> Integer,
+        account_id -> Integer,
+    }
+}
+
+table! {
     rpg_systems (rpg_system_id) {
         rpg_system_id -> Integer,
         name -> Varchar,
@@ -56,12 +64,15 @@ joinable!(books -> accounts (owner_member_by_id));
 joinable!(books -> guilds (owner_guild_by_id));
 joinable!(books -> titles (title_by_id));
 joinable!(guilds -> accounts (contact_by_account_id));
+joinable!(librarians -> accounts (account_id));
+joinable!(librarians -> guilds (guild_id));
 joinable!(titles -> rpg_systems (rpg_system_by_id));
 
 allow_tables_to_appear_in_same_query!(
     accounts,
     books,
     guilds,
+    librarians,
     rpg_systems,
     titles,
 );

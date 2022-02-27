@@ -6,6 +6,7 @@ use super::schema::titles;
 use super::schema::accounts;
 use super::schema::guilds;
 use super::schema::books;
+use super::schema::librarians;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -89,7 +90,6 @@ impl From<Account> for User {
 pub struct NewAccount {
     pub active: bool,
     pub external_id: String,
-    pub username: String,
     pub full_name: String,
     pub given_name: String,
     pub family_name: String,
@@ -97,19 +97,9 @@ pub struct NewAccount {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct NewAccountPost {
-    pub username: String,
+pub struct AccountActive {
+    pub is_active: bool,
 }
-
-// TODO: Unsure which info should be modifiable
-// #[derive(Insertable, Deserialize, Clone)]
-// #[table_name = "accounts"]
-// pub struct UpdateAccount{
-//     pub username: String,
-//     pub given_name: String,
-//     pub family_name: String,
-//     pub email: String,
-// }
 
 #[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug)]
 #[table_name = "guilds"]
@@ -276,3 +266,18 @@ impl AsChangeset for NewBook {
         ).as_changeset()
     }
 }
+
+#[derive(Insertable, Deserialize, Clone)]
+#[table_name = "librarians"]
+pub struct NewLibrarian {
+    account_id: i32,
+    guild_id: i32
+}
+
+#[derive(Queryable, Clone)]
+pub struct Librarian{
+    _permission_id: i32,
+    pub account_id: i32,
+    pub guild_id: i32
+}
+
