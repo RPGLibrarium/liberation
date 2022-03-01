@@ -6,7 +6,7 @@ extern crate clap;
 extern crate diesel;
 
 use actix_web::web::Data;
-use clap::{App, AppSettings};
+use clap::Command;
 use futures::TryFutureExt;
 use log::{debug, info};
 use authentication::Authentication;
@@ -27,13 +27,12 @@ mod app;
 async fn main() -> Result<(), InternalError> {
     env_logger::init();
 
-    let matches = app_from_crate!()
-        .global_setting(AppSettings::PropagateVersion)
-        .global_setting(AppSettings::UseLongFormatForHelpSubcommand)
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+    let matches = command!()
+        .propagate_version(true)
+        .subcommand_required(true)
         .arg(arg!(-c --config <CONFIG> "Define the config file"))
-        .subcommand(App::new("serve").about("start the liberation service"))
-        .subcommand(App::new("test").about("run whatever was programed"))
+        .subcommand(Command::new("serve").about("start the liberation service"))
+        .subcommand(Command::new("test").about("run whatever was programed"))
         .get_matches();
 
     let settings = Settings::with_file(matches.value_of_t_or_exit("config"))?;
