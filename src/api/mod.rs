@@ -18,7 +18,7 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
             .service(web::resource("")
                 .route(web::get().to(me::get))
                 .route(web::post().to(me::post))
-                .route(web::patch().to(me::patch))
+                .route(web::put().to(me::put))
                 // .route(web::delete().to(me::delete))
             )
             .service(web::scope("/collection")
@@ -43,9 +43,7 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
             // )
         )
         .service(web::scope("/accounts")
-            .service(web::resource("")
-                .route(web::get().to(accounts::get_all))
-            )
+            .service(web::resource("").route(web::get().to(accounts::get_all)))
             .service(web::resource("/{id}")
                 .route(web::get().to(accounts::get_one))
                 .route(web::put().to(accounts::put))
@@ -53,12 +51,8 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
             )
         )
         .service(web::scope("/user")
-            .service(web::resource("")
-                .route(web::get().to(users::get_all))
-            )
-            .service(web::resource("/{id}")
-                .route(web::get().to(users::get_one))
-            )
+            .service(web::resource("").route(web::get().to(users::get_all)))
+            .service(web::resource("/{id}").route(web::get().to(users::get_one)))
         )
         .service(web::scope("/guilds")
             .service(web::resource("")
@@ -125,7 +119,5 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
     );
 }
 // @formatter:on
-
-
 
 

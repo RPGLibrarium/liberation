@@ -4,7 +4,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::Claims;
 use crate::authentication::scopes::{ARISTOCRAT_GUILDS_MODIFY, GUILDS_READ};
-use crate::models::NewGuild;
+use crate::models::{Id, NewGuild};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(GUILDS_READ)?;
@@ -27,7 +27,7 @@ pub async fn post(
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
-    search_id: web::Path<i32>,
+    search_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.require_scope(GUILDS_READ)?;
     let conn = app.open_database_connection()?;
@@ -38,7 +38,7 @@ pub async fn get_one(
 pub async fn put(
     app: web::Data<AppState>,
     authentication: Claims,
-    write_to_id: web::Path<i32>,
+    write_to_id: web::Path<Id>,
     new_info: web::Json<NewGuild>,
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_GUILDS_MODIFY)?;
@@ -50,19 +50,23 @@ pub async fn put(
 pub mod collection {
     use actix_web::{HttpResponse, web};
     use crate::actions;
-    use crate::actions::{assert_librarian_for_guild, find_account_by_external_id, find_guild};
+    use crate::actions::{assert_librarian_for_guild, find_current_registered_account, find_guild};
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::authentication::Claims;
-    use crate::authentication::scopes::{GUILDS_READ, LIBRARIAN_COLLECTION_MODIFY};
-    use crate::models::PostOwnedBook;
+    use crate::authentication::scopes::{GUILDS_READ, GUILDS_COLLECTION_MODIFY};
+    use crate::models::{Id, PostOwnedBook};
 
-    pub async fn get_all(app: web::Data<AppState>, authentication: Claims, guild_id: web::Path<i32>) -> MyResponder {
+    pub async fn get_all(
+        app: web::Data<AppState>,
+        authentication: Claims,
+        guild_id: web::Path<Id>,
+    ) -> MyResponder {
         authentication.require_scope(GUILDS_READ)?;
         let conn = app.open_database_connection()?;
         // Using the guild id directly would work as well, but this way we can distinguish what
         // doesn't exist and we are more consistent with the other endpoints.
-        let guild= actions::find_guild(&conn, *guild_id)?;
+        let guild = actions::find_guild(&conn, *guild_id)?;
         let books = actions::list_books_owned_by_guild(&conn, &guild)?;
         Ok(HttpResponse::Ok().json(books))
     }
@@ -70,14 +74,15 @@ pub mod collection {
     pub async fn post(
         app: web::Data<AppState>,
         authentication: Claims,
-        guild_id: web::Path<i32>,
+        guild_id: web::Path<Id>,
         posted_book: web::Json<PostOwnedBook>,
     ) -> MyResponder {
-        authentication.require_scope(LIBRARIAN_COLLECTION_MODIFY)?;
+        authentication.require_scope(GUILDS_COLLECTION_MODIFY)?;
         let member_id = authentication.external_account_id()?;
         let conn = app.open_database_connection()?;
         let guild = find_guild(&conn, *guild_id)?;
-        let account = find_account_by_external_id(&conn, member_id)?;
+        let account = find_current_registered_account(&conn, member_id)?
+            .assert_active()?;
         assert_librarian_for_guild(&conn, &guild, &account)?;
 
         let created_book = actions::create_book_owned_by_guild(&conn, &guild, posted_book.into_inner())?;
@@ -87,7 +92,7 @@ pub mod collection {
     pub async fn get_one(
         app: web::Data<AppState>,
         authentication: Claims,
-        search_ids: web::Path<(i32, i32)>,
+        search_ids: web::Path<(Id, Id)>,
     ) -> MyResponder {
         let (guild_id, search_id) = *search_ids;
 
@@ -102,14 +107,15 @@ pub mod collection {
     pub async fn delete(
         app: web::Data<AppState>,
         authentication: Claims,
-        ids: web::Path<(i32, i32)>,
+        ids: web::Path<(Id, Id)>,
     ) -> MyResponder {
         let (guild_id, delete_id) = *ids;
-        authentication.require_scope(LIBRARIAN_COLLECTION_MODIFY)?;
+        authentication.require_scope(GUILDS_COLLECTION_MODIFY)?;
         let member_id = authentication.external_account_id()?;
         let conn = app.open_database_connection()?;
         let guild = find_guild(&conn, guild_id)?;
-        let account = find_account_by_external_id(&conn, member_id)?;
+        let account = find_current_registered_account(&conn, member_id)?
+            .assert_active()?;
         assert_librarian_for_guild(&conn, &guild, &account)?;
 
         actions::delete_book_owned_by_guild(&conn, &guild, delete_id)?;

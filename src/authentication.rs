@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use jsonwebtoken::DecodingKey;
 use log::{debug, error, info, warn};
@@ -118,8 +119,8 @@ pub mod scopes {
     // pub const INVENTORY_MODIFY: &'static str = "inventory:modify";
 
     // Librarian specific scopes
-    pub const LIBRARIAN_COLLECTION_MODIFY: &'static str = "guild:collection:modify";
-    // pub const LIBRARIAN_INVENTORY_MODIFY: &'static str = "guild:inventory:modify";
+    pub const GUILDS_COLLECTION_MODIFY: &'static str = "guilds:collection:modify";
+    // pub const GUILDS_INVENTORY_MODIFY: &'static str = "guilds:inventory:modify";
     pub const LIBRARIAN_RPGSYSTEMS_MODIFY: &'static str = "librarian:rpgsystems:modify";
     pub const LIBRARIAN_TITLES_MODIFY: &'static str = "librarian:titles:modify";
 
@@ -160,7 +161,7 @@ struct JwtClaims {
 #[derive(Debug)]
 pub enum Claims {
     Authorized {
-        scopes: Vec<String>,
+        scopes: HashSet<String>,
         external_account_id: ExternalAccountId,
         account_info: Option<AccountInfo>,
     },
@@ -179,8 +180,7 @@ impl Claims {
     /// Returns an error when a scope is not available
     pub fn require_scope(&self, required_scope: &str) -> Result<(), UE> {
         match self {
-            Claims::Authorized { scopes, .. }
-            if scopes.into_iter().any(|scope| scope == required_scope) => Ok(()),
+            Claims::Authorized { scopes, .. } if scopes.contains(required_scope) => Ok(()),
             Claims::Authorized { scopes, .. } => {
                 warn!("Authentication failed! Role '{}' was required, but only '{:?}' were given.", required_scope, scopes);
                 Err(UE::YouShallNotPass)
@@ -193,10 +193,7 @@ impl Claims {
     pub fn external_account_id(&self) -> Result<ExternalAccountId, UE> {
         match self {
             Claims::Authorized { external_account_id, .. } => Ok(external_account_id.to_string()),
-            _ => {
-                warn!("Authentication failed! No token was provided.");
-                Err(UE::YouShallNotPass)
-            }
+            Claims::Anonymous => Err(UE::AuthenticationRequired)
         }
     }
 
@@ -204,14 +201,17 @@ impl Claims {
     pub fn account_info(&self) -> Result<AccountInfo, UE> {
         match self {
             Claims::Authorized { account_info: Some(info), .. } => Ok(info.clone()),
+            Claims::Anonymous => Err(UE::AuthenticationRequired),
             _ => {
-                warn!("Authentication failed! No account info was provided.");
+                warn!("No account info was provided.");
                 Err(UE::YouShallNotPass)
             }
         }
     }
 
     /// Special case that always succeeds.
+    /// Good style to avoid confusion ("did the programmer really want no check‽") and reject
+    /// malformed tokens even though none might be required.
     pub fn requires_nothing(&self) -> Result<(), UE> { Ok(()) }
 }
 

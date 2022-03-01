@@ -4,7 +4,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::Claims;
 use crate::authentication::scopes::{ARISTOCRAT_BOOKS_MODIFY, ARISTOCRAT_BOOKS_READ};
-use crate::models::NewBook;
+use crate::models::{Id, NewBook};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_READ)?;
@@ -27,18 +27,18 @@ pub async fn post(
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
-    search_id: web::Path<i32>,
+    search_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_READ)?;
     let conn = app.open_database_connection()?;
-    let title = actions::find_book(&conn, *search_id)?;
-    Ok(HttpResponse::Ok().json(title))
+    let book = actions::find_book(&conn, *search_id)?;
+    Ok(HttpResponse::Ok().json(book))
 }
 
 pub async fn put(
     app: web::Data<AppState>,
     authentication: Claims,
-    write_to_id: web::Path<i32>,
+    write_to_id: web::Path<Id>,
     new_info: web::Json<NewBook>,
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_MODIFY)?;
@@ -50,7 +50,7 @@ pub async fn put(
 pub async fn delete(
     app: web::Data<AppState>,
     authentication: Claims,
-    delete_id: web::Path<i32>,
+    delete_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_MODIFY)?;
     let conn = app.open_database_connection()?;

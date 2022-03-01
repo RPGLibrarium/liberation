@@ -162,11 +162,20 @@ pub fn update_account(conn: &MysqlConnection, write_to_id: i32, new_info: NewAcc
     find_account(conn, write_to_id)
 }
 
-pub fn find_account_by_external_id(conn: &MysqlConnection, search_external_id: String) -> Result<Account, UE> {
+pub fn find_current_registered_account(
+    conn: &MysqlConnection,
+    search_external_id: String,
+) -> Result<SomeAccount, UE> {
     use crate::schema::accounts::dsl::*;
-    accounts.filter(external_id.eq(search_external_id))
+    accounts.filter(external_id.eq(search_external_id).and(active.eq(true)))
         .first(conn)
-        .map_err(handle_db_errors)
+        .map(|acc| SomeAccount(Some(acc)))
+        .or_else(|e|
+            match e {
+                DE::NotFound => Ok(SomeAccount(None)),
+                _ => Err(handle_db_errors(e)),
+            }
+        )
 }
 
 pub fn deactivate_account(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
@@ -392,9 +401,23 @@ pub fn assert_librarian_for_guild(conn: &MysqlConnection, guild: &Guild, account
             // In this case no finding a result means the permission is missing. We can't use
             // the error handler.
             DE::NotFound => UE::YouShallNotPass,
-            _ => UE::Internal(IE::DatabaseError(e))
+            _ => handle_db_errors(e),
         })?;
     assert_eq!(permission.account_id, account.account_id);
     assert_eq!(permission.guild_id, guild.guild_id);
     Ok(())
 }
+
+// TODO: is this with trait nicer?
+pub struct SomeAccount(Option<Account>);
+impl SomeAccount{
+    pub fn assert_active(self) -> Result<Account, UE>{
+        let account = self.0.ok_or(UserFacingError::YouShallNotPass)?;
+        if !account.active { Err(UserFacingError::Deactivated) } else  { Ok(account) }
+    }
+
+    pub fn assert_exists(self) -> Result<Account, UE>{
+        self.0.ok_or(UserFacingError::NotFound)
+    }
+}
+

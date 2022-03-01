@@ -11,8 +11,10 @@ use tokio::task::JoinError;
 pub enum UserFacingError {
     #[error("authentication required")]
     AuthenticationRequired,
-    #[error("authentication was successful, but you shall not path.")]
+    #[error("authentication was successful, but you shall not pass.")]
     YouShallNotPass,
+    #[error("you are not registered.")]
+    NoRegistered,
     #[error("your token smells bad, go away.")]
     BadToken(String),
     #[error("element was not found")]
@@ -47,7 +49,6 @@ pub enum InternalError {
     KeycloakKeyHasBadFormat(#[from] jsonwebtoken::errors::Error),
     #[error("authenticating with keycloak failed")]
     KeycloakAuthenticationFailed(#[from] Box<dyn std::error::Error>),
-
 }
 
 /// actix uses this trait to decide on status codes.
@@ -71,9 +72,10 @@ impl ResponseError for UserFacingError {
         match *self {
             UE::AuthenticationRequired => StatusCode::UNAUTHORIZED,
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
+            UE::NoRegistered => StatusCode::FORBIDDEN,
             UE::BadToken(_) => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
-            UE::Deactivated => StatusCode::NOT_FOUND,
+            UE::Deactivated => StatusCode::FORBIDDEN,
             UE::AlreadyExists => StatusCode::CONFLICT,
             UE::InvalidForeignKey => StatusCode::BAD_REQUEST,
             UE::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

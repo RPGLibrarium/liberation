@@ -2,9 +2,8 @@ use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::app::AppState;
 use crate::authentication::Claims;
-use crate::models::NewRpgSystem;
+use crate::models::{Id, NewRpgSystem};
 use crate::api::MyResponder;
-use crate::authentication::scopes::RPGSYSTEMS_MODIFY;
 
 // Don't ask to many questions about the arguments. With typing magic actix allows us to get the
 // state or arguments from the request. We can use up to 12 arguments to get data auto-
@@ -32,7 +31,7 @@ pub async fn post(
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
-    search_id: web::Path<i32>,
+    search_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
@@ -43,7 +42,7 @@ pub async fn get_one(
 pub async fn put(
     app: web::Data<AppState>,
     authentication: Claims,
-    write_to_id: web::Path<i32>,
+    write_to_id: web::Path<Id>,
     new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
     authentication.require_scope(RPGSYSTEMS_MODIFY)?;
@@ -55,7 +54,7 @@ pub async fn put(
 pub async fn delete(
     app: web::Data<AppState>,
     authentication: Claims,
-    delete_id: web::Path<i32>,
+    delete_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.require_scope(RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;

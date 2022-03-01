@@ -12,7 +12,8 @@ pub async fn get(app: web::Data<AppState>, claims: Claims) -> MyResponder {
     claims.require_scope(ACCOUNT_READ)?;
     let external_id = claims.external_account_id()?;
     let conn = app.open_database_connection()?;
-    let account = actions::find_account_by_external_id(&conn, external_id)?;
+    let account = actions::find_current_registered_account(&conn, external_id)?
+        .assert_exists()?;
     Ok(HttpResponse::Ok().json(account))
 }
 
@@ -38,7 +39,7 @@ pub async fn post(app: web::Data<AppState>, claims: Claims) -> MyResponder {
 
 /// Update an account for the currently authenticated user. Can be used to de-/reactivate an
 /// account.
-pub async fn patch(app: web::Data<AppState>, claims: Claims, body: Json<AccountActive>) -> MyResponder {
+pub async fn put(app: web::Data<AppState>, claims: Claims, body: Json<AccountActive>) -> MyResponder {
     claims.require_scope(ACCOUNT_REGISTER)?;
     let account_info = claims.account_info()?;
     let external_id = claims.external_account_id()?;
@@ -53,9 +54,16 @@ pub async fn patch(app: web::Data<AppState>, claims: Claims, body: Json<AccountA
         email: account_info.email,
     };
 
-    let old_account = actions::find_account_by_external_id(&conn, external_id)?;
-    let account = actions::update_account(&conn, old_account.account_id, updated_account)?;
-    Ok(HttpResponse::Created().json(account))
+    match actions::find_current_registered_account(&conn, external_id)? {
+        Some(old_account) => {
+            let updated = actions::update_account(&conn, old_account.account_id, updated_account)?;
+            Ok(HttpResponse::Ok().json(updated))
+        }
+        None => {
+            let new = actions::create_account(&conn, updated_account)?;
+            Ok(HttpResponse::Created().json(new))
+        }
+    }
 }
 
 // Users can't delete their account, for security reasons. An an aristocrat can though.
@@ -69,14 +77,15 @@ pub mod collection {
     use crate::authentication::Claims;
     use crate::authentication::scopes::{COLLECTION_MODIFY, COLLECTION_READ};
     use crate::error::UserFacingError;
-    use crate::models::{PostOwnedBook};
+    use crate::models::{Id, PostOwnedBook};
 
     /// Displays the collection of the authenticated user.
     pub async fn get_all(app: web::Data<AppState>, claims: Claims) -> MyResponder {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_account_by_external_id(&conn, external_id)?;
+        let account = actions::find_current_registered_account(&conn, external_id)?
+            .ok_or(UserFacingError::YouShallNotPass)?;
         if !account.active { return Err(UserFacingError::Deactivated); }
         let books = actions::list_books_owned_by_member(&conn, account)?;
         Ok(HttpResponse::Ok().json(books))
@@ -90,7 +99,8 @@ pub mod collection {
         claims.require_scope(COLLECTION_MODIFY)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_account_by_external_id(&conn, external_id)?;
+        let account = actions::find_current_registered_account(&conn, external_id)?
+            .ok_or(UserFacingError::YouShallNotPass)?;
         if !account.active { return Err(UserFacingError::Deactivated); }
         let created_book = actions::create_book_owned_by_member(&conn, account, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
@@ -99,12 +109,13 @@ pub mod collection {
     pub async fn get_one(
         app: web::Data<AppState>,
         claims: Claims,
-        search_id: web::Path<i32>,
+        search_id: web::Path<Id>,
     ) -> MyResponder {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_account_by_external_id(&conn, external_id)?;
+        let account = actions::find_current_registered_account(&conn, external_id)?
+            .ok_or(UserFacingError::YouShallNotPass)?;
         if !account.active { return Err(UserFacingError::Deactivated); }
         let book = find_book_owned_by_member(&conn, account, *search_id)?;
         Ok(HttpResponse::Created().json(book))
@@ -113,12 +124,13 @@ pub mod collection {
     pub async fn delete(
         app: web::Data<AppState>,
         claims: Claims,
-        delete_id: web::Path<i32>,
+        delete_id: web::Path<Id>,
     ) -> MyResponder {
         claims.require_scope(COLLECTION_MODIFY)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_account_by_external_id(&conn, external_id)?;
+        let account = actions::find_current_registered_account(&conn, external_id)?
+            .ok_or(UserFacingError::YouShallNotPass)?;
         if !account.active { return Err(UserFacingError::Deactivated); }
         delete_book_owned_by_member(&conn, &account, *delete_id)?;
         Ok(HttpResponse::Ok().finish())

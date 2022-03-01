@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 pub type Year = i16;
+pub type Id = i32;
 
 #[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug, Clone)]
 #[table_name = "rpg_systems"]
@@ -60,7 +61,6 @@ pub struct Account {
     pub account_id: i32,
     pub active: bool,
     pub external_id: String,
-    pub username: String,
     pub full_name: String,
     pub given_name: String,
     pub family_name: String,
