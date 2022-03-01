@@ -103,10 +103,12 @@ pub mod scopes {
     // Global scopes
     pub const USERS_READ: &'static str = "users:read";
     pub const GUILDS_READ: &'static str = "guilds:read";
+    pub const RPGSYSTEMS_ADD: &'static str = "rpgsystems:add";
+    pub const TITLES_ADD: &'static str = "titles:add";
 
     // Personal scopes
     pub const ACCOUNT_READ: &'static str = "account:read";
-    pub const ACCOUNT_REGISTER: &'static str = "account:register";
+    pub const ACCOUNT_REGISTER: &'static str = "account:modify";
     //pub const ACCOUNT_DELETE: &'static str = "account:delete";
 
     pub const COLLECTION_READ: &'static str = "collection:read";
@@ -116,10 +118,10 @@ pub mod scopes {
     // pub const INVENTORY_MODIFY: &'static str = "inventory:modify";
 
     // Librarian specific scopes
-    pub const LIBRARIAN_COLLECTION_MODIFY: &'static str = "librarian:collection:modify";
-    // pub const LIBRARIAN_INVENTORY_MODIFY: &'static str = "librarian:inventory:modify";
-    pub const RPGSYSTEMS_MODIFY: &'static str = "rpgsystems:modify";
-    pub const TITLES_MODIFY: &'static str = "titles:modify";
+    pub const LIBRARIAN_COLLECTION_MODIFY: &'static str = "guild:collection:modify";
+    // pub const LIBRARIAN_INVENTORY_MODIFY: &'static str = "guild:inventory:modify";
+    pub const LIBRARIAN_RPGSYSTEMS_MODIFY: &'static str = "librarian:rpgsystems:modify";
+    pub const LIBRARIAN_TITLES_MODIFY: &'static str = "librarian:titles:modify";
 
     // Privileged scopes
     pub const ARISTOCRAT_ACCOUNTS_READ: &'static str = "aristocrat:accounts:read";

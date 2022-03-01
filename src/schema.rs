@@ -3,7 +3,6 @@ table! {
         account_id -> Integer,
         active -> Bool,
         external_id -> Varchar,
-        username -> Varchar,
         full_name -> Varchar,
         given_name -> Varchar,
         family_name -> Varchar,
