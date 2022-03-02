@@ -98,7 +98,6 @@ pub mod collection {
     ) -> MyResponder {
         let (guild_id, search_id) = *search_ids;
 
-        //TODO: find better roles. s.o.
         authentication.require_scope(GUILDS_READ)?;
         let conn = app.open_database_connection()?;
         let guild = find_guild(&conn, guild_id)?;

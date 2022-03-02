@@ -3,7 +3,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::scopes::*;
 use crate::authentication::Claims;
-use crate::models::NewTitle;
+use crate::models::{Id, NewTitle};
 use actix_web::{web, HttpResponse};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
@@ -27,7 +27,7 @@ pub async fn post(
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
-    search_id: web::Path<i32>,
+    search_id: web::Path<Id>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
@@ -38,10 +38,10 @@ pub async fn get_one(
 pub async fn put(
     app: web::Data<AppState>,
     authentication: Claims,
-    write_to_id: web::Path<i32>,
+    write_to_id: web::Path<Id>,
     new_info: web::Json<NewTitle>,
 ) -> MyResponder {
-    authentication.require_scope(TITLES_ADD)?;
+    authentication.require_scope(LIBRARIAN_TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_title(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
@@ -50,9 +50,9 @@ pub async fn put(
 pub async fn delete(
     app: web::Data<AppState>,
     authentication: Claims,
-    delete_id: web::Path<i32>,
+    delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(TITLES_ADD)?;
+    authentication.require_scope(LIBRARIAN_TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     actions::delete_title(&conn, *delete_id)?;
     Ok(HttpResponse::Ok().finish())

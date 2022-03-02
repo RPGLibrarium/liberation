@@ -3,7 +3,7 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::scopes::USERS_READ;
 use crate::authentication::Claims;
-use crate::models::User;
+use crate::models::{Id, User};
 use actix_web::{web, HttpResponse};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
@@ -17,7 +17,7 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResp
 pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
-    id: web::Path<i32>,
+    id: web::Path<Id>,
 ) -> MyResponder {
     authentication.require_scope(USERS_READ)?;
     let conn = app.open_database_connection()?;

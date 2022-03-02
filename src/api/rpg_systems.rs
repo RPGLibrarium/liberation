@@ -46,7 +46,7 @@ pub async fn put(
     write_to_id: web::Path<Id>,
     new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_ADD)?;
+    authentication.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_rpg_system(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
@@ -57,7 +57,7 @@ pub async fn delete(
     authentication: Claims,
     delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_ADD)?;
+    authentication.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     actions::delete_rpgsystem(&conn, *delete_id)?;
     Ok(HttpResponse::Ok().finish())

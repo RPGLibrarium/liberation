@@ -75,12 +75,11 @@ pub async fn put(
 
 pub mod collection {
     use crate::actions;
-    use crate::actions::{delete_book_owned_by_member, find_book_owned_by_member};
+    use crate::actions::{AccountAssertions, delete_book_owned_by_member, find_book_owned_by_member};
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::authentication::scopes::{COLLECTION_MODIFY, COLLECTION_READ};
     use crate::authentication::Claims;
-    use crate::error::UserFacingError;
     use crate::models::{Id, PostOwnedBook};
     use actix_web::{web, HttpResponse};
 
@@ -90,10 +89,7 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account = actions::find_current_registered_account(&conn, external_id)?
-            .ok_or(UserFacingError::YouShallNotPass)?;
-        if !account.active {
-            return Err(UserFacingError::Deactivated);
-        }
+            .assert_active()?;
         let books = actions::list_books_owned_by_member(&conn, account)?;
         Ok(HttpResponse::Ok().json(books))
     }
@@ -107,10 +103,7 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account = actions::find_current_registered_account(&conn, external_id)?
-            .ok_or(UserFacingError::YouShallNotPass)?;
-        if !account.active {
-            return Err(UserFacingError::Deactivated);
-        }
+            .assert_active()?;
         let created_book =
             actions::create_book_owned_by_member(&conn, account, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
@@ -125,10 +118,7 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account = actions::find_current_registered_account(&conn, external_id)?
-            .ok_or(UserFacingError::YouShallNotPass)?;
-        if !account.active {
-            return Err(UserFacingError::Deactivated);
-        }
+            .assert_active()?;
         let book = find_book_owned_by_member(&conn, account, *search_id)?;
         Ok(HttpResponse::Created().json(book))
     }
@@ -142,10 +132,7 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account = actions::find_current_registered_account(&conn, external_id)?
-            .ok_or(UserFacingError::YouShallNotPass)?;
-        if !account.active {
-            return Err(UserFacingError::Deactivated);
-        }
+            .assert_active()?;
         delete_book_owned_by_member(&conn, &account, *delete_id)?;
         Ok(HttpResponse::Ok().finish())
     }

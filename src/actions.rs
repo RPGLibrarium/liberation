@@ -511,7 +511,7 @@ pub trait AccountAssertions {
 
 impl AccountAssertions for Option<Account> {
     fn assert_active(self) -> Result<Account, UE> {
-        let account = self.ok_or(UserFacingError::YouShallNotPass)?;
+        let account = self.ok_or(UserFacingError::NotRegistered)?;
         match account.active {
             true => Ok(account),
             false => Err(UE::Deactivated),
