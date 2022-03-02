@@ -1,11 +1,11 @@
-use actix_web::{HttpResponse, web};
-use log::debug;
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::authentication::Claims;
 use crate::authentication::scopes::{ARISTOCRAT_ACCOUNTS_MODIFY, ARISTOCRAT_ACCOUNTS_READ};
+use crate::authentication::Claims;
 use crate::models::{Id, NewAccount};
+use actix_web::{web, HttpResponse};
+use log::debug;
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;

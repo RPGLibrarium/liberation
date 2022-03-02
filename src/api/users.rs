@@ -1,10 +1,10 @@
-use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::authentication::Claims;
 use crate::authentication::scopes::USERS_READ;
+use crate::authentication::Claims;
 use crate::models::User;
+use actix_web::{web, HttpResponse};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(USERS_READ)?;

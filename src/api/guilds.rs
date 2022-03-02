@@ -1,10 +1,10 @@
-use actix_web::{HttpResponse, web};
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
-use crate::authentication::Claims;
 use crate::authentication::scopes::{ARISTOCRAT_GUILDS_MODIFY, GUILDS_READ};
+use crate::authentication::Claims;
 use crate::models::{Id, NewGuild};
+use actix_web::{web, HttpResponse};
 
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(GUILDS_READ)?;
@@ -48,14 +48,14 @@ pub async fn put(
 }
 
 pub mod collection {
-    use actix_web::{HttpResponse, web};
     use crate::actions;
     use crate::actions::{assert_librarian_for_guild, find_current_registered_account, find_guild};
     use crate::api::MyResponder;
     use crate::app::AppState;
+    use crate::authentication::scopes::{GUILDS_COLLECTION_MODIFY, GUILDS_READ};
     use crate::authentication::Claims;
-    use crate::authentication::scopes::{GUILDS_READ, GUILDS_COLLECTION_MODIFY};
     use crate::models::{Id, PostOwnedBook};
+    use actix_web::{web, HttpResponse};
 
     pub async fn get_all(
         app: web::Data<AppState>,
@@ -81,11 +81,11 @@ pub mod collection {
         let member_id = authentication.external_account_id()?;
         let conn = app.open_database_connection()?;
         let guild = find_guild(&conn, *guild_id)?;
-        let account = find_current_registered_account(&conn, member_id)?
-            .assert_active()?;
+        let account = find_current_registered_account(&conn, member_id)?.assert_active()?;
         assert_librarian_for_guild(&conn, &guild, &account)?;
 
-        let created_book = actions::create_book_owned_by_guild(&conn, &guild, posted_book.into_inner())?;
+        let created_book =
+            actions::create_book_owned_by_guild(&conn, &guild, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
     }
 
@@ -114,8 +114,7 @@ pub mod collection {
         let member_id = authentication.external_account_id()?;
         let conn = app.open_database_connection()?;
         let guild = find_guild(&conn, guild_id)?;
-        let account = find_current_registered_account(&conn, member_id)?
-            .assert_active()?;
+        let account = find_current_registered_account(&conn, member_id)?.assert_active()?;
         assert_librarian_for_guild(&conn, &guild, &account)?;
 
         actions::delete_book_owned_by_guild(&conn, &guild, delete_id)?;

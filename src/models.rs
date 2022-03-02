@@ -1,12 +1,12 @@
-use diesel::mysql::Mysql;
-use diesel::{ExpressionMethods, Insertable, Queryable};
-use diesel::query_builder::AsChangeset;
+use super::schema::accounts;
+use super::schema::books;
+use super::schema::guilds;
+use super::schema::librarians;
 use super::schema::rpg_systems;
 use super::schema::titles;
-use super::schema::accounts;
-use super::schema::guilds;
-use super::schema::books;
-use super::schema::librarians;
+use diesel::mysql::Mysql;
+use diesel::query_builder::AsChangeset;
+use diesel::{ExpressionMethods, Insertable, Queryable};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -29,7 +29,9 @@ pub struct NewRpgSystem {
     pub shortname: String,
 }
 
-#[derive(Identifiable, Queryable, Associations, Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(
+    Identifiable, Queryable, Associations, Serialize, Deserialize, PartialEq, Debug, Clone,
+)]
 #[table_name = "titles"]
 #[primary_key(title_id)]
 #[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
@@ -135,7 +137,7 @@ impl From<(Option<i32>, Option<i32>)> for Owner {
         match ids {
             (Some(id), None) => Self::Member { id },
             (None, Some(id)) => Self::Guild { id },
-            _ => panic!("database contains owner member and guild!")
+            _ => panic!("database contains owner member and guild!"),
         }
     }
 }
@@ -143,12 +145,11 @@ impl From<(Option<i32>, Option<i32>)> for Owner {
 impl Into<(Option<i32>, Option<i32>)> for Owner {
     fn into(self) -> (Option<i32>, Option<i32>) {
         match self {
-            Self::Member {id} => (Some(id), None),
-            Self::Guild{id} => (None, Some(id)),
+            Self::Member { id } => (Some(id), None),
+            Self::Guild { id } => (None, Some(id)),
         }
     }
 }
-
 
 // This maps the owner to the correct colums. `cargo expand` does really help here.
 impl Insertable<books::table> for Owner {
@@ -163,7 +164,8 @@ impl Insertable<books::table> for Owner {
         match self {
             Owner::Member { id } => (Some(owner_member_by_id.eq(id)), None),
             Owner::Guild { id } => (None, Some(owner_guild_by_id.eq(id))),
-        }.values()
+        }
+        .values()
     }
 }
 
@@ -180,7 +182,8 @@ impl<'insert> Insertable<books::table> for &'insert Owner {
         match self {
             Owner::Member { id } => (Some(owner_member_by_id.eq(*id)), None),
             Owner::Guild { id } => (None, Some(owner_guild_by_id.eq(*id))),
-        }.values()
+        }
+        .values()
     }
 }
 
@@ -241,7 +244,6 @@ impl PostOwnedBook {
             external_inventory_id: self.external_inventory_id,
         }
     }
-
 }
 
 impl AsChangeset for NewBook {
@@ -262,8 +264,9 @@ impl AsChangeset for NewBook {
             owner_member_by_id.eq(member_id),
             owner_guild_by_id.eq(guild_id),
             quality.eq(self.quality),
-            external_inventory_id.eq(self.external_inventory_id)
-        ).as_changeset()
+            external_inventory_id.eq(self.external_inventory_id),
+        )
+            .as_changeset()
     }
 }
 
@@ -271,13 +274,12 @@ impl AsChangeset for NewBook {
 #[table_name = "librarians"]
 pub struct NewLibrarian {
     account_id: i32,
-    guild_id: i32
+    guild_id: i32,
 }
 
 #[derive(Queryable, Clone)]
-pub struct Librarian{
+pub struct Librarian {
     _permission_id: i32,
     pub account_id: i32,
-    pub guild_id: i32
+    pub guild_id: i32,
 }
-

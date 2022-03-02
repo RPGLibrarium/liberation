@@ -1,6 +1,6 @@
+use crate::InternalError;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
-use crate::InternalError;
 
 #[derive(Deserialize)]
 pub struct RealmMetadata {
@@ -19,14 +19,18 @@ impl RealmMetadata {
     pub async fn fetch_new(keycloak_url: &str, realm: &str) -> Result<Self, InternalError> {
         let meta_data_endpoint = format!("{}/auth/realms/{}", keycloak_url, realm);
         let meta = reqwest::get(meta_data_endpoint)
-            .await.map_err(InternalError::KeycloakNotReachable)?
+            .await
+            .map_err(InternalError::KeycloakNotReachable)?
             .json::<RealmMetadata>()
             .await?;
         return Ok(meta);
     }
 
     pub fn decoding_key(&self) -> Result<DecodingKey, InternalError> {
-        let key_with_headers = format!("-----BEGIN PUBLIC KEY-----{}-----END PUBLIC KEY-----", self.public_key);
+        let key_with_headers = format!(
+            "-----BEGIN PUBLIC KEY-----{}-----END PUBLIC KEY-----",
+            self.public_key
+        );
         DecodingKey::from_rsa_pem(key_with_headers.as_bytes())
             .map_err(InternalError::KeycloakKeyHasBadFormat)
     }

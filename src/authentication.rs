@@ -1,22 +1,22 @@
+use crate::app::AppState;
+use crate::error::InternalError as IE;
+use crate::error::UserFacingError as UE;
+use crate::keycloak::RealmMetadata;
+use crate::Authentication::Keycloak;
+use crate::InternalError;
+use actix_web::dev::Payload;
+use actix_web::web::Data;
+use actix_web::{FromRequest, HttpRequest};
+use futures::future::LocalBoxFuture;
+use futures::FutureExt;
+use jsonwebtoken::DecodingKey;
+use jsonwebtoken::{decode, Algorithm, Validation};
+use log::{debug, error, info, warn};
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
-use jsonwebtoken::DecodingKey;
-use log::{debug, error, info, warn};
-use actix_web::{FromRequest, HttpRequest};
-use actix_web::dev::Payload;
-use actix_web::web::{Data};
-use futures::future::{LocalBoxFuture};
-use futures::FutureExt;
-use jsonwebtoken::{Algorithm, decode, Validation};
-use serde::{Serialize, Deserialize};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-use crate::app::AppState;
-use crate::Authentication::Keycloak;
-use crate::error::UserFacingError as UE;
-use crate::error::InternalError as IE;
-use crate::InternalError;
-use crate::keycloak::RealmMetadata;
 
 pub enum Authentication {
     Keycloak {
@@ -24,22 +24,29 @@ pub enum Authentication {
         realm: String,
         public_key: Arc<Mutex<DecodingKey>>,
     },
-    Static { public_key: DecodingKey },
+    Static {
+        public_key: DecodingKey,
+    },
 }
 
 impl Authentication {
     /// Creates a new authenticator which updates the key from keycloak periodically. Use the
     /// JoinHandle to stop the key updates.
-    pub async fn with_rotating_keys(keycloak_url: String, realm: String, renewal_interval_s: u64) -> (Self, Option<JoinHandle<()>>) {
+    pub async fn with_rotating_keys(
+        keycloak_url: String,
+        realm: String,
+        renewal_interval_s: u64,
+    ) -> (Self, Option<JoinHandle<()>>) {
         use actix_web::rt::spawn;
         use std::time::Duration;
         use tokio::time;
 
         let public_key = Arc::new(Mutex::new(
-            RealmMetadata::fetch_new(&keycloak_url, &realm).await
+            RealmMetadata::fetch_new(&keycloak_url, &realm)
+                .await
                 .expect("Fetching fist realm metadata failed.")
                 .decoding_key()
-                .expect("Decoding first public key from keycloak failed.")
+                .expect("Decoding first public key from keycloak failed."),
         ));
 
         let authenticator = Keycloak {
@@ -53,9 +60,13 @@ impl Authentication {
             let mut interval = time::interval(Duration::from_secs(renewal_interval_s));
 
             // Wrapping this in a function makes futures easier to handle
-            async fn fetch_key(keycloak_url: &str, realm: &str) -> Result<DecodingKey, InternalError> {
+            async fn fetch_key(
+                keycloak_url: &str,
+                realm: &str,
+            ) -> Result<DecodingKey, InternalError> {
                 info!("Updating rotating keys from keycloak.");
-                RealmMetadata::fetch_new(keycloak_url, realm).await?
+                RealmMetadata::fetch_new(keycloak_url, realm)
+                    .await?
                     .decoding_key()
             }
 
@@ -67,7 +78,7 @@ impl Authentication {
                         let mut lock = public_key.lock().await;
                         *lock = new_key;
                     }
-                    Err(e) => error!("Could not public key: {:?}", e)
+                    Err(e) => error!("Could not public key: {:?}", e),
                 }
             }
         });
@@ -78,7 +89,9 @@ impl Authentication {
     pub fn with_static_key(static_key: String) -> Self {
         let static_key = DecodingKey::from_rsa_pem(static_key.as_bytes())
             .expect("The static key is not a valid pem key.");
-        Authentication::Static { public_key: static_key }
+        Authentication::Static {
+            public_key: static_key,
+        }
     }
 
     pub async fn verify_token(&self, token: &str) -> Result<Claims, UE> {
@@ -182,25 +195,34 @@ impl Claims {
         match self {
             Claims::Authorized { scopes, .. } if scopes.contains(required_scope) => Ok(()),
             Claims::Authorized { scopes, .. } => {
-                warn!("Authentication failed! Role '{}' was required, but only '{:?}' were given.", required_scope, scopes);
+                warn!(
+                    "Authentication failed! Role '{}' was required, but only '{:?}' were given.",
+                    required_scope, scopes
+                );
                 Err(UE::YouShallNotPass)
             }
-            Claims::Anonymous => Err(UE::AuthenticationRequired)
+            Claims::Anonymous => Err(UE::AuthenticationRequired),
         }
     }
 
     /// Asserts that authentication was successful and returns the subject.
     pub fn external_account_id(&self) -> Result<ExternalAccountId, UE> {
         match self {
-            Claims::Authorized { external_account_id, .. } => Ok(external_account_id.to_string()),
-            Claims::Anonymous => Err(UE::AuthenticationRequired)
+            Claims::Authorized {
+                external_account_id,
+                ..
+            } => Ok(external_account_id.to_string()),
+            Claims::Anonymous => Err(UE::AuthenticationRequired),
         }
     }
 
     /// Returns the account information that are provided with the account:register scope.
     pub fn account_info(&self) -> Result<AccountInfo, UE> {
         match self {
-            Claims::Authorized { account_info: Some(info), .. } => Ok(info.clone()),
+            Claims::Authorized {
+                account_info: Some(info),
+                ..
+            } => Ok(info.clone()),
             Claims::Anonymous => Err(UE::AuthenticationRequired),
             _ => {
                 warn!("No account info was provided.");
@@ -212,7 +234,9 @@ impl Claims {
     /// Special case that always succeeds.
     /// Good style to avoid confusion ("did the programmer really want no check‽") and reject
     /// malformed tokens even though none might be required.
-    pub fn requires_nothing(&self) -> Result<(), UE> { Ok(()) }
+    pub fn requires_nothing(&self) -> Result<(), UE> {
+        Ok(())
+    }
 }
 
 impl From<JwtClaims> for Claims {
@@ -220,14 +244,26 @@ impl From<JwtClaims> for Claims {
         Claims::Authorized {
             scopes: claims.scope.split(" ").map(String::from).collect(),
             external_account_id: claims.sub,
-            account_info: if let (Some(full_name), Some(given_name), Some(family_name), Some(email)) = (claims.name, claims.given_name, claims.family_name, claims.email) {
+            account_info: if let (
+                Some(full_name),
+                Some(given_name),
+                Some(family_name),
+                Some(email),
+            ) = (
+                claims.name,
+                claims.given_name,
+                claims.family_name,
+                claims.email,
+            ) {
                 Some(AccountInfo {
                     full_name,
                     given_name,
                     family_name,
                     email,
                 })
-            } else { None },
+            } else {
+                None
+            },
         }
     }
 }
@@ -245,7 +281,9 @@ impl FromRequest for Claims {
         // It appears as if this a restriction of rust traits which don't support async functions.
         async move {
             if let Some(header) = req.headers().get("Authorization") {
-                let raw_token = header.to_str().map_err(|_| UE::BadToken("not a valid string".to_string()))?;
+                let raw_token = header
+                    .to_str()
+                    .map_err(|_| UE::BadToken("not a valid string".to_string()))?;
 
                 let unvalidated = if raw_token.starts_with("Bearer ") {
                     raw_token.replacen("Bearer ", "", 1)
@@ -253,13 +291,16 @@ impl FromRequest for Claims {
                     return Err(UE::BadToken(raw_token.to_string()));
                 };
 
-                let authenticator = &req.app_data::<Data<AppState>>()
+                let authenticator = &req
+                    .app_data::<Data<AppState>>()
                     .ok_or(UE::Internal(IE::MissingAppState))?
                     .authenticator;
 
                 authenticator.verify_token(&unvalidated).await
-            } else { Ok(Claims::Anonymous) }
-        }.boxed_local()
+            } else {
+                Ok(Claims::Anonymous)
+            }
+        }
+        .boxed_local()
     }
 }
-

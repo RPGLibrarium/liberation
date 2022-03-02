@@ -1,17 +1,18 @@
-use actix_web::{HttpResponse, web};
 use crate::error::UserFacingError;
+use actix_web::{web, HttpResponse};
 
-mod me;
 mod accounts;
+mod books;
 mod guilds;
+mod me;
 mod rpg_systems;
 mod titles;
 mod users;
-mod books;
 
 type MyResponder = Result<HttpResponse, UserFacingError>;
 
 // @formatter:off
+#[rustfmt::skip]
 pub fn v1(cfg: &mut web::ServiceConfig) {
     cfg.service(web::scope("/api/v1")
         .service(web::scope("/me")
@@ -119,5 +120,3 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
     );
 }
 // @formatter:on
-
-

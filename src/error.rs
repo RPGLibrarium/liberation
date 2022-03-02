@@ -1,10 +1,10 @@
+use actix_web::http::{header, StatusCode};
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use config::ConfigError;
+use diesel::r2d2::PoolError;
+use diesel::result::Error as DieselError;
 use std::io;
 use thiserror::Error;
-use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
-use actix_web::http::{header, StatusCode};
-use config::ConfigError;
-use diesel::r2d2::{PoolError};
-use diesel::result::Error as DieselError;
 use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
@@ -59,7 +59,10 @@ impl ResponseError for UserFacingError {
         let mut response = HttpResponseBuilder::new(self.status_code());
 
         if let &UserFacingError::AuthenticationRequired = self {
-            response.insert_header((header::WWW_AUTHENTICATE, format!("Bearer realm=\"{}\"", "liberation"))); //TODO: Use config for realm name
+            response.insert_header((
+                header::WWW_AUTHENTICATE,
+                format!("Bearer realm=\"{}\"", "liberation"),
+            )); //TODO: Use config for realm name
         }
         response
             .insert_header((header::CONTENT_TYPE, "text/html; charset=utf-8"))
