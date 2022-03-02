@@ -1,9 +1,10 @@
+use crate::error::InternalError;
 use config::Config;
 use serde::Deserialize;
-use crate::error::InternalError;
 
-
-fn default_bind() -> String { "127.0.0.1:8080".to_string() }
+fn default_bind() -> String {
+    "127.0.0.1:8080".to_string()
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -49,7 +50,9 @@ pub struct Settings {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthenticationSettings {
-    Static { public_key: String },
+    Static {
+        public_key: String,
+    },
     Keycloak {
         url: String,
         realm: String,
@@ -62,10 +65,14 @@ impl Settings {
     pub fn with_file(file: String) -> Result<Self, InternalError> {
         let mut settings = Config::default();
 
-        settings.merge(config::File::with_name(file.as_str())).unwrap()
-            .merge(config::Environment::with_prefix("LIBERATION")).unwrap();
+        settings
+            .merge(config::File::with_name(file.as_str()))
+            .unwrap()
+            .merge(config::Environment::with_prefix("LIBERATION"))
+            .unwrap();
 
-        settings.try_into::<Settings>()
+        settings
+            .try_into::<Settings>()
             .map_err(InternalError::ConfigError)
     }
 }

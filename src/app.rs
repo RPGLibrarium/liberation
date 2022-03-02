@@ -1,7 +1,7 @@
-use diesel::mysql::MysqlConnection;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
 use crate::authentication::Authentication;
 use crate::error::{InternalError, UserFacingError};
+use diesel::mysql::MysqlConnection;
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 
 type DbPool = diesel::r2d2::Pool<ConnectionManager<MysqlConnection>>;
 
@@ -12,7 +12,10 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(database: DbPool, authenticator: Authentication /*, live_users: LiveUsers*/) -> Self {
+    pub fn new(
+        database: DbPool,
+        authenticator: Authentication, /*, live_users: LiveUsers*/
+    ) -> Self {
         AppState {
             database,
             authenticator,
@@ -20,10 +23,11 @@ impl AppState {
         }
     }
 
-    pub fn open_database_connection(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>, UserFacingError> {
-        self.database.get()
+    pub fn open_database_connection(
+        &self,
+    ) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>, UserFacingError> {
+        self.database
+            .get()
             .map_err(|e| UserFacingError::Internal(InternalError::DatabasePoolingError(e)))
     }
 }
-
-

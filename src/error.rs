@@ -1,10 +1,10 @@
+use actix_web::http::{header, StatusCode};
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use config::ConfigError;
+use diesel::r2d2::PoolError;
+use diesel::result::Error as DieselError;
 use std::io;
 use thiserror::Error;
-use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
-use actix_web::http::{header, StatusCode};
-use config::ConfigError;
-use diesel::r2d2::{PoolError};
-use diesel::result::Error as DieselError;
 use tokio::task::JoinError;
 
 #[derive(Error, Debug)]
@@ -14,7 +14,7 @@ pub enum UserFacingError {
     #[error("authentication was successful, but you shall not pass.")]
     YouShallNotPass,
     #[error("you are not registered.")]
-    NoRegistered,
+    NotRegistered,
     #[error("your token smells bad, go away.")]
     BadToken(String),
     #[error("element was not found")]
@@ -59,7 +59,10 @@ impl ResponseError for UserFacingError {
         let mut response = HttpResponseBuilder::new(self.status_code());
 
         if let &UserFacingError::AuthenticationRequired = self {
-            response.insert_header((header::WWW_AUTHENTICATE, format!("Bearer realm=\"{}\"", "liberation"))); //TODO: Use config for realm name
+            response.insert_header((
+                header::WWW_AUTHENTICATE,
+                format!("Bearer realm=\"{}\"", "liberation"),
+            )); //TODO: Use config for realm name
         }
         response
             .insert_header((header::CONTENT_TYPE, "text/html; charset=utf-8"))
@@ -72,7 +75,7 @@ impl ResponseError for UserFacingError {
         match *self {
             UE::AuthenticationRequired => StatusCode::UNAUTHORIZED,
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
-            UE::NoRegistered => StatusCode::FORBIDDEN,
+            UE::NotRegistered => StatusCode::FORBIDDEN,
             UE::BadToken(_) => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
             UE::Deactivated => StatusCode::FORBIDDEN,
