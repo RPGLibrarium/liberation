@@ -57,7 +57,7 @@ pub fn create_rpg_system(
     Ok(matching)
 }
 
-pub fn find_rpg_system(conn: &MysqlConnection, search_id: i32) -> Result<RpgSystem, UE> {
+pub fn find_rpg_system(conn: &MysqlConnection, search_id: Id) -> Result<RpgSystem, UE> {
     use crate::schema::rpg_systems::dsl::*;
     rpg_systems
         .find(search_id)
@@ -67,15 +67,16 @@ pub fn find_rpg_system(conn: &MysqlConnection, search_id: i32) -> Result<RpgSyst
 
 pub fn update_rpg_system(
     conn: &MysqlConnection,
-    write_to_id: i32,
+    write_to_id: Id,
     new_info: NewRpgSystem,
 ) -> Result<RpgSystem, UE> {
     use crate::schema::rpg_systems::dsl::*;
 
     let affected = diesel::update(rpg_systems.find(write_to_id))
-        .set(new_info.clone())
+        .set(new_info)
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(
         affected, 1,
         "update rpg system must affect only a single row."
@@ -84,11 +85,12 @@ pub fn update_rpg_system(
     find_rpg_system(conn, write_to_id)
 }
 
-pub fn delete_rpgsystem(conn: &MysqlConnection, delete_id: i32) -> Result<(), UE> {
+pub fn delete_rpgsystem(conn: &MysqlConnection, delete_id: Id) -> Result<(), UE> {
     use crate::schema::rpg_systems::dsl::*;
     let affected = diesel::delete(rpg_systems.find(delete_id))
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(
         affected, 1,
         "delete rpg_system must affect only a single row."
@@ -117,14 +119,14 @@ pub fn create_title(conn: &MysqlConnection, new_title: NewTitle) -> Result<Title
     Ok(matching)
 }
 
-pub fn find_title(conn: &MysqlConnection, search_id: i32) -> Result<Title, UE> {
+pub fn find_title(conn: &MysqlConnection, search_id: Id) -> Result<Title, UE> {
     use crate::schema::titles::dsl::*;
     titles.find(search_id).first(conn).map_err(handle_db_errors)
 }
 
 pub fn update_title(
     conn: &MysqlConnection,
-    write_to_id: i32,
+    write_to_id: Id,
     new_info: NewTitle,
 ) -> Result<Title, UE> {
     use crate::schema::titles::dsl::*;
@@ -132,17 +134,19 @@ pub fn update_title(
     let affected = diesel::update(titles.find(write_to_id))
         .set(new_info)
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "update title must affect only a single row.");
 
     find_title(conn, write_to_id)
 }
 
-pub fn delete_title(conn: &MysqlConnection, delete_id: i32) -> Result<(), UE> {
+pub fn delete_title(conn: &MysqlConnection, delete_id: Id) -> Result<(), UE> {
     use crate::schema::titles::dsl::*;
     let affected = diesel::delete(titles.find(delete_id))
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "delete titles must affect only a single row.");
     Ok(())
 }
@@ -157,7 +161,8 @@ pub fn create_account(conn: &MysqlConnection, new_account: NewAccount) -> Result
     let affected = diesel::insert_into(accounts)
         .values(new_account.clone())
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "crate account must affect only a single row.");
 
     let matching = accounts
@@ -168,7 +173,7 @@ pub fn create_account(conn: &MysqlConnection, new_account: NewAccount) -> Result
     Ok(matching)
 }
 
-pub fn find_account(conn: &MysqlConnection, search_id: i32) -> Result<Account, UE> {
+pub fn find_account(conn: &MysqlConnection, search_id: Id) -> Result<Account, UE> {
     use crate::schema::accounts::dsl::*;
     accounts
         .find(search_id)
@@ -178,14 +183,15 @@ pub fn find_account(conn: &MysqlConnection, search_id: i32) -> Result<Account, U
 
 pub fn update_account(
     conn: &MysqlConnection,
-    write_to_id: i32,
+    write_to_id: Id,
     new_info: NewAccount,
 ) -> Result<Account, UE> {
     use crate::schema::accounts::dsl::*;
     let affected = diesel::update(accounts.find(write_to_id))
         .set(new_info)
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "update account must affect only a single row.");
 
     find_account(conn, write_to_id)
@@ -197,7 +203,7 @@ pub fn find_current_registered_account(
 ) -> Result<Option<Account>, UE> {
     use crate::schema::accounts::dsl::*;
     accounts
-        .filter(external_id.eq(search_external_id).and(active.eq(true)))
+        .filter(external_id.eq(search_external_id))
         .first(conn)
         .optional()
         .map_err(handle_db_errors)
@@ -221,7 +227,8 @@ pub fn delete_account(conn: &MysqlConnection, account: &Account) -> Result<(), U
     use crate::schema::accounts::dsl::*;
     let affected = diesel::delete(accounts.find(account.account_id))
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(
         affected, 1,
         "delete rpg_system must affect only a single row."
@@ -243,28 +250,29 @@ pub fn create_guild(conn: &MysqlConnection, new_guild: NewGuild) -> Result<Guild
     assert_eq!(affected, 1, "create guilds must affect only a single row.");
 
     let matching = guilds
-        .filter(external_id.eq(new_guild.external_id))
+        .filter(name.eq(new_guild.name))
         .first::<Guild>(conn)
         .map_err(handle_db_errors)?;
 
     Ok(matching)
 }
 
-pub fn find_guild(conn: &MysqlConnection, search_id: i32) -> Result<Guild, UE> {
+pub fn find_guild(conn: &MysqlConnection, search_id: Id) -> Result<Guild, UE> {
     use crate::schema::guilds::dsl::*;
     guilds.find(search_id).first(conn).map_err(handle_db_errors)
 }
 
 pub fn update_guild(
     conn: &MysqlConnection,
-    write_to_id: i32,
+    write_to_id: Id,
     new_info: NewGuild,
 ) -> Result<Guild, UE> {
     use crate::schema::guilds::dsl::*;
     let affected = diesel::update(guilds.find(write_to_id))
         .set(new_info)
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "update guilds must affect only a single row.");
 
     find_guild(conn, write_to_id)
@@ -299,9 +307,9 @@ pub fn create_book(conn: &MysqlConnection, new_book: NewBook) -> Result<Book, UE
 
 /// Little helper function which creates an sql query searching for an inventory key.
 fn with_inventory_key(
-    ext_inventory_id: i32,
-    member_id: Option<i32>,
-    guild_id: Option<i32>,
+    ext_inventory_id: Id,
+    member_id: Option<Id>,
+    guild_id: Option<Id>,
 ) -> Box<dyn BoxableExpression<crate::schema::books::table, Mysql, SqlType = Bool>> {
     use crate::schema::books::dsl::*;
     let matches_member_id: Box<
@@ -328,37 +336,35 @@ fn with_inventory_key(
     )
 }
 
-pub fn find_book(conn: &MysqlConnection, search_id: i32) -> Result<Book, UE> {
+pub fn find_book(conn: &MysqlConnection, search_id: Id) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books.find(search_id).first(conn).map_err(handle_db_errors)
 }
 
-pub fn update_book(
-    conn: &MysqlConnection,
-    write_to_id: i32,
-    new_info: NewBook,
-) -> Result<Book, UE> {
+pub fn update_book(conn: &MysqlConnection, write_to_id: Id, new_info: NewBook) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     let affected = diesel::update(books.find(write_to_id))
         .set(new_info)
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "update books must affect only a single row.");
 
     find_book(conn, write_to_id)
 }
 
-pub fn delete_book(conn: &MysqlConnection, delete_id: i32) -> Result<(), UE> {
+pub fn delete_book(conn: &MysqlConnection, delete_id: Id) -> Result<(), UE> {
     use crate::schema::books::dsl::*;
     let affected = diesel::delete(books.find(delete_id))
         .execute(conn)
-        .map_err(handle_db_errors)?;
+        .map_err(handle_db_errors)?
+        .assert_row_existed()?;
     assert_eq!(affected, 1, "delete books must affect only a single row.");
     Ok(())
 }
 
 // Member collection
-pub fn create_book_owned_by_member(
+pub fn create_book_owned_by_account(
     conn: &MysqlConnection,
     account: Account,
     partial_book: PostOwnedBook,
@@ -369,10 +375,10 @@ pub fn create_book_owned_by_member(
     create_book(&conn, new_book)
 }
 
-pub fn find_book_owned_by_member(
+pub fn find_book_owned_by_account(
     conn: &MysqlConnection,
     account: Account,
-    search_id: i32,
+    search_id: Id,
 ) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books
@@ -382,7 +388,7 @@ pub fn find_book_owned_by_member(
         .map_err(handle_db_errors)
 }
 
-pub fn list_books_owned_by_member(
+pub fn list_books_owned_by_account(
     conn: &MysqlConnection,
     account: Account,
 ) -> Result<Vec<Book>, UE> {
@@ -393,10 +399,10 @@ pub fn list_books_owned_by_member(
         .map_err(handle_db_errors)
 }
 
-pub fn delete_book_owned_by_member(
+pub fn delete_book_owned_by_account(
     conn: &MysqlConnection,
     account: &Account,
-    delete_id: i32,
+    delete_id: Id,
 ) -> Result<(), UE> {
     use crate::schema::books::dsl::*;
     let affected = diesel::delete(
@@ -405,7 +411,8 @@ pub fn delete_book_owned_by_member(
             .find(delete_id),
     )
     .execute(conn)
-    .map_err(handle_db_errors)?;
+    .map_err(handle_db_errors)?
+    .assert_row_existed()?;
     assert_eq!(affected, 1, "delete books must affect only a single row.");
     Ok(())
 }
@@ -434,7 +441,7 @@ pub fn create_book_owned_by_guild(
 pub fn find_book_owned_by_guild(
     conn: &MysqlConnection,
     guild: &Guild,
-    search_id: i32,
+    search_id: Id,
 ) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books
@@ -465,7 +472,8 @@ pub fn delete_book_owned_by_guild(
             .find(delete_id),
     )
     .execute(conn)
-    .map_err(handle_db_errors)?;
+    .map_err(handle_db_errors)?
+    .assert_row_existed()?;
     assert_eq!(affected, 1, "delete books must affect only a single row.");
     Ok(())
 }
@@ -522,5 +530,19 @@ impl AccountAssertions for Option<Account> {
     }
     fn assert_registered(self) -> Result<Account, UE> {
         self.ok_or(UserFacingError::NotRegistered)
+    }
+}
+
+pub trait RowsAffectedAssertions {
+    fn assert_row_existed(self) -> Result<usize, UE>;
+}
+
+impl RowsAffectedAssertions for usize {
+    fn assert_row_existed(self) -> Result<usize, UE> {
+        if self == 0 {
+            Err(UE::NotFound)
+        } else {
+            Ok(self)
+        }
     }
 }

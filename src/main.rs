@@ -30,7 +30,7 @@ async fn main() -> Result<(), InternalError> {
     let matches = command!()
         .propagate_version(true)
         .subcommand_required(true)
-        .arg(arg!(-c --config <CONFIG> "Define the config file"))
+        .arg(arg!(-c --config <CONFIG> "set the config file"))
         .subcommand(Command::new("serve").about("start the liberation service"))
         .subcommand(Command::new("test").about("run whatever was programed"))
         .get_matches();

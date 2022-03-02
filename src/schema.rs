@@ -24,7 +24,6 @@ table! {
 table! {
     guilds (guild_id) {
         guild_id -> Integer,
-        external_id -> Varchar,
         name -> Varchar,
         address -> Text,
         contact_by_account_id -> Integer,
@@ -67,4 +66,11 @@ joinable!(librarians -> accounts (account_id));
 joinable!(librarians -> guilds (guild_id));
 joinable!(titles -> rpg_systems (rpg_system_by_id));
 
-allow_tables_to_appear_in_same_query!(accounts, books, guilds, librarians, rpg_systems, titles,);
+allow_tables_to_appear_in_same_query!(
+    accounts,
+    books,
+    guilds,
+    librarians,
+    rpg_systems,
+    titles,
+);

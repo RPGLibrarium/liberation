@@ -75,7 +75,7 @@ pub async fn put(
 
 pub mod collection {
     use crate::actions;
-    use crate::actions::{AccountAssertions, delete_book_owned_by_member, find_book_owned_by_member};
+    use crate::actions::{find_book_owned_by_account, AccountAssertions};
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::authentication::scopes::{COLLECTION_MODIFY, COLLECTION_READ};
@@ -88,9 +88,9 @@ pub mod collection {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_current_registered_account(&conn, external_id)?
-            .assert_active()?;
-        let books = actions::list_books_owned_by_member(&conn, account)?;
+        let account =
+            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
+        let books = actions::list_books_owned_by_account(&conn, account)?;
         Ok(HttpResponse::Ok().json(books))
     }
 
@@ -102,10 +102,10 @@ pub mod collection {
         claims.require_scope(COLLECTION_MODIFY)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_current_registered_account(&conn, external_id)?
-            .assert_active()?;
+        let account =
+            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
         let created_book =
-            actions::create_book_owned_by_member(&conn, account, posted_book.into_inner())?;
+            actions::create_book_owned_by_account(&conn, account, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
     }
 
@@ -117,9 +117,9 @@ pub mod collection {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_current_registered_account(&conn, external_id)?
-            .assert_active()?;
-        let book = find_book_owned_by_member(&conn, account, *search_id)?;
+        let account =
+            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
+        let book = find_book_owned_by_account(&conn, account, *search_id)?;
         Ok(HttpResponse::Created().json(book))
     }
 
@@ -131,9 +131,9 @@ pub mod collection {
         claims.require_scope(COLLECTION_MODIFY)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
-        let account = actions::find_current_registered_account(&conn, external_id)?
-            .assert_active()?;
-        delete_book_owned_by_member(&conn, &account, *delete_id)?;
+        let account =
+            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
+        actions::delete_book_owned_by_account(&conn, &account, *delete_id)?;
         Ok(HttpResponse::Ok().finish())
     }
 }

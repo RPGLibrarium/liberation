@@ -17,7 +17,7 @@ pub type Id = i32;
 #[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
 pub struct RpgSystem {
-    pub rpg_system_id: i32,
+    pub rpg_system_id: Id,
     pub name: String,
     pub shortname: Option<String>,
 }
@@ -36,9 +36,9 @@ pub struct NewRpgSystem {
 #[primary_key(title_id)]
 #[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
 pub struct Title {
-    pub title_id: i32,
+    pub title_id: Id,
     pub name: String,
-    pub rpg_system_by_id: i32,
+    pub rpg_system_by_id: Id,
     pub language: String,
     pub publisher: String,
     pub year: Year,
@@ -49,7 +49,7 @@ pub struct Title {
 #[table_name = "titles"]
 pub struct NewTitle {
     pub name: String,
-    pub rpg_system_by_id: i32,
+    pub rpg_system_by_id: Id,
     pub language: String,
     pub publisher: String,
     pub year: Year,
@@ -60,7 +60,7 @@ pub struct NewTitle {
 #[table_name = "accounts"]
 #[primary_key(account_id)]
 pub struct Account {
-    pub account_id: i32,
+    pub account_id: Id,
     pub active: bool,
     pub external_id: String,
     pub full_name: String,
@@ -72,7 +72,7 @@ pub struct Account {
 /// DTO with less information about a user
 #[derive(Serialize, Debug)]
 pub struct User {
-    pub id: i32,
+    pub id: Id,
     pub active: bool,
     pub full_name: String,
 }
@@ -107,33 +107,31 @@ pub struct AccountActive {
 #[table_name = "guilds"]
 #[primary_key(guild_id)]
 pub struct Guild {
-    pub guild_id: i32,
-    pub external_id: String,
+    pub guild_id: Id,
     pub name: String,
     pub address: String,
-    pub contact_by_account_id: i32,
+    pub contact_by_account_id: Id,
 }
 
 #[derive(Insertable, AsChangeset, Deserialize, Clone)]
 #[table_name = "guilds"]
 pub struct NewGuild {
-    pub external_id: String,
     pub name: String,
     pub address: String,
-    pub contact_by_account_id: i32,
+    pub contact_by_account_id: Id,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum Owner {
     #[serde(rename = "member")]
-    Member { id: i32 },
+    Member { id: Id },
     #[serde(rename = "guild")]
-    Guild { id: i32 },
+    Guild { id: Id },
 }
 
-impl From<(Option<i32>, Option<i32>)> for Owner {
-    fn from(ids: (Option<i32>, Option<i32>)) -> Self {
+impl From<(Option<Id>, Option<Id>)> for Owner {
+    fn from(ids: (Option<Id>, Option<Id>)) -> Self {
         match ids {
             (Some(id), None) => Self::Member { id },
             (None, Some(id)) => Self::Guild { id },
@@ -142,8 +140,8 @@ impl From<(Option<i32>, Option<i32>)> for Owner {
     }
 }
 
-impl Into<(Option<i32>, Option<i32>)> for Owner {
-    fn into(self) -> (Option<i32>, Option<i32>) {
+impl Into<(Option<Id>, Option<Id>)> for Owner {
+    fn into(self) -> (Option<Id>, Option<Id>) {
         match self {
             Self::Member { id } => (Some(id), None),
             Self::Guild { id } => (None, Some(id)),
@@ -154,8 +152,8 @@ impl Into<(Option<i32>, Option<i32>)> for Owner {
 // This maps the owner to the correct colums. `cargo expand` does really help here.
 impl Insertable<books::table> for Owner {
     type Values = <(
-        Option<diesel::dsl::Eq<books::owner_member_by_id, i32>>,
-        Option<diesel::dsl::Eq<books::owner_guild_by_id, i32>>,
+        Option<diesel::dsl::Eq<books::owner_member_by_id, Id>>,
+        Option<diesel::dsl::Eq<books::owner_guild_by_id, Id>>,
     ) as Insertable<books::table>>::Values;
 
     fn values(self) -> Self::Values {
@@ -172,8 +170,8 @@ impl Insertable<books::table> for Owner {
 // Borrowed variant, which is also needed
 impl<'insert> Insertable<books::table> for &'insert Owner {
     type Values = <(
-        Option<diesel::dsl::Eq<books::owner_member_by_id, i32>>,
-        Option<diesel::dsl::Eq<books::owner_guild_by_id, i32>>,
+        Option<diesel::dsl::Eq<books::owner_member_by_id, Id>>,
+        Option<diesel::dsl::Eq<books::owner_guild_by_id, Id>>,
     ) as Insertable<books::table>>::Values;
 
     fn values(self) -> Self::Values {
@@ -195,15 +193,15 @@ impl<'insert> Insertable<books::table> for &'insert Owner {
 #[belongs_to(Account, foreign_key=owner_member_by_id)]
 //#[belongs_to(Guild, foreign_key=owner_guild_by_id)]
 pub struct Book {
-    pub book_id: i32,
-    pub title_by_id: i32,
+    pub book_id: Id,
+    pub title_by_id: Id,
     pub owner: Owner,
     pub quality: String,
-    pub external_inventory_id: i32,
+    pub external_inventory_id: Id,
 }
 
 impl Queryable<books::SqlType, Mysql> for Book {
-    type Row = (i32, i32, Option<i32>, Option<i32>, String, i32);
+    type Row = (Id, Id, Option<Id>, Option<Id>, String, Id);
 
     fn build(row: Self::Row) -> Self {
         Book {
@@ -219,20 +217,20 @@ impl Queryable<books::SqlType, Mysql> for Book {
 #[derive(Insertable, Deserialize, Clone)]
 #[table_name = "books"]
 pub struct NewBook {
-    pub title_by_id: i32,
+    pub title_by_id: Id,
     #[diesel(embed)]
     pub owner: Owner,
     // rentee: MemberOrGuild,
     pub quality: String,
-    pub external_inventory_id: i32,
+    pub external_inventory_id: Id,
 }
 
 /// Allows creation of books, where the owner is derived from the token or endpoint.
 #[derive(Deserialize, Clone)]
 pub struct PostOwnedBook {
-    pub title_by_id: i32,
+    pub title_by_id: Id,
     pub quality: String,
-    pub external_inventory_id: i32,
+    pub external_inventory_id: Id,
 }
 
 impl PostOwnedBook {
@@ -249,11 +247,11 @@ impl PostOwnedBook {
 impl AsChangeset for NewBook {
     type Target = books::table;
     type Changeset = <(
-        diesel::dsl::Eq<books::title_by_id, i32>,
-        diesel::dsl::Eq<books::owner_member_by_id, Option<i32>>,
-        diesel::dsl::Eq<books::owner_guild_by_id, Option<i32>>,
+        diesel::dsl::Eq<books::title_by_id, Id>,
+        diesel::dsl::Eq<books::owner_member_by_id, Option<Id>>,
+        diesel::dsl::Eq<books::owner_guild_by_id, Option<Id>>,
         diesel::dsl::Eq<books::quality, String>,
-        diesel::dsl::Eq<books::external_inventory_id, i32>,
+        diesel::dsl::Eq<books::external_inventory_id, Id>,
     ) as AsChangeset>::Changeset;
 
     fn as_changeset(self) -> Self::Changeset {
@@ -273,13 +271,13 @@ impl AsChangeset for NewBook {
 #[derive(Insertable, Deserialize, Clone)]
 #[table_name = "librarians"]
 pub struct NewLibrarian {
-    account_id: i32,
-    guild_id: i32,
+    account_id: Id,
+    guild_id: Id,
 }
 
 #[derive(Queryable, Clone)]
 pub struct Librarian {
-    _permission_id: i32,
-    pub account_id: i32,
-    pub guild_id: i32,
+    _permission_id: Id,
+    pub account_id: Id,
+    pub guild_id: Id,
 }
