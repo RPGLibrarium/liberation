@@ -1,145 +1,87 @@
-use actix_web::client::SendRequestError;
-use actix_web::{error, HttpResponse, ResponseError};
-use awc;
-use core::num::ParseIntError;
+use actix_web::http::{header, StatusCode};
+use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
+use config::ConfigError;
+use diesel::r2d2::PoolError;
+use diesel::result::Error as DieselError;
+use std::io;
+use thiserror::Error;
+use tokio::task::JoinError;
 
-use mysql::Error as MySqlError;
-
-
-use std::fmt;
-//use std::option::NoneError;
-
-type Field = String;
-
-#[derive(Debug)]
-/// An custom error type, that handles convertion to HTTP error codes
-pub enum Error {
-    /// Internal Database Errors -> 500
-    DatabaseError(MySqlError),
-    /// Database Constraints, usually from invalid User input -> 400 or 500
-    ConstraintError(Option<Field>),
-    /// User input is too long -> 400
-    DataTooLong(Field),
-    /// User input has wrong type -> 400
-    IllegalValueForType(Field),
-    /// Database is inconsistent -> 500
-    IllegalState,
-    /// Invalid Json from user -> 400
-    JsonPayloadError(actix_web::error::JsonPayloadError),
-    /// Backend can not authenticate with the Keycloak server-> 500
-    //KeycloakAuthenticationError(Box<RequestTokenError<dyn Fail, BasicErrorResponseType>>),
-    /// No connection to Keycloak server -> 500
-    KeycloakConnectionError(SendRequestError),
-    /// Keycload answer wrong -> 500
-    KeycloakJsonError(awc::error::JsonPayloadError),
-    /// Authentication Token is invalid -> 401
-    InvalidAuthenticationError,
-    /// Missing a required claim -> 403
-    YouShallNotPassError,
-    /// Not even logged in -> 401
-    SpeakFriendAndEnterError,
-    /// Missing parameter in URL -> 400
-    BadRequestFormat,
-    ///
-    ActixError(error::Error),
-    /// No item with given id found -> 404
-    ItemNotFound,
+#[derive(Error, Debug)]
+pub enum UserFacingError {
+    #[error("authentication required")]
+    AuthenticationRequired,
+    #[error("authentication was successful, but you shall not pass.")]
+    YouShallNotPass,
+    #[error("you are not registered.")]
+    NotRegistered,
+    #[error("your token smells bad, go away.")]
+    BadToken(String),
+    #[error("element was not found")]
+    NotFound,
+    #[error("deactivated")]
+    Deactivated,
+    #[error("element already exists")]
+    AlreadyExists,
+    #[error("invalid foreign key")]
+    InvalidForeignKey,
+    #[error("an internal server error occurred")]
+    Internal(InternalError),
 }
 
-impl From<MySqlError> for Error {
-    fn from(error: MySqlError) -> Self {
-        match error {
-            MySqlError::MySqlError(ref e) if e.code == 1452 => Error::ConstraintError(None),
-            /*MySqlError::MySqlError(e) => match e.code {
-                1452 => DatabaseError::FieldError(FieldError::ConstraintError(None)),
-                _ => DatabaseError::GenericError(MySqlError::MySqlError(e)),
-            },*/
-            _ => Error::DatabaseError(error),
-        }
-    }
+#[derive(Error, Debug)]
+pub enum InternalError {
+    #[error("config is invalid")]
+    ConfigError(#[from] ConfigError),
+    #[error("data base connection failed")]
+    DatabaseError(#[from] DieselError),
+    #[error("getting a connection from the pool failed")]
+    DatabasePoolingError(#[from] PoolError),
+    #[error("could not find the app state during jwt checking")]
+    MissingAppState,
+    #[error("io error")]
+    IOError(#[from] io::Error),
+    #[error("join error")]
+    JoinError(#[from] JoinError),
+    #[error("keycloak is not reachable")]
+    KeycloakNotReachable(#[from] reqwest::Error),
+    #[error("keycloak returned a bad key")]
+    KeycloakKeyHasBadFormat(#[from] jsonwebtoken::errors::Error),
+    #[error("authenticating with keycloak failed")]
+    KeycloakAuthenticationFailed(#[from] Box<dyn std::error::Error>),
 }
 
-//impl From<NoneError> for Error {
-//    fn from(error: NoneError) -> Self {
-//        Error::BadRequestFormat
-//    }
-//}
-
-impl From<ParseIntError> for Error {
-    fn from(_error: ParseIntError) -> Self {
-        Error::BadRequestFormat
-    }
-}
-
-impl From<actix_web::error::JsonPayloadError> for Error {
-    fn from(error: actix_web::error::JsonPayloadError) -> Self {
-        Error::JsonPayloadError(error)
-    }
-}
-
-/*
-impl From<RequestTokenError<Fail, BasicErrorResponseType>> for Error {
-    fn from(error: RequestTokenError<dyn Fail, BasicErrorResponseType>) -> Self {
-        Error::KeycloakAuthenticationError(Box::new(error))
-    }
-}
-*/
-
-// impl From<error::Error> for Error {
-//     fn from(error: error::Error) -> Self {
-//         Error::ActixError(error)
-//     }
-// }
-
-/*
-impl From<error::InternalError<ParseIntError>> for Error {
-    fn from(error: error::InternalError<ParseIntError>) -> Self {
-        Error::ActixInternalError(error)
-    }
-}
-*/
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            //TODO: Use Field when available
-            Error::ConstraintError(_) => write!(f, "ERROR: unknown constaint error"),
-            Error::DataTooLong(ref field) => write!(f, "ERROR: data too long for field: {}", field),
-            Error::IllegalValueForType(ref field) => {
-                write!(f, "ERROR: illegal value in field: {}", field)
-            }
-            Error::DatabaseError(ref err) => write!(f, "{{ {} }}", err),
-            Error::JsonPayloadError(ref err) => write!(f, "{{ {} }}", err),
-            //Error::KeycloakAuthenticationError(ref err) => write!(f, "{{ {} }}", err),
-            // Error::ActixError(ref err) => write!(f, "{{ {} }}", err),
-            _ => write!(f, "ERROR: unknown error"),
-        }
-    }
-}
-
-//impl Fail for Error {}
-
-impl ResponseError for Error {
+/// actix uses this trait to decide on status codes.
+/// see here for more information https://actix.rs/docs/errors/
+// My IntelliJ thinks this is wrong, but it's not. Display is provided by thiserror.
+impl ResponseError for UserFacingError {
     fn error_response(&self) -> HttpResponse {
+        let mut response = HttpResponseBuilder::new(self.status_code());
+
+        if let &UserFacingError::AuthenticationRequired = self {
+            response.insert_header((
+                header::WWW_AUTHENTICATE,
+                format!("Bearer realm=\"{}\"", "liberation"),
+            )); //TODO: Use config for realm name
+        }
+        response
+            .insert_header((header::CONTENT_TYPE, "text/html; charset=utf-8"))
+            .body(self.to_string())
+    }
+
+    fn status_code(&self) -> StatusCode {
+        use UserFacingError as UE;
+
         match *self {
-            Error::DataTooLong(ref e) => HttpResponse::BadRequest()
-                .header("x-field", e.clone())
-                .body(format!("{}", self)),
-            Error::InvalidAuthenticationError => HttpResponse::Unauthorized()
-                .header(
-                    "WWW-Authenticate",
-                    format!("Bearer realm=\"{}\"", "liberation"), //TODO: Use config for realm name
-                )
-                .finish(),
-            Error::YouShallNotPassError => HttpResponse::Forbidden().finish(),
-            Error::SpeakFriendAndEnterError => HttpResponse::Unauthorized().finish(),
-            //_ => HttpResponse::InternalServerError().finish(), TODO: Debugging option
-            // Error::ActixError(err) => err.as_response_error().error_response(),
-            // Error::ActixInternalError(err) => err.error_response(),
-            _ => {
-                error!("Internal Server Error: {:?}", self);
-                HttpResponse::InternalServerError().body(format!("{}", self))
-            },
+            UE::AuthenticationRequired => StatusCode::UNAUTHORIZED,
+            UE::YouShallNotPass => StatusCode::FORBIDDEN,
+            UE::NotRegistered => StatusCode::FORBIDDEN,
+            UE::BadToken(_) => StatusCode::BAD_REQUEST,
+            UE::NotFound => StatusCode::NOT_FOUND,
+            UE::Deactivated => StatusCode::FORBIDDEN,
+            UE::AlreadyExists => StatusCode::CONFLICT,
+            UE::InvalidForeignKey => StatusCode::BAD_REQUEST,
+            UE::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

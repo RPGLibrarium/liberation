@@ -1,82 +1,78 @@
-use config::{Config, ConfigError, Environment, File};
-use url::Url;
-use url_serde;
-use serde::{Deserialize};
+use crate::error::InternalError;
+use config::Config;
+use serde::Deserialize;
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Database {
-    pub hostname: Option<String>, //default 127.0.0.1 by mysql
-    pub port: Option<u16>,
-    pub username: Option<String>, //default None by mysql
-    pub password: Option<String>, //default None by mysql
-    pub database: String,
+fn default_bind() -> String {
+    "127.0.0.1:8080".to_string()
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Keycloak {
-    #[serde(with = "url_serde")]
-    pub url: Url,
-    pub realm: String,
-    pub clientid: String,
-    pub clientsecret: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub debug: bool,
-    pub serve_static_files: bool,
-    pub port: u16,
-    pub database: Database,
-    pub keycloak: Keycloak,
+    /// The server uses this database. Only mysql is supported a the moment.
+    ///
+    /// ```toml
+    /// database = "mysql://liberation:liberation@127.0.0.1:3306/liberation"
+    /// ```
+    pub database: String,
+
+    /// The server binds to this address. Defaults to `127.0.0.1:8080`.
+    ///
+    /// ```toml
+    /// bind = 127.0.0.1:8080
+    /// ```
+    #[serde(default = "default_bind")]
+    pub bind: String,
+
+    /// See [AuthenticationSettings] for more details.
+    pub authentication: AuthenticationSettings,
+}
+
+/// The authentication is done with [JWT tokens](https://jwt.io/) that must be signed by the
+/// authorization server (probably Keycloak). Only one of the following variants is accepted.
+///
+/// ## Keycloak
+/// The public key is fetched automatically from keycloak and renewed periodically.
+///
+/// ```toml
+/// [authentication.keycloak]
+/// url = "https://sso.rpg-librarium.de/"
+/// realm = "Liberation"
+/// ```
+///
+/// ## Static
+/// The public key is set constant at runtime. This might be helpful when testing or migrating to
+/// another authentication server.
+///
+/// ```toml
+/// [authentication.static]
+/// public_key = "MIIBIjANBgkqhkiG9w0BAQEFAA..."
+/// ```
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AuthenticationSettings {
+    Static {
+        public_key: String,
+    },
+    Keycloak {
+        url: String,
+        realm: String,
+        /// the key is renewed every so often (in seconds)
+        renew_interval_s: u64,
+    },
 }
 
 impl Settings {
-    pub fn new() -> Result<Self, ConfigError> {
-        let mut s = Config::default();
+    pub fn with_file(file: String) -> Result<Self, InternalError> {
+        let mut settings = Config::default();
 
-        // Start off by merging in the "default" configuration file
-        s.merge(File::with_name("config/defaults")).unwrap();
-
-        // Add in a local configuration file
-        // This file shouldn't be checked in to git
-        s.merge(File::with_name("config/local").required(false))
+        settings
+            .merge(config::File::with_name(file.as_str()))
+            .unwrap()
+            .merge(config::Environment::with_prefix("LIBERATION"))
             .unwrap();
 
-        s.merge(Environment::with_prefix("LIBERATION").separator("_"))
-            .unwrap();
-
-        s.try_into()
-    }
-}
-
-#[cfg(test)]
-#[derive(Debug, Deserialize)]
-pub struct TestSettings {
-    pub debug: bool,
-    pub database: Database,
-}
-
-#[cfg(test)]
-impl TestSettings {
-    pub fn new() -> Result<Self, ConfigError> {
-        let mut s = Config::default();
-
-        // Start off by merging in the "default" configuration file
-        s.merge(File::with_name("config/defaults")).unwrap();
-
-        // Add in a local configuration file
-        // This file shouldn't be checked in to git
-        s.merge(File::with_name("config/local").required(false))
-            .unwrap();
-
-        s.merge(File::with_name("config/test").required(false))
-            .unwrap();
-
-        s.set("database.database", "")?;
-
-        s.merge(Environment::with_prefix("LIBERATION").separator("_"))
-            .unwrap();
-
-        s.try_into()
+        settings
+            .try_into::<Settings>()
+            .map_err(InternalError::ConfigError)
     }
 }

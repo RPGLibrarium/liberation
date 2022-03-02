@@ -1,5 +1,0 @@
-debug = false
-serve_static_files = true
-port = 8080
-[keycloak]
-token = "<Accesstoken from Keycloak>"
