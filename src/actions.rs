@@ -6,8 +6,8 @@ use diesel::result::DatabaseErrorKind::{ForeignKeyViolation, UniqueViolation};
 use diesel::result::{Error as DE, Error};
 use diesel::sql_types::Bool;
 use diesel::{
-    BoolExpressionMethods, BoxableExpression, ExpressionMethods, MysqlConnection, QueryDsl,
-    RunQueryDsl,
+    BoolExpressionMethods, BoxableExpression, ExpressionMethods, MysqlConnection,
+    OptionalExtension, QueryDsl, RunQueryDsl,
 };
 use log::debug;
 
@@ -194,16 +194,13 @@ pub fn update_account(
 pub fn find_current_registered_account(
     conn: &MysqlConnection,
     search_external_id: String,
-) -> Result<SomeAccount, UE> {
+) -> Result<Option<Account>, UE> {
     use crate::schema::accounts::dsl::*;
     accounts
         .filter(external_id.eq(search_external_id).and(active.eq(true)))
         .first(conn)
-        .map(|acc| SomeAccount(Some(acc)))
-        .or_else(|e| match e {
-            DE::NotFound => Ok(SomeAccount(None)),
-            _ => Err(handle_db_errors(e)),
-        })
+        .optional()
+        .map_err(handle_db_errors)
 }
 
 pub fn deactivate_account(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
@@ -212,7 +209,10 @@ pub fn deactivate_account(conn: &MysqlConnection, account: &Account) -> Result<(
         .set(active.eq(false))
         .execute(conn)
         .map_err(handle_db_errors)?;
-    assert_eq!(affected, 1, "deactivate account must affect only a single row.");
+    assert_eq!(
+        affected, 1,
+        "deactivate account must affect only a single row."
+    );
 
     Ok(())
 }
@@ -503,19 +503,24 @@ pub fn assert_librarian_for_guild(
     Ok(())
 }
 
-// TODO: is this with trait nicer?
-pub struct SomeAccount(Option<Account>);
-impl SomeAccount {
-    pub fn assert_active(self) -> Result<Account, UE> {
-        let account = self.0.ok_or(UserFacingError::YouShallNotPass)?;
-        if !account.active {
-            Err(UserFacingError::Deactivated)
-        } else {
-            Ok(account)
+pub trait AccountAssertions {
+    fn assert_active(self) -> Result<Account, UE>;
+    fn assert_exists(self) -> Result<Account, UE>;
+    fn assert_registered(self) -> Result<Account, UE>;
+}
+
+impl AccountAssertions for Option<Account> {
+    fn assert_active(self) -> Result<Account, UE> {
+        let account = self.ok_or(UserFacingError::YouShallNotPass)?;
+        match account.active {
+            true => Ok(account),
+            false => Err(UE::Deactivated),
         }
     }
-
-    pub fn assert_exists(self) -> Result<Account, UE> {
-        self.0.ok_or(UserFacingError::NotFound)
+    fn assert_exists(self) -> Result<Account, UE> {
+        self.ok_or(UserFacingError::NotFound)
+    }
+    fn assert_registered(self) -> Result<Account, UE> {
+        self.ok_or(UserFacingError::NotRegistered)
     }
 }

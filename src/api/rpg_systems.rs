@@ -1,6 +1,7 @@
 use crate::actions;
 use crate::api::MyResponder;
 use crate::app::AppState;
+use crate::authentication::scopes::*;
 use crate::authentication::Claims;
 use crate::models::{Id, NewRpgSystem};
 use actix_web::{web, HttpResponse};
@@ -22,7 +23,7 @@ pub async fn post(
     authentication: Claims,
     new_rpg_system: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
+    authentication.require_scope(RPGSYSTEMS_ADD)?;
     let conn = app.open_database_connection()?;
     let created = actions::create_rpg_system(&conn, new_rpg_system.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -45,7 +46,7 @@ pub async fn put(
     write_to_id: web::Path<Id>,
     new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
+    authentication.require_scope(RPGSYSTEMS_ADD)?;
     let conn = app.open_database_connection()?;
     let updated = actions::update_rpg_system(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
@@ -56,7 +57,7 @@ pub async fn delete(
     authentication: Claims,
     delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_MODIFY)?;
+    authentication.require_scope(RPGSYSTEMS_ADD)?;
     let conn = app.open_database_connection()?;
     actions::delete_rpgsystem(&conn, *delete_id)?;
     Ok(HttpResponse::Ok().finish())

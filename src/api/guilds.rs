@@ -49,7 +49,9 @@ pub async fn put(
 
 pub mod collection {
     use crate::actions;
-    use crate::actions::{assert_librarian_for_guild, find_current_registered_account, find_guild};
+    use crate::actions::{
+        assert_librarian_for_guild, find_current_registered_account, find_guild, AccountAssertions,
+    };
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::authentication::scopes::{GUILDS_COLLECTION_MODIFY, GUILDS_READ};

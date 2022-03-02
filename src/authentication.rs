@@ -104,7 +104,10 @@ impl Authentication {
         // the jwt library checks exp and
         let validated = decode::<JwtClaims>(&token, &key, &Validation::new(Algorithm::RS256))
             .map_err(|e| {
-                UE::BadToken(format!("validation failed for token '{}' with error {}", token, e))
+                UE::BadToken(format!(
+                    "validation failed for token '{}' with error {}",
+                    token, e
+                ))
             })?;
 
         Ok(Claims::from(validated.claims))

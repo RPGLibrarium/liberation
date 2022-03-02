@@ -14,7 +14,7 @@ pub enum UserFacingError {
     #[error("authentication was successful, but you shall not pass.")]
     YouShallNotPass,
     #[error("you are not registered.")]
-    NoRegistered,
+    NotRegistered,
     #[error("your token smells bad, go away.")]
     BadToken(String),
     #[error("element was not found")]
@@ -75,7 +75,7 @@ impl ResponseError for UserFacingError {
         match *self {
             UE::AuthenticationRequired => StatusCode::UNAUTHORIZED,
             UE::YouShallNotPass => StatusCode::FORBIDDEN,
-            UE::NoRegistered => StatusCode::FORBIDDEN,
+            UE::NotRegistered => StatusCode::FORBIDDEN,
             UE::BadToken(_) => StatusCode::BAD_REQUEST,
             UE::NotFound => StatusCode::NOT_FOUND,
             UE::Deactivated => StatusCode::FORBIDDEN,

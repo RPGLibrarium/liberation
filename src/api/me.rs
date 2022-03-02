@@ -1,4 +1,5 @@
 use crate::actions;
+use crate::actions::AccountAssertions;
 use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::scopes::{ACCOUNT_READ, ACCOUNT_REGISTER};
@@ -12,7 +13,8 @@ pub async fn get(app: web::Data<AppState>, claims: Claims) -> MyResponder {
     claims.require_scope(ACCOUNT_READ)?;
     let external_id = claims.external_account_id()?;
     let conn = app.open_database_connection()?;
-    let account = actions::find_current_registered_account(&conn, external_id)?.assert_exists()?;
+    let account =
+        actions::find_current_registered_account(&conn, external_id)?.assert_registered()?;
     Ok(HttpResponse::Ok().json(account))
 }
 
