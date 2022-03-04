@@ -4,11 +4,16 @@
 extern crate clap;
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+
+embed_migrations!();
 
 use crate::settings::{AuthenticationSettings, Settings};
 use actix_web::web::Data;
 use authentication::Authentication;
 use clap::Command;
+use diesel::r2d2::ManageConnection;
 use error::InternalError;
 use futures::TryFutureExt;
 use log::{debug, info};
@@ -48,6 +53,11 @@ async fn main() -> Result<(), InternalError> {
                 use diesel::{r2d2, MysqlConnection};
 
                 let manager = ConnectionManager::<MysqlConnection>::new(&settings.database);
+
+                info!("Updating database/running migrations");
+                let conn = manager.connect().expect("Connecting to database failed");
+                embedded_migrations::run(&conn).expect("Updating database failed.");
+
                 r2d2::Pool::builder()
                     .build(manager)
                     .expect("Failed to create db pool.")

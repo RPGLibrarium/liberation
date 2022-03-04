@@ -1,0 +1,16 @@
+# This is an example configuration for Liberation
+
+# Database access is configured via this url. Only mysql is supported at the moment.
+database = "mysql://USER:PASSWORD@127.0.0.1:3306/DATABASE"
+
+
+# JWT checking is done with one of the following variants.
+# This variant connects to keycloak and downloads the public key on a regular basis.
+[authentication.keycloak]
+url = "https://sso.example.com/"
+realm = "Liberation"
+renew_interval_s = 320
+
+# Alternatively, the key can be static. Don't forget to comment the variant above.
+#[authentication.static]
+#public_key = "MIIBIjANBgkqhkiG9w0BAQEFAA..."
