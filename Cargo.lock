@@ -954,7 +954,7 @@ checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
 
 [[package]]
 name = "liberation"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "actix-web",
  "base64",
