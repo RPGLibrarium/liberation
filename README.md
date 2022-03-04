@@ -1,5 +1,7 @@
 # Liberation Backend
 
+The sole purpose of this software is to be used by the RPG Librarium Aachen e.V. Anybody who wants to use this software may under the given licenses, but there will be no support whatsoever and not promises are made to the public regarding stability and availability of this project. 
+
 ## Development setup
 Dependencies (Ubuntu):
 - gcc
