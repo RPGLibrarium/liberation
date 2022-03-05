@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 log = "0.4"
 thiserror = "1.0"
-actix-web = "4.0.0-beta.21"
+actix-web = "4"
 tokio = { version = "1", features = ["macros"] }
 futures = "0.3"
 # in version 7 handling the key is super anoying, because it has no state.
