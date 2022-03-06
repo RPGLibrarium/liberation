@@ -211,7 +211,7 @@ pub fn find_current_registered_account(
 
 pub fn deactivate_account(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
     use crate::schema::accounts::dsl::*;
-    let affected = diesel::update(accounts.find(account.account_id))
+    let affected = diesel::update(accounts.find(account.id))
         .set(active.eq(false))
         .execute(conn)
         .map_err(handle_db_errors)?;
@@ -225,7 +225,7 @@ pub fn deactivate_account(conn: &MysqlConnection, account: &Account) -> Result<(
 
 pub fn delete_account(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
     use crate::schema::accounts::dsl::*;
-    let affected = diesel::delete(accounts.find(account.account_id))
+    let affected = diesel::delete(accounts.find(account.id))
         .execute(conn)
         .map_err(handle_db_errors)?
         .assert_row_existed()?;
@@ -370,7 +370,7 @@ pub fn create_book_owned_by_account(
     partial_book: PostOwnedBook,
 ) -> Result<Book, UE> {
     let new_book = partial_book.owned_by(Owner::Member {
-        id: account.account_id,
+        id: account.id,
     });
     create_book(&conn, new_book)
 }
@@ -382,7 +382,7 @@ pub fn find_book_owned_by_account(
 ) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books
-        .filter(owner_member_by_id.eq(account.account_id))
+        .filter(owner_member_by_id.eq(account.id))
         .find(search_id)
         .first(conn)
         .map_err(handle_db_errors)
@@ -394,7 +394,7 @@ pub fn list_books_owned_by_account(
 ) -> Result<Vec<Book>, UE> {
     use crate::schema::books::dsl::*;
     books
-        .filter(owner_member_by_id.eq(account.account_id))
+        .filter(owner_member_by_id.eq(account.id))
         .load(conn)
         .map_err(handle_db_errors)
 }
@@ -407,7 +407,7 @@ pub fn delete_book_owned_by_account(
     use crate::schema::books::dsl::*;
     let affected = diesel::delete(
         books
-            .filter(owner_member_by_id.eq(account.account_id))
+            .filter(owner_member_by_id.eq(account.id))
             .find(delete_id),
     )
     .execute(conn)
@@ -422,7 +422,7 @@ pub fn delete_all_books_owned_by_account(
     account: &Account,
 ) -> Result<(), UE> {
     use crate::schema::books::dsl::*;
-    diesel::delete(books.filter(owner_member_by_id.eq(account.account_id)))
+    diesel::delete(books.filter(owner_member_by_id.eq(account.id)))
         .execute(conn)
         .map_err(handle_db_errors)?;
     Ok(())
@@ -434,7 +434,7 @@ pub fn create_book_owned_by_guild(
     guild: &Guild,
     partial_book: PostOwnedBook,
 ) -> Result<Book, UE> {
-    let new_book = partial_book.owned_by(Owner::Guild { id: guild.guild_id });
+    let new_book = partial_book.owned_by(Owner::Guild { id: guild.id });
     create_book(&conn, new_book)
 }
 
@@ -445,7 +445,7 @@ pub fn find_book_owned_by_guild(
 ) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books
-        .filter(owner_guild_by_id.eq(guild.guild_id))
+        .filter(owner_guild_by_id.eq(guild.id))
         .find(search_id)
         .first(conn)
         .map_err(handle_db_errors)
@@ -454,7 +454,7 @@ pub fn find_book_owned_by_guild(
 pub fn list_books_owned_by_guild(conn: &MysqlConnection, guild: &Guild) -> Result<Vec<Book>, UE> {
     use crate::schema::books::dsl::*;
     books
-        .filter(owner_guild_by_id.eq(guild.guild_id))
+        .filter(owner_guild_by_id.eq(guild.id))
         .load(conn)
         .map_err(handle_db_errors)
 }
@@ -468,7 +468,7 @@ pub fn delete_book_owned_by_guild(
 
     let affected = diesel::delete(
         books
-            .filter(owner_guild_by_id.eq(guild.guild_id))
+            .filter(owner_guild_by_id.eq(guild.id))
             .find(delete_id),
     )
     .execute(conn)
@@ -480,7 +480,7 @@ pub fn delete_book_owned_by_guild(
 
 pub fn delete_all_books_owned_by_guild(conn: &MysqlConnection, guild: &Guild) -> Result<(), UE> {
     use crate::schema::books::dsl::*;
-    diesel::delete(books.filter(owner_guild_by_id.eq(guild.guild_id)))
+    diesel::delete(books.filter(owner_guild_by_id.eq(guild.id)))
         .execute(conn)
         .map_err(handle_db_errors)?;
     Ok(())
@@ -496,8 +496,8 @@ pub fn assert_librarian_for_guild(
     let permission = librarians
         .filter(
             guild_id
-                .eq(guild.guild_id)
-                .and(account_id.eq(account.account_id)),
+                .eq(guild.id)
+                .and(account_id.eq(account.id)),
         )
         .first::<Librarian>(conn)
         .map_err(|e| match e {
@@ -506,8 +506,8 @@ pub fn assert_librarian_for_guild(
             DE::NotFound => UE::YouShallNotPass,
             _ => handle_db_errors(e),
         })?;
-    assert_eq!(permission.account_id, account.account_id);
-    assert_eq!(permission.guild_id, guild.guild_id);
+    assert_eq!(permission.account_id, account.id);
+    assert_eq!(permission.guild_id, guild.id);
     Ok(())
 }
 

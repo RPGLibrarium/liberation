@@ -61,7 +61,7 @@ pub async fn put(
 
     match actions::find_current_registered_account(&conn, external_id)? {
         Some(old_account) => {
-            let updated = actions::update_account(&conn, old_account.account_id, updated_account)?;
+            let updated = actions::update_account(&conn, old_account.id, updated_account)?;
             Ok(HttpResponse::Ok().json(updated))
         }
         None => {
