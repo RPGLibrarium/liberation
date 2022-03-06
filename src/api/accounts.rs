@@ -7,8 +7,8 @@ use crate::models::{Id, NewAccount};
 use actix_web::{web, HttpResponse};
 use log::debug;
 
-pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
-    authentication.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
+pub async fn get_all(app: web::Data<AppState>, claims: Claims) -> MyResponder {
+    claims.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
     let conn = app.open_database_connection()?;
     let account = actions::account::list(&conn)?;
     Ok(HttpResponse::Ok().json(account))
@@ -16,10 +16,10 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResp
 
 pub async fn get_one(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     search_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
+    claims.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
     let conn = app.open_database_connection()?;
     let account = actions::account::find(&conn, *search_id)?;
     Ok(HttpResponse::Ok().json(account))
@@ -27,11 +27,11 @@ pub async fn get_one(
 
 pub async fn put(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     write_to_id: web::Path<Id>,
     new_info: web::Json<NewAccount>,
 ) -> MyResponder {
-    authentication.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
+    claims.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated_account = actions::account::update(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated_account))
@@ -39,10 +39,10 @@ pub async fn put(
 
 pub async fn delete(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
+    claims.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
     let conn = app.open_database_connection()?;
 
     let account = actions::account::find(&conn, *delete_id)?;

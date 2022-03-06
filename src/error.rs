@@ -11,7 +11,7 @@ use tokio::task::JoinError;
 pub enum UserFacingError {
     #[error("authentication required")]
     AuthenticationRequired,
-    #[error("authentication was successful, but you shall not pass.")]
+    #[error("authentication was successful, but you shall not path.")]
     YouShallNotPass,
     #[error("you are not registered.")]
     NotRegistered,

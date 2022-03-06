@@ -80,11 +80,15 @@ pub mod collection {
     use crate::app::AppState;
     use crate::authentication::scopes::{COLLECTION_MODIFY, COLLECTION_READ};
     use crate::authentication::Claims;
-    use crate::models::{Id, PostOwnedBook, QueryOptions};
-    use actix_web::{web, HttpResponse};
+    use crate::models::{PostOwnedBook, QueryOptions};
+    use actix_web::{web, HttpResponse,};
 
     /// Displays the collection of the authenticated user.
-    pub async fn get_all(app: web::Data<AppState>, claims: Claims, query: web::Query<QueryOptions>) -> MyResponder {
+    pub async fn get_all(
+        app: web::Data<AppState>,
+        claims: Claims,
+        query: web::Query<QueryOptions>,
+    ) -> MyResponder {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
@@ -116,39 +120,5 @@ pub mod collection {
             posted_book.into_inner(),
         )?;
         Ok(HttpResponse::Created().json(created_book))
-    }
-
-    pub async fn get_one(
-        app: web::Data<AppState>,
-        claims: Claims,
-        search_id: web::Path<Id>,
-        query: web::Query<QueryOptions>,
-    ) -> MyResponder {
-        claims.require_scope(COLLECTION_READ)?;
-        let external_id = claims.external_account_id()?;
-        let conn = app.open_database_connection()?;
-        let account =
-            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
-        if query.recursive {
-            let book = actions::book::recursive_find_owned_by(&conn, account.into(), *search_id)?;
-            Ok(HttpResponse::Created().json(book))
-        } else {
-            let book = actions::book::find_owned_by(&conn, account.into(), *search_id)?;
-            Ok(HttpResponse::Created().json(book))
-        }
-    }
-
-    pub async fn delete(
-        app: web::Data<AppState>,
-        claims: Claims,
-        delete_id: web::Path<Id>,
-    ) -> MyResponder {
-        claims.require_scope(COLLECTION_MODIFY)?;
-        let external_id = claims.external_account_id()?;
-        let conn = app.open_database_connection()?;
-        let account =
-            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
-        actions::book::delete_owned_by(&conn, account.into(), *delete_id)?;
-        Ok(HttpResponse::Ok().finish())
     }
 }

@@ -105,23 +105,6 @@ pub fn create_owned_by(
     create(conn, partial.owned_by(owner))
 }
 
-pub fn find_owned_by(conn: &MysqlConnection, owner: Owner, search_id: Id) -> Result<Book, UE> {
-    use crate::schema::books::dsl::*;
-    books
-        .filter(with_owner(owner))
-        .find(search_id)
-        .first(conn)
-        .map_err(handle_db_errors)
-}
-
-pub fn recursive_find_owned_by(conn: &MysqlConnection, owner: Owner, search_id: Id) -> Result<RecursiveBook, UE> {
-    // I couldn't find a way to filter inner_joins, hence we filter on application level
-    let book = recursive_find(&conn, search_id)?;
-    if book.owner == owner {
-        Ok(book)
-    } else { Err(UE::NotFound) }
-}
-
 pub fn list_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<Vec<Book>, UE> {
     use crate::schema::books::dsl::*;
     books
@@ -141,15 +124,6 @@ pub fn recursive_list_owned_by(
         .collect())
 }
 
-pub fn delete_owned_by(conn: &MysqlConnection, owner: Owner, delete_id: Id) -> Result<(), UE> {
-    use crate::schema::books::dsl::*;
-    let affected = diesel::delete(books.filter(with_owner(owner)).find(delete_id))
-        .execute(conn)
-        .map_err(handle_db_errors)?
-        .assert_row_existed()?;
-    assert_eq!(affected, 1, "delete books must affect only a single row.");
-    Ok(())
-}
 
 pub fn delete_all_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<(), UE> {
     use crate::schema::books::dsl::*;

@@ -3,7 +3,6 @@ use crate::models::*;
 use crate::InternalError as IE;
 use diesel::result::DatabaseErrorKind::{ForeignKeyViolation, UniqueViolation};
 use diesel::result::{Error as DE, Error};
-use diesel::{BoolExpressionMethods, ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 use log::debug;
 
 /// Mapping all the errors is anoying.
@@ -28,31 +27,7 @@ pub mod guild;
 mod recursive;
 pub mod rpg_system;
 pub mod title;
-
-// Guilds Access control
-pub fn assert_librarian_for_guild(
-    conn: &MysqlConnection,
-    guild: &Guild,
-    account: &Account,
-) -> Result<(), UE> {
-    use crate::schema::librarians::dsl::*;
-    let permission = librarians
-        .filter(
-            guild_id
-                .eq(guild.id)
-                .and(account_id.eq(account.id)),
-        )
-        .first::<Librarian>(conn)
-        .map_err(|e| match e {
-            // In this case no finding a result means the permission is missing. We can't use
-            // the error handler.
-            DE::NotFound => UE::YouShallNotPass,
-            _ => handle_db_errors(e),
-        })?;
-    assert_eq!(permission.account_id, account.id);
-    assert_eq!(permission.guild_id, guild.id);
-    Ok(())
-}
+pub mod authorization;
 
 pub trait AccountAssertions {
     fn assert_active(self) -> Result<Account, UE>;

@@ -8,10 +8,10 @@ use actix_web::{web, HttpResponse};
 
 pub async fn get_all(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     query: web::Query<QueryOptions>,
 ) -> MyResponder {
-    authentication.requires_nothing()?;
+    claims.requires_nothing()?;
     let conn = app.open_database_connection()?;
 
     if (*query).recursive {
@@ -25,10 +25,10 @@ pub async fn get_all(
 
 pub async fn post(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     new_title: web::Json<NewTitle>,
 ) -> MyResponder {
-    authentication.require_scope(TITLES_ADD)?;
+    claims.require_scope(TITLES_ADD)?;
     let conn = app.open_database_connection()?;
     let created = actions::title::create(&conn, new_title.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -36,11 +36,11 @@ pub async fn post(
 
 pub async fn get_one(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     search_id: web::Path<Id>,
     query: web::Query<QueryOptions>,
 ) -> MyResponder {
-    authentication.requires_nothing()?;
+    claims.requires_nothing()?;
     let conn = app.open_database_connection()?;
     if (*query).recursive {
         let title = actions::title::recursive_find(&conn, *search_id)?;
@@ -53,11 +53,11 @@ pub async fn get_one(
 
 pub async fn put(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     write_to_id: web::Path<Id>,
     new_info: web::Json<NewTitle>,
 ) -> MyResponder {
-    authentication.require_scope(LIBRARIAN_TITLES_MODIFY)?;
+    claims.require_scope(LIBRARIAN_TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::title::update(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
@@ -65,10 +65,10 @@ pub async fn put(
 
 pub async fn delete(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(LIBRARIAN_TITLES_MODIFY)?;
+    claims.require_scope(LIBRARIAN_TITLES_MODIFY)?;
     let conn = app.open_database_connection()?;
     actions::title::delete(&conn, *delete_id)?;
     Ok(HttpResponse::Ok().finish())

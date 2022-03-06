@@ -11,8 +11,8 @@ use actix_web::{web, HttpResponse};
 // magically out of the request.
 // https://github.com/actix/actix-web/blob/2a12b41456f40b28c1efe0ec6947e8f50ba22006/src/handler.rs
 // https://actix.rs/docs/extractors/
-pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
-    authentication.requires_nothing()?;
+pub async fn get_all(app: web::Data<AppState>, claims: Claims) -> MyResponder {
+    claims.requires_nothing()?;
     let conn = app.open_database_connection()?;
     let rpg_systems = actions::rpg_system::list(&conn)?;
     Ok(HttpResponse::Ok().json(rpg_systems))
@@ -20,10 +20,10 @@ pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResp
 
 pub async fn post(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     new_rpg_system: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.require_scope(RPGSYSTEMS_ADD)?;
+    claims.require_scope(RPGSYSTEMS_ADD)?;
     let conn = app.open_database_connection()?;
     let created = actions::rpg_system::create(&conn, new_rpg_system.into_inner())?;
     Ok(HttpResponse::Created().json(created))
@@ -31,10 +31,10 @@ pub async fn post(
 
 pub async fn get_one(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     search_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.requires_nothing()?;
+    claims.requires_nothing()?;
     let conn = app.open_database_connection()?;
     let rpg_system = actions::rpg_system::find(&conn, *search_id)?;
     Ok(HttpResponse::Ok().json(rpg_system))
@@ -42,11 +42,11 @@ pub async fn get_one(
 
 pub async fn put(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     write_to_id: web::Path<Id>,
     new_info: web::Json<NewRpgSystem>,
 ) -> MyResponder {
-    authentication.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
+    claims.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     let updated = actions::rpg_system::update(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated))
@@ -54,10 +54,10 @@ pub async fn put(
 
 pub async fn delete(
     app: web::Data<AppState>,
-    authentication: Claims,
+    claims: Claims,
     delete_id: web::Path<Id>,
 ) -> MyResponder {
-    authentication.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
+    claims.require_scope(LIBRARIAN_RPGSYSTEMS_MODIFY)?;
     let conn = app.open_database_connection()?;
     actions::rpg_system::delete(&conn, *delete_id)?;
     Ok(HttpResponse::Ok().finish())
