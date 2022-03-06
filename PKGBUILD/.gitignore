@@ -1,5 +1,6 @@
 *
 !PKGBUILD
+!PKGBUILD-git
 !liberation.service
 !liberation.sysusers
 !liberation.tmpfiles
