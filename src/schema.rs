@@ -66,11 +66,4 @@ joinable!(librarians -> accounts (account_id));
 joinable!(librarians -> guilds (guild_id));
 joinable!(titles -> rpg_systems (rpg_system_by_id));
 
-allow_tables_to_appear_in_same_query!(
-    accounts,
-    books,
-    guilds,
-    librarians,
-    rpg_systems,
-    titles,
-);
+allow_tables_to_appear_in_same_query!(accounts, books, guilds, librarians, rpg_systems, titles,);

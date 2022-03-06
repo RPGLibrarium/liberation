@@ -13,6 +13,12 @@ use serde::Serialize;
 pub type Year = i16;
 pub type Id = i32;
 
+#[derive(Deserialize)]
+pub struct QueryOptions {
+    #[serde(default = "bool::default")] // Defaults to false
+    pub recursive: bool,
+}
+
 #[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug, Clone)]
 #[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
@@ -58,6 +64,31 @@ pub struct NewTitle {
     pub publisher: String,
     pub year: Year,
     pub coverimage: Option<String>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct RecursiveTitle {
+    pub id: Id,
+    pub name: String,
+    pub rpg_system: RpgSystem,
+    pub language: String,
+    pub publisher: String,
+    pub year: Year,
+    pub coverimage: Option<String>,
+}
+
+impl From<(Title, RpgSystem)> for RecursiveTitle {
+    fn from((title, rpg_system): (Title, RpgSystem)) -> Self {
+        RecursiveTitle {
+            id: title.id,
+            name: title.name,
+            rpg_system,
+            language: title.language,
+            publisher: title.publisher,
+            year: title.year,
+            coverimage: title.coverimage,
+        }
+    }
 }
 
 #[derive(Identifiable, Queryable, Deserialize, PartialEq, Serialize, Debug, Clone)]
@@ -128,7 +159,7 @@ pub struct NewGuild {
     pub contact_account_id: Id,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum Owner {
     #[serde(rename = "member")]
@@ -147,12 +178,15 @@ impl From<(Option<Id>, Option<Id>)> for Owner {
     }
 }
 
-impl Into<(Option<Id>, Option<Id>)> for Owner {
-    fn into(self) -> (Option<Id>, Option<Id>) {
-        match self {
-            Self::Member { id } => (Some(id), None),
-            Self::Guild { id } => (None, Some(id)),
-        }
+impl From<Account> for Owner {
+    fn from(account: Account) -> Self {
+        Owner::Member { id: account.id }
+    }
+}
+
+impl From<Guild> for Owner {
+    fn from(guild: Guild) -> Self {
+        Owner::Guild { id: guild.id }
     }
 }
 
@@ -235,6 +269,27 @@ pub struct NewBook {
     pub external_inventory_id: Id,
 }
 
+#[derive(Serialize, Debug, Clone)]
+pub struct RecursiveBook {
+    pub id: Id,
+    pub title: RecursiveTitle,
+    pub owner: Owner,
+    pub quality: String,
+    pub external_inventory_id: Id,
+}
+
+impl From<(Book, RecursiveTitle)> for RecursiveBook {
+    fn from((book, title): (Book, RecursiveTitle)) -> Self {
+        RecursiveBook {
+            id: book.id,
+            title,
+            owner: book.owner,
+            quality: book.quality,
+            external_inventory_id: book.external_inventory_id,
+        }
+    }
+}
+
 /// Allows creation of books, where the owner is derived from the token or endpoint.
 #[derive(Deserialize, Clone)]
 pub struct PostOwnedBook {
@@ -266,7 +321,10 @@ impl AsChangeset for NewBook {
 
     fn as_changeset(self) -> Self::Changeset {
         use crate::schema::books::dsl::*;
-        let (member_id, guild_id) = self.owner.into();
+        let (member_id, guild_id) = match self.owner {
+            Owner::Member { id } => (Some(id), None),
+            Owner::Guild { id } => (None, Some(id)),
+        };
         (
             title_by_id.eq(self.title_id),
             owner_member_by_id.eq(member_id),
