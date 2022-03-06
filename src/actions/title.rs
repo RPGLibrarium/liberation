@@ -38,7 +38,7 @@ pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<Recursive
         .find(search_id)
         .first(conn)
         .map_err(handle_db_errors)?;
-    let rpg_system = actions::rpg_system::find(conn, title.rpg_system_by_id)?;
+    let rpg_system = actions::rpg_system::find(conn, title.rpg_system_id)?;
     Ok((title, rpg_system).into())
 }
 

@@ -71,7 +71,7 @@ pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<Recursive
         .find(search_id)
         .first(conn)
         .map_err(handle_db_errors)?;
-    let title = actions::title::recursive_find(conn, book.title_by_id)?;
+    let title = actions::title::recursive_find(conn, book.id)?;
     Ok(RecursiveBook::from((book, title)))
 }
 

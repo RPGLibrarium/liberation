@@ -61,7 +61,7 @@ pub async fn put(
 
     match actions::account::try_find_by_external_id(&conn, external_id)? {
         Some(old_account) => {
-            let updated = actions::account::update(&conn, old_account.account_id, updated_account)?;
+            let updated = actions::account::update(&conn, old_account.id, updated_account)?;
             Ok(HttpResponse::Ok().json(updated))
         }
         None => {

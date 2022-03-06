@@ -63,7 +63,7 @@ pub fn update(
 
 pub fn deactivate(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
     use crate::schema::accounts::dsl::*;
-    let affected = diesel::update(accounts.find(account.account_id))
+    let affected = diesel::update(accounts.find(account.id))
         .set(active.eq(false))
         .execute(conn)
         .map_err(handle_db_errors)?;
@@ -77,7 +77,7 @@ pub fn deactivate(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
 
 pub fn delete(conn: &MysqlConnection, account: &Account) -> Result<(), UE> {
     use crate::schema::accounts::dsl::*;
-    let affected = diesel::delete(accounts.find(account.account_id))
+    let affected = diesel::delete(accounts.find(account.id))
         .execute(conn)
         .map_err(handle_db_errors)?
         .assert_row_existed()?;

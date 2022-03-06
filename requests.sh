@@ -17,14 +17,14 @@ curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/users/1
 
 ## Collection Management
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/collection
-curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me/collection -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
+curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/me/collection -d '{"title_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/me/collection/1
 curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/me/collection/1
 
 # Librarian
 ## Collection Management
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/guilds/1/collection
-curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/guilds/1/collection -d '{"title_by_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
+curl -H "Authorization: Bearer $TOKEN" -X POST -H 'Content-Type: application/json' localhost:8080/api/v1/guilds/1/collection -d '{"title_id": 623, "quality": "fabulous", "external_inventory_id": 1}'
 curl -H "Authorization: Bearer $TOKEN" -X GET localhost:8080/api/v1/guilds/1/collection/1
 curl -H "Authorization: Bearer $TOKEN" -X DELETE localhost:8080/api/v1/guilds/1/collection/1
 

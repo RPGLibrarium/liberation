@@ -39,8 +39,8 @@ pub fn assert_librarian_for_guild(
     let permission = librarians
         .filter(
             guild_id
-                .eq(guild.guild_id)
-                .and(account_id.eq(account.account_id)),
+                .eq(guild.id)
+                .and(account_id.eq(account.id)),
         )
         .first::<Librarian>(conn)
         .map_err(|e| match e {
@@ -49,8 +49,8 @@ pub fn assert_librarian_for_guild(
             DE::NotFound => UE::YouShallNotPass,
             _ => handle_db_errors(e),
         })?;
-    assert_eq!(permission.account_id, account.account_id);
-    assert_eq!(permission.guild_id, guild.guild_id);
+    assert_eq!(permission.account_id, account.id);
+    assert_eq!(permission.guild_id, guild.id);
     Ok(())
 }
 

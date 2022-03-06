@@ -23,7 +23,8 @@ pub struct QueryOptions {
 #[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
 pub struct RpgSystem {
-    pub rpg_system_id: Id,
+    #[column_name = "rpg_system_id"]
+    pub id: Id,
     pub name: String,
     pub shortname: Option<String>,
 }
@@ -42,9 +43,11 @@ pub struct NewRpgSystem {
 #[primary_key(title_id)]
 #[belongs_to(RpgSystem, foreign_key = "rpg_system_by_id")]
 pub struct Title {
-    pub title_id: Id,
+    #[column_name = "title_id"]
+    pub id: Id,
     pub name: String,
-    pub rpg_system_by_id: Id,
+    #[column_name = "rpg_system_by_id"]
+    pub rpg_system_id: Id,
     pub language: String,
     pub publisher: String,
     pub year: Year,
@@ -55,7 +58,8 @@ pub struct Title {
 #[table_name = "titles"]
 pub struct NewTitle {
     pub name: String,
-    pub rpg_system_by_id: Id,
+    #[column_name = "rpg_system_by_id"]
+    pub rpg_system_id: Id,
     pub language: String,
     pub publisher: String,
     pub year: Year,
@@ -64,7 +68,7 @@ pub struct NewTitle {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct RecursiveTitle {
-    pub title_id: Id,
+    pub id: Id,
     pub name: String,
     pub rpg_system: RpgSystem,
     pub language: String,
@@ -76,7 +80,7 @@ pub struct RecursiveTitle {
 impl From<(Title, RpgSystem)> for RecursiveTitle {
     fn from((title, rpg_system): (Title, RpgSystem)) -> Self {
         RecursiveTitle {
-            title_id: title.title_id,
+            id: title.id,
             name: title.name,
             rpg_system,
             language: title.language,
@@ -91,7 +95,8 @@ impl From<(Title, RpgSystem)> for RecursiveTitle {
 #[table_name = "accounts"]
 #[primary_key(account_id)]
 pub struct Account {
-    pub account_id: Id,
+    #[column_name = "account_id"]
+    pub id: Id,
     pub active: bool,
     pub external_id: String,
     pub full_name: String,
@@ -111,7 +116,7 @@ pub struct User {
 impl From<Account> for User {
     fn from(account: Account) -> Self {
         User {
-            id: account.account_id,
+            id: account.id,
             active: account.active,
             full_name: account.full_name,
         }
@@ -138,7 +143,8 @@ pub struct AccountActive {
 #[table_name = "guilds"]
 #[primary_key(guild_id)]
 pub struct Guild {
-    pub guild_id: Id,
+    #[column_name = "guild_id"]
+    pub id: Id,
     pub name: String,
     pub address: String,
     pub contact_by_account_id: Id,
@@ -149,7 +155,8 @@ pub struct Guild {
 pub struct NewGuild {
     pub name: String,
     pub address: String,
-    pub contact_by_account_id: Id,
+    #[column_name = "contact_by_account_id"]
+    pub contact_account_id: Id,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, Eq, PartialEq)]
@@ -173,15 +180,13 @@ impl From<(Option<Id>, Option<Id>)> for Owner {
 
 impl From<Account> for Owner {
     fn from(account: Account) -> Self {
-        Owner::Member {
-            id: account.account_id,
-        }
+        Owner::Member { id: account.id }
     }
 }
 
 impl From<Guild> for Owner {
     fn from(guild: Guild) -> Self {
-        Owner::Guild { id: guild.guild_id }
+        Owner::Guild { id: guild.id }
     }
 }
 
@@ -229,8 +234,10 @@ impl<'insert> Insertable<books::table> for &'insert Owner {
 #[belongs_to(Account, foreign_key=owner_member_by_id)]
 //#[belongs_to(Guild, foreign_key=owner_guild_by_id)]
 pub struct Book {
-    pub book_id: Id,
-    pub title_by_id: Id,
+    #[column_name = "book_id"]
+    pub id: Id,
+    #[column_name = "title_by_id"]
+    pub title_id: Id,
     pub owner: Owner,
     pub quality: String,
     pub external_inventory_id: Id,
@@ -241,8 +248,8 @@ impl Queryable<books::SqlType, Mysql> for Book {
 
     fn build(row: Self::Row) -> Self {
         Book {
-            book_id: row.0,
-            title_by_id: row.1,
+            id: row.0,
+            title_id: row.1,
             owner: Owner::from((row.2, row.3)),
             quality: row.4,
             external_inventory_id: row.5,
@@ -253,7 +260,8 @@ impl Queryable<books::SqlType, Mysql> for Book {
 #[derive(Insertable, Deserialize, Clone)]
 #[table_name = "books"]
 pub struct NewBook {
-    pub title_by_id: Id,
+    #[column_name = "title_by_id"]
+    pub title_id: Id,
     #[diesel(embed)]
     pub owner: Owner,
     // rentee: MemberOrGuild,
@@ -263,7 +271,7 @@ pub struct NewBook {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct RecursiveBook {
-    pub book_id: Id,
+    pub id: Id,
     pub title: RecursiveTitle,
     pub owner: Owner,
     pub quality: String,
@@ -273,7 +281,7 @@ pub struct RecursiveBook {
 impl From<(Book, RecursiveTitle)> for RecursiveBook {
     fn from((book, title): (Book, RecursiveTitle)) -> Self {
         RecursiveBook {
-            book_id: book.book_id,
+            id: book.id,
             title,
             owner: book.owner,
             quality: book.quality,
@@ -285,7 +293,7 @@ impl From<(Book, RecursiveTitle)> for RecursiveBook {
 /// Allows creation of books, where the owner is derived from the token or endpoint.
 #[derive(Deserialize, Clone)]
 pub struct PostOwnedBook {
-    pub title_by_id: Id,
+    pub title_id: Id,
     pub quality: String,
     pub external_inventory_id: Id,
 }
@@ -293,7 +301,7 @@ pub struct PostOwnedBook {
 impl PostOwnedBook {
     pub fn owned_by(self, owner: Owner) -> NewBook {
         NewBook {
-            title_by_id: self.title_by_id,
+            title_id: self.title_id,
             owner,
             quality: self.quality,
             external_inventory_id: self.external_inventory_id,
@@ -318,7 +326,7 @@ impl AsChangeset for NewBook {
             Owner::Guild { id } => (None, Some(id)),
         };
         (
-            title_by_id.eq(self.title_by_id),
+            title_by_id.eq(self.title_id),
             owner_member_by_id.eq(member_id),
             owner_guild_by_id.eq(guild_id),
             quality.eq(self.quality),
