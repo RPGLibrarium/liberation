@@ -13,6 +13,12 @@ use serde::Serialize;
 pub type Year = i16;
 pub type Id = i32;
 
+#[derive(Deserialize)]
+pub struct QueryOptions {
+    #[serde(default = "bool::default")] // Defaults to false
+    pub recursive: bool,
+}
+
 #[derive(Identifiable, Queryable, PartialEq, Serialize, Deserialize, Debug, Clone)]
 #[table_name = "rpg_systems"]
 #[primary_key(rpg_system_id)]
@@ -54,6 +60,31 @@ pub struct NewTitle {
     pub publisher: String,
     pub year: Year,
     pub coverimage: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+pub struct RecursiveTitle {
+    pub title_id: Id,
+    pub name: String,
+    pub rpg_system: RpgSystem,
+    pub language: String,
+    pub publisher: String,
+    pub year: Year,
+    pub coverimage: Option<String>,
+}
+
+impl From<(Title, RpgSystem)> for RecursiveTitle {
+    fn from((title, rpg_system): (Title, RpgSystem)) -> Self {
+        RecursiveTitle {
+            title_id: title.title_id,
+            name: title.name,
+            rpg_system,
+            language: title.language,
+            publisher: title.publisher,
+            year: title.year,
+            coverimage: title.coverimage,
+        }
+    }
 }
 
 #[derive(Identifiable, Queryable, Deserialize, PartialEq, Serialize, Debug, Clone)]

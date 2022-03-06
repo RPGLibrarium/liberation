@@ -103,6 +103,18 @@ pub fn list_titles(conn: &MysqlConnection) -> Result<Vec<Title>, UE> {
     titles.load::<Title>(conn).map_err(handle_db_errors)
 }
 
+pub fn recursive_list_titles(conn: &MysqlConnection) -> Result<Vec<RecursiveTitle>, UE> {
+    use crate::schema::titles::dsl::*;
+    use crate::schema::rpg_systems::dsl::*;
+    let tuples = titles.inner_join(rpg_systems)
+        .load::<(Title, RpgSystem)>(conn)
+        .map_err(handle_db_errors)?;
+    let recursive = tuples.into_iter()
+        .map(|tuple| RecursiveTitle::from(tuple))
+        .collect();
+    Ok(recursive)
+}
+
 pub fn create_title(conn: &MysqlConnection, new_title: NewTitle) -> Result<Title, UE> {
     use crate::schema::titles::dsl::*;
     let affected = diesel::insert_into(titles)
@@ -122,6 +134,13 @@ pub fn create_title(conn: &MysqlConnection, new_title: NewTitle) -> Result<Title
 pub fn find_title(conn: &MysqlConnection, search_id: Id) -> Result<Title, UE> {
     use crate::schema::titles::dsl::*;
     titles.find(search_id).first(conn).map_err(handle_db_errors)
+}
+
+pub fn recursive_find_title(conn: &MysqlConnection, search_id: Id) -> Result<RecursiveTitle, UE> {
+    use crate::schema::titles::dsl::*;
+    let title: Title = titles.find(search_id).first(conn).map_err(handle_db_errors)?;
+    let rpg_system = find_rpg_system(conn, title.rpg_system_by_id)?;
+    Ok((title, rpg_system).into())
 }
 
 pub fn update_title(

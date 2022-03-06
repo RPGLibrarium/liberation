@@ -3,14 +3,24 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::scopes::*;
 use crate::authentication::Claims;
-use crate::models::{Id, NewTitle};
+use crate::models::{Id, NewTitle, QueryOptions};
 use actix_web::{web, HttpResponse};
 
-pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
+pub async fn get_all(
+    app: web::Data<AppState>,
+    authentication: Claims,
+    query: web::Query<QueryOptions>,
+) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
-    let titles = actions::list_titles(&conn)?;
-    Ok(HttpResponse::Ok().json(titles))
+
+    if (*query).recursive {
+        let titles = actions::recursive_list_titles(&conn)?;
+        Ok(HttpResponse::Ok().json(titles))
+    } else {
+        let titles = actions::list_titles(&conn)?;
+        Ok(HttpResponse::Ok().json(titles))
+    }
 }
 
 pub async fn post(
@@ -28,11 +38,17 @@ pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
     search_id: web::Path<Id>,
+    query: web::Query<QueryOptions>,
 ) -> MyResponder {
     authentication.requires_nothing()?;
     let conn = app.open_database_connection()?;
-    let title = actions::find_title(&conn, *search_id)?;
-    Ok(HttpResponse::Ok().json(title))
+    if (*query).recursive {
+        let title = actions::recursive_find_title(&conn, *search_id)?;
+        Ok(HttpResponse::Ok().json(title))
+    } else {
+        let title = actions::find_title(&conn, *search_id)?;
+        Ok(HttpResponse::Ok().json(title))
+    }
 }
 
 pub async fn put(
