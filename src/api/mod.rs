@@ -1,5 +1,6 @@
 use crate::error::UserFacingError;
 use actix_web::{HttpResponse, web};
+use crate::models::Id;
 
 mod accounts;
 mod books;
@@ -10,6 +11,19 @@ mod titles;
 mod users;
 
 type MyResponder = Result<HttpResponse, UserFacingError>;
+
+pub async fn redirect_collection_to_books(book_id: web::Path<Id>) -> MyResponder {
+    Ok(HttpResponse::PermanentRedirect()
+        .append_header(("Location", format!("../../books/{}", *book_id)))
+        .finish())
+}
+
+pub async fn redirect_guild_to_books(path: web::Path<(Id, Id)>) -> MyResponder {
+    let (_, book_id) = *path;
+    Ok(HttpResponse::PermanentRedirect()
+        .append_header(("Location", format!("../../../books/{}", book_id)))
+        .finish())
+}
 
 // @formatter:off
 #[rustfmt::skip]
@@ -28,8 +42,8 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                     .route(web::post().to(me::collection::post))
                 )
                 .service(web::resource("/{id}")
-                    .route(web::get().to(me::collection::get_one))
-                    .route(web::delete().to(me::collection::delete))
+                    .route(web::get().to(redirect_collection_to_books))
+                    .route(web::delete().to(redirect_collection_to_books))
                 )
             )
             // .service(web::scope("/inventory")
@@ -71,8 +85,8 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
                          .route(web::post().to(guilds::collection::post))
                      )
                      .service(web::resource("/{id}")
-                         .route(web::get().to(guilds::collection::get_one))
-                         .route(web::delete().to(guilds::collection::delete))
+                         .route(web::get().to(redirect_guild_to_books))
+                         .route(web::delete().to(redirect_guild_to_books))
                      )
                  )
             ),

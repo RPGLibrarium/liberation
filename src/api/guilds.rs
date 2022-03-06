@@ -91,39 +91,4 @@ pub mod collection {
         let created_book = actions::book::create_owned_by(&conn, guild, posted_book.into_inner())?;
         Ok(HttpResponse::Created().json(created_book))
     }
-
-    pub async fn get_one(
-        app: web::Data<AppState>,
-        claims: Claims,
-        search_ids: web::Path<(Id, Id)>,
-        query: web::Query<QueryOptions>,
-    ) -> MyResponder {
-        let (guild_id, search_id) = *search_ids;
-
-        claims.require_scope(GUILDS_READ)?;
-        let conn = app.open_database_connection()?;
-        let guild = Owner::from(actions::guild::find(&conn, guild_id)?);
-        actions::authorization::can_read_book_of_owner(&conn, &claims, guild)?;
-        if query.recursive {
-            let book = actions::book::recursive_find_owned_by(&conn, guild, search_id)?;
-            Ok(HttpResponse::Ok().json(book))
-        } else {
-            let book = actions::book::find_owned_by(&conn, guild, search_id)?;
-            Ok(HttpResponse::Ok().json(book))
-        }
-    }
-
-    pub async fn delete(
-        app: web::Data<AppState>,
-        claims: Claims,
-        ids: web::Path<(Id, Id)>,
-    ) -> MyResponder {
-        let (guild_id, delete_id) = *ids;
-        claims.require_scope(GUILDS_COLLECTION_MODIFY)?;
-        let conn = app.open_database_connection()?;
-        let guild = Owner::from(actions::guild::find(&conn, guild_id)?);
-        actions::authorization::can_modify_book_of_owner(&conn, &claims, guild)?;
-        actions::book::delete_owned_by(&conn, guild.into(), delete_id)?;
-        Ok(HttpResponse::Ok().finish())
-    }
 }
