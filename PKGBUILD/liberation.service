@@ -1,0 +1,40 @@
+[Unit]
+Description=Liberation backend
+Wants=network-online.target
+After=network-online.target nss-lookup.target mariadb.service
+[Service]
+Type=simple
+Environment="RUST_LOG=debug"
+Environment="RUST_BACKTRACE=full"
+ExecStart=/usr/bin/liberation -c /etc/liberation/config.toml serve
+
+User=liberation
+ConfigurationDirectory=liberation
+ReadOnlyPaths=/
+ReadWritePaths=/run/mysqld/
+
+# man systemd.exec for infos
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+SystemCallFilter=@system-service
+RestrictNamespaces=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectProc=invisible
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+PrivateUsers=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+ProtectClock=true
+ProtectHostname=true
+[Install]
+WantedBy=multi-user.target

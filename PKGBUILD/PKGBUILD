@@ -1,0 +1,69 @@
+# Maintainer: Yoann Kehler <mail@yoann.de>
+# Contributor: Thibaud Kehler <thibaud.kehler at gmx net>
+pkgname=liberation-git
+pkgver=v0.2.2.r3.g6f9f35c
+pkgrel=1
+pkgdesc="Book sharing web service"
+arch=('x86_64')
+url="https://github.com/RPGLibrarium/liberation"
+license=('MIT' 'Apache')
+depends=()
+makedepends=(
+    'git'
+    'cargo'
+    )
+provides=("${pkgname%-git}")
+conflicts=("${pkgname%-git}")
+backup=("etc/liberation/config.toml")
+source=(
+    "${pkgname%-git}::git+https://github.com/RPGLibrarium/liberation.git"
+    "liberation.service"
+    "liberation.sysusers"
+    "liberation.tmpfiles"
+)
+sha512sums=('SKIP'
+            'fbccd55c96a3fd2ee8ade33180376e656f69d049a8e8f6974a23388e36af5c7c8e5ebad56a22bbc37f27e7e6679f84f1c69e135836c2895b70687fd1d8b5654f'
+            'b07a018de1f8ffe043ab2097b0efcd83fb4625209ba5317e95fc3b0c8fded67d025150342cad5d761b9f82caaa75e13498afe7946e089cd068bb1671a7137096'
+            '52081e01bd77b7bfa576f2fa4b70727e7a4e008a1060bea1ec2e29d7739631100e92cfd8b2afa7c92603a5125bae49fde1dd130e34cc07489b00d168b21fc722')
+
+pkgver() {
+	cd "$srcdir/${pkgname%-git}"
+    # Git, get version from latest tag
+    git describe --long --tags | sed 's/^foo-//;s/\([^-]*-g\)/r\1/;s/-/./g'	
+}
+
+prepare() {
+	cd "$srcdir/${pkgname%-git}"
+    cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+}
+
+build() {
+	cd "$srcdir/${pkgname%-git}"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features
+}
+
+check() {
+	cd "$srcdir/${pkgname%-git}"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen --all-features
+}
+
+package() {
+	cd "$srcdir/${pkgname%-git}"
+    
+    install -Dm0755 -t "$pkgdir/usr/bin/" "target/release/${pkgname%-git}"
+    install -D "config/example.toml" "$pkgdir/etc/${pkgname%-git}/config.toml" 
+
+    install -Dm644 "LICENSE-MIT" "$pkgdir/usr/share/licenses/${pkgname%-git}/LICENSE-MIT"
+    install -Dm644 "README.md" "$pkgdir/usr/share/doc/${pkgname%-git}/README.md"
+    install -Dm644 "config/example.toml" "$pkgdir/usr/share/doc/${pkgname%-git}/examples/config.toml"
+
+    install -dm 755 "${pkgdir}"/usr/lib/{systemd/system,sysusers.d,tmpfiles.d}
+    install -m 644 "../liberation.service" "$pkgdir/usr/lib/systemd/system/${pkgname%-git}.service"
+    # Creates a new system user for the service
+    install -m 644 "../liberation.sysusers" "$pkgdir/usr/lib/sysusers.d/${pkgname%-git}.conf"
+    # Set file permissions
+    install -m 644 "../liberation.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/${pkgname%-git}.conf"
+}
