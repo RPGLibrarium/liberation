@@ -2,7 +2,7 @@
 # Contributor: Thibaud Kehler <thibaud.kehler at gmx net>
 pkgname=liberation
 _latestver=$(curl --silent https://github.com/RPGLibrarium/liberation/releases/latest | grep '/tag/' | sed -E 's/.*tag\/v([^"]+)".*/\1/')
-pkgver=_latestver
+pkgver="$_latestver"
 pkgrel=1
 pkgdesc="Book sharing web service"
 arch=('x86_64')
@@ -18,7 +18,7 @@ makedepends=(
     )
 backup=("etc/liberation/config.toml")
 source=(
-    "${pkgname}::https://github.com/RPGLibrarium/$pkgname/archive/v$_latestver.tar.gz"
+    "${pkgname}.tar.gz::https://github.com/RPGLibrarium/$pkgname/archive/v$_latestver.tar.gz"
     "liberation.service"
     "liberation.sysusers"
     "liberation.tmpfiles"
@@ -29,25 +29,25 @@ sha512sums=('SKIP'
             '52081e01bd77b7bfa576f2fa4b70727e7a4e008a1060bea1ec2e29d7739631100e92cfd8b2afa7c92603a5125bae49fde1dd130e34cc07489b00d168b21fc722')
 
 prepare() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/${pkgname}-$pkgver"
     cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
 
 build() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/${pkgname}-$pkgver"
     export RUSTUP_TOOLCHAIN=stable
     export CARGO_TARGET_DIR=target
     cargo build --frozen --release --all-features
 }
 
 check() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/${pkgname}-$pkgver"
     export RUSTUP_TOOLCHAIN=stable
     cargo test --frozen --all-features
 }
 
 package() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/${pkgname}-$pkgver"
     
     install -Dm0755 -t "$pkgdir/usr/bin/" "target/release/${pkgname}"
     install -D "config/example.toml" "$pkgdir/etc/${pkgname}/config.toml" 
