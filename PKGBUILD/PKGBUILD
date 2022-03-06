@@ -2,7 +2,7 @@
 # Contributor: Thibaud Kehler <thibaud.kehler at gmx net>
 pkgname=liberation
 _latestver=$(curl --silent https://github.com/RPGLibrarium/liberation/releases/latest | grep '/tag/' | sed -E 's/.*tag\/v([^"]+)".*/\1/')
-pkgver=0.2.2
+pkgver=_latestver
 pkgrel=1
 pkgdesc="Book sharing web service"
 arch=('x86_64')
