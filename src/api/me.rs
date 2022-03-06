@@ -14,7 +14,7 @@ pub async fn get(app: web::Data<AppState>, claims: Claims) -> MyResponder {
     let external_id = claims.external_account_id()?;
     let conn = app.open_database_connection()?;
     let account =
-        actions::find_current_registered_account(&conn, external_id)?.assert_registered()?;
+        actions::account::try_find_by_external_id(&conn, external_id)?.assert_registered()?;
     Ok(HttpResponse::Ok().json(account))
 }
 
@@ -34,7 +34,7 @@ pub async fn post(app: web::Data<AppState>, claims: Claims) -> MyResponder {
         email: account_info.email,
     };
 
-    let account = actions::create_account(&conn, new_account)?;
+    let account = actions::account::create(&conn, new_account)?;
     Ok(HttpResponse::Created().json(account))
 }
 
@@ -59,13 +59,13 @@ pub async fn put(
         email: account_info.email,
     };
 
-    match actions::find_current_registered_account(&conn, external_id)? {
+    match actions::account::try_find_by_external_id(&conn, external_id)? {
         Some(old_account) => {
-            let updated = actions::update_account(&conn, old_account.account_id, updated_account)?;
+            let updated = actions::account::update(&conn, old_account.account_id, updated_account)?;
             Ok(HttpResponse::Ok().json(updated))
         }
         None => {
-            let new = actions::create_account(&conn, updated_account)?;
+            let new = actions::account::create(&conn, updated_account)?;
             Ok(HttpResponse::Created().json(new))
         }
     }
@@ -75,23 +75,28 @@ pub async fn put(
 
 pub mod collection {
     use crate::actions;
-    use crate::actions::{find_book_owned_by_account, AccountAssertions};
+    use crate::actions::AccountAssertions;
     use crate::api::MyResponder;
     use crate::app::AppState;
     use crate::authentication::scopes::{COLLECTION_MODIFY, COLLECTION_READ};
     use crate::authentication::Claims;
-    use crate::models::{Id, PostOwnedBook};
+    use crate::models::{Id, PostOwnedBook, QueryOptions};
     use actix_web::{web, HttpResponse};
 
     /// Displays the collection of the authenticated user.
-    pub async fn get_all(app: web::Data<AppState>, claims: Claims) -> MyResponder {
+    pub async fn get_all(app: web::Data<AppState>, claims: Claims, query: web::Query<QueryOptions>) -> MyResponder {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account =
-            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
-        let books = actions::list_books_owned_by_account(&conn, account)?;
-        Ok(HttpResponse::Ok().json(books))
+            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
+        if query.recursive {
+            let books = actions::book::recursive_list_owned_by(&conn, account.into())?;
+            Ok(HttpResponse::Ok().json(books))
+        } else {
+            let books = actions::book::list_owned_by(&conn, account.into())?;
+            Ok(HttpResponse::Ok().json(books))
+        }
     }
 
     pub async fn post(
@@ -103,9 +108,13 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account =
-            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
-        let created_book =
-            actions::create_book_owned_by_account(&conn, account, posted_book.into_inner())?;
+            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
+        let conn_argument = &conn;
+        let created_book = actions::book::create_owned_by(
+            &conn_argument,
+            account.into(),
+            posted_book.into_inner(),
+        )?;
         Ok(HttpResponse::Created().json(created_book))
     }
 
@@ -113,14 +122,20 @@ pub mod collection {
         app: web::Data<AppState>,
         claims: Claims,
         search_id: web::Path<Id>,
+        query: web::Query<QueryOptions>,
     ) -> MyResponder {
         claims.require_scope(COLLECTION_READ)?;
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account =
-            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
-        let book = find_book_owned_by_account(&conn, account, *search_id)?;
-        Ok(HttpResponse::Created().json(book))
+            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
+        if query.recursive {
+            let book = actions::book::recursive_find_owned_by(&conn, account.into(), *search_id)?;
+            Ok(HttpResponse::Created().json(book))
+        } else {
+            let book = actions::book::find_owned_by(&conn, account.into(), *search_id)?;
+            Ok(HttpResponse::Created().json(book))
+        }
     }
 
     pub async fn delete(
@@ -132,8 +147,8 @@ pub mod collection {
         let external_id = claims.external_account_id()?;
         let conn = app.open_database_connection()?;
         let account =
-            actions::find_current_registered_account(&conn, external_id)?.assert_active()?;
-        actions::delete_book_owned_by_account(&conn, &account, *delete_id)?;
+            actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
+        actions::book::delete_owned_by(&conn, account.into(), *delete_id)?;
         Ok(HttpResponse::Ok().finish())
     }
 }

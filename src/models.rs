@@ -152,7 +152,7 @@ pub struct NewGuild {
     pub contact_by_account_id: Id,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum Owner {
     #[serde(rename = "member")]
@@ -171,12 +171,17 @@ impl From<(Option<Id>, Option<Id>)> for Owner {
     }
 }
 
-impl Into<(Option<Id>, Option<Id>)> for Owner {
-    fn into(self) -> (Option<Id>, Option<Id>) {
-        match self {
-            Self::Member { id } => (Some(id), None),
-            Self::Guild { id } => (None, Some(id)),
+impl From<Account> for Owner {
+    fn from(account: Account) -> Self {
+        Owner::Member {
+            id: account.account_id,
         }
+    }
+}
+
+impl From<Guild> for Owner {
+    fn from(guild: Guild) -> Self {
+        Owner::Guild { id: guild.guild_id }
     }
 }
 
@@ -308,7 +313,10 @@ impl AsChangeset for NewBook {
 
     fn as_changeset(self) -> Self::Changeset {
         use crate::schema::books::dsl::*;
-        let (member_id, guild_id) = self.owner.into();
+        let (member_id, guild_id) = match self.owner {
+            Owner::Member { id } => (Some(id), None),
+            Owner::Guild { id } => (None, Some(id)),
+        };
         (
             title_by_id.eq(self.title_by_id),
             owner_member_by_id.eq(member_id),

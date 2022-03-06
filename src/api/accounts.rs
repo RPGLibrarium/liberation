@@ -10,7 +10,7 @@ use log::debug;
 pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
     let conn = app.open_database_connection()?;
-    let account = actions::list_accounts(&conn)?;
+    let account = actions::account::list(&conn)?;
     Ok(HttpResponse::Ok().json(account))
 }
 
@@ -21,7 +21,7 @@ pub async fn get_one(
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_ACCOUNTS_READ)?;
     let conn = app.open_database_connection()?;
-    let account = actions::find_account(&conn, *search_id)?;
+    let account = actions::account::find(&conn, *search_id)?;
     Ok(HttpResponse::Ok().json(account))
 }
 
@@ -33,7 +33,7 @@ pub async fn put(
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
     let conn = app.open_database_connection()?;
-    let updated_account = actions::update_account(&conn, *write_to_id, new_info.into_inner())?;
+    let updated_account = actions::account::update(&conn, *write_to_id, new_info.into_inner())?;
     Ok(HttpResponse::Ok().json(updated_account))
 }
 
@@ -45,12 +45,12 @@ pub async fn delete(
     authentication.require_scope(ARISTOCRAT_ACCOUNTS_MODIFY)?;
     let conn = app.open_database_connection()?;
 
-    let account = actions::find_account(&conn, *delete_id)?;
-    actions::deactivate_account(&conn, &account)?;
+    let account = actions::account::find(&conn, *delete_id)?;
+    actions::account::deactivate(&conn, &account)?;
     debug!("deleting account {:?}", &account);
     // TODO: check all books are returned
     // TODO: delete all librarian roles
-    actions::delete_all_books_owned_by_account(&conn, &account)?;
-    actions::delete_account(&conn, &account)?;
+    actions::book::delete_all_owned_by(&conn, account.clone().into())?;
+    actions::account::delete(&conn, &account)?;
     Ok(HttpResponse::Ok().finish())
 }
