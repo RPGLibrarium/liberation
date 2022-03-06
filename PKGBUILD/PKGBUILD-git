@@ -1,7 +1,7 @@
 # Maintainer: Yoann Kehler <mail@yoann.de>
 # Contributor: Thibaud Kehler <thibaud.kehler at gmx net>
 pkgname=liberation-git
-pkgver=0.2.2
+pkgver=0.2.3
 pkgrel=1
 pkgdesc="Book sharing web service"
 arch=('x86_64')

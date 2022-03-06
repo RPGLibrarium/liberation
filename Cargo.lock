@@ -21,9 +21,9 @@ dependencies = [
 
 [[package]]
 name = "actix-http"
-version = "3.0.1"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5753ed977cb402da7f63445cfcca2f3e514189d516bd0b0d8cd1e24979bfcd3c"
+checksum = "bc14de609ea2ae2467f5a626d403082ce3c5ca248ba26c9ee6f617a5fd096517"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -889,9 +889,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.3.1"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
+checksum = "35e70ee094dc02fd9c13fdad4940090f22dbd6ac7c9e7094a46cf0232a50bc7c"
 
 [[package]]
 name = "itoa"
@@ -964,7 +964,7 @@ checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
 
 [[package]]
 name = "liberation"
-version = "0.2.1"
+version = "0.2.3"
 dependencies = [
  "actix-web",
  "base64",
