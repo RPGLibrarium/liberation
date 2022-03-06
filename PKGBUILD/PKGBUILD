@@ -1,6 +1,7 @@
 # Maintainer: Yoann Kehler <mail@yoann.de>
 # Contributor: Thibaud Kehler <thibaud.kehler at gmx net>
 pkgname=liberation
+_latestver=$(curl --silent https://github.com/RPGLibrarium/liberation/releases/latest | grep '/tag/' | sed -E 's/.*tag\/v([^"]+)".*/\1/')
 pkgver=0.2.2
 pkgrel=1
 pkgdesc="Book sharing web service"
@@ -17,7 +18,7 @@ makedepends=(
     )
 backup=("etc/liberation/config.toml")
 source=(
-    "${pkgname}::git+https://github.com/RPGLibrarium/liberation.git#tag=v${pkgver}"
+    "${pkgname}::https://github.com/RPGLibrarium/$pkgname/archive/v$_latestver.tar.gz"
     "liberation.service"
     "liberation.sysusers"
     "liberation.tmpfiles"
