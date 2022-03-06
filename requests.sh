@@ -1,3 +1,4 @@
+export HOST=localhost:8080
 # Anonymous
 curl -X GET localhost:8080/api/v1/rpgsystems
 curl -X GET localhost:8080/api/v1/titles

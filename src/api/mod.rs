@@ -1,5 +1,5 @@
 use crate::error::UserFacingError;
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse, web};
 
 mod accounts;
 mod books;

@@ -208,6 +208,35 @@ impl Claims {
         }
     }
 
+    pub fn contains_scope(&self, scope: &str) -> bool {
+        if let Claims::Authorized { scopes, .. } = self {
+            scopes.contains(scope)
+        } else {
+            false
+        }
+    }
+
+    /// Returns the available scopes
+    pub fn require_scope_in<'a>(
+        &self,
+        required_scope: Vec<&'a str>,
+    ) -> Result<HashSet<&'a str>, UE> {
+        match self {
+            Claims::Authorized { scopes, .. } => {
+                let matched = required_scope
+                    .into_iter()
+                    .filter(|required| scopes.contains(*required))
+                    .collect::<HashSet<&str>>();
+                if matched.is_empty() {
+                    Err(UE::YouShallNotPass)
+                } else {
+                    Ok(matched)
+                }
+            }
+            Claims::Anonymous => Err(UE::AuthenticationRequired),
+        }
+    }
+
     /// Asserts that authentication was successful and returns the subject.
     pub fn external_account_id(&self) -> Result<ExternalAccountId, UE> {
         match self {
