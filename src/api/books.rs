@@ -3,14 +3,24 @@ use crate::api::MyResponder;
 use crate::app::AppState;
 use crate::authentication::scopes::{ARISTOCRAT_BOOKS_MODIFY, ARISTOCRAT_BOOKS_READ};
 use crate::authentication::Claims;
-use crate::models::{Id, NewBook};
+use crate::models::{Id, NewBook, QueryOptions};
 use actix_web::{web, HttpResponse};
 
-pub async fn get_all(app: web::Data<AppState>, authentication: Claims) -> MyResponder {
+pub async fn get_all(
+    app: web::Data<AppState>,
+    authentication: Claims,
+    query: web::Query<QueryOptions>,
+) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_READ)?;
     let conn = app.open_database_connection()?;
-    let books = actions::list_books(&conn)?;
-    Ok(HttpResponse::Ok().json(books))
+
+    if query.recursive {
+        let books = actions::recursive_list_books(&conn)?;
+        Ok(HttpResponse::Ok().json(books))
+    } else {
+        let books = actions::list_books(&conn)?;
+        Ok(HttpResponse::Ok().json(books))
+    }
 }
 
 pub async fn post(
@@ -28,11 +38,17 @@ pub async fn get_one(
     app: web::Data<AppState>,
     authentication: Claims,
     search_id: web::Path<Id>,
+    query: web::Query<QueryOptions>,
 ) -> MyResponder {
     authentication.require_scope(ARISTOCRAT_BOOKS_READ)?;
     let conn = app.open_database_connection()?;
-    let book = actions::find_book(&conn, *search_id)?;
-    Ok(HttpResponse::Ok().json(book))
+    if query.recursive {
+        let books = actions::recursive_find_book(&conn, *search_id)?;
+        Ok(HttpResponse::Ok().json(books))
+    } else {
+        let book = actions::find_book(&conn, *search_id)?;
+        Ok(HttpResponse::Ok().json(book))
+    }
 }
 
 pub async fn put(

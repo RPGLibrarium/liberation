@@ -62,7 +62,7 @@ pub struct NewTitle {
     pub coverimage: Option<String>,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct RecursiveTitle {
     pub title_id: Id,
     pub name: String,
@@ -254,6 +254,27 @@ pub struct NewBook {
     // rentee: MemberOrGuild,
     pub quality: String,
     pub external_inventory_id: Id,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct RecursiveBook {
+    pub book_id: Id,
+    pub title: RecursiveTitle,
+    pub owner: Owner,
+    pub quality: String,
+    pub external_inventory_id: Id,
+}
+
+impl From<(Book, RecursiveTitle)> for RecursiveBook {
+    fn from((book, title): (Book, RecursiveTitle)) -> Self {
+        RecursiveBook {
+            book_id: book.book_id,
+            title,
+            owner: book.owner,
+            quality: book.quality,
+            external_inventory_id: book.external_inventory_id,
+        }
+    }
 }
 
 /// Allows creation of books, where the owner is derived from the token or endpoint.

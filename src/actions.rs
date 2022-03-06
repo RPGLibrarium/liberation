@@ -104,12 +104,14 @@ pub fn list_titles(conn: &MysqlConnection) -> Result<Vec<Title>, UE> {
 }
 
 pub fn recursive_list_titles(conn: &MysqlConnection) -> Result<Vec<RecursiveTitle>, UE> {
-    use crate::schema::titles::dsl::*;
     use crate::schema::rpg_systems::dsl::*;
-    let tuples = titles.inner_join(rpg_systems)
+    use crate::schema::titles::dsl::*;
+    let tuples = titles
+        .inner_join(rpg_systems)
         .load::<(Title, RpgSystem)>(conn)
         .map_err(handle_db_errors)?;
-    let recursive = tuples.into_iter()
+    let recursive = tuples
+        .into_iter()
         .map(|tuple| RecursiveTitle::from(tuple))
         .collect();
     Ok(recursive)
@@ -138,7 +140,10 @@ pub fn find_title(conn: &MysqlConnection, search_id: Id) -> Result<Title, UE> {
 
 pub fn recursive_find_title(conn: &MysqlConnection, search_id: Id) -> Result<RecursiveTitle, UE> {
     use crate::schema::titles::dsl::*;
-    let title: Title = titles.find(search_id).first(conn).map_err(handle_db_errors)?;
+    let title: Title = titles
+        .find(search_id)
+        .first(conn)
+        .map_err(handle_db_errors)?;
     let rpg_system = find_rpg_system(conn, title.rpg_system_by_id)?;
     Ok((title, rpg_system).into())
 }
@@ -302,6 +307,22 @@ pub fn list_books(conn: &MysqlConnection) -> Result<Vec<Book>, UE> {
     books.load::<Book>(conn).map_err(handle_db_errors)
 }
 
+pub fn recursive_list_books(conn: &MysqlConnection) -> Result<Vec<RecursiveBook>, UE> {
+    use crate::schema::books::dsl::*;
+    use crate::schema::rpg_systems::dsl::*;
+    use crate::schema::titles::dsl::*;
+
+    let tuples = books
+        .inner_join(titles.inner_join(rpg_systems))
+        .load::<(Book, (Title, RpgSystem))>(conn)
+        .map_err(handle_db_errors)?;
+    let recursive = tuples
+        .into_iter()
+        .map(|(book, title)| RecursiveBook::from((book, RecursiveTitle::from(title))))
+        .collect();
+    Ok(recursive)
+}
+
 pub fn create_book(conn: &MysqlConnection, new_book: NewBook) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     let affected = diesel::insert_into(books)
@@ -358,6 +379,16 @@ fn with_inventory_key(
 pub fn find_book(conn: &MysqlConnection, search_id: Id) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
     books.find(search_id).first(conn).map_err(handle_db_errors)
+}
+
+pub fn recursive_find_book(conn: &MysqlConnection, search_id: Id) -> Result<RecursiveBook, UE> {
+    use crate::schema::books::dsl::*;
+    let book: Book = books
+        .find(search_id)
+        .first(conn)
+        .map_err(handle_db_errors)?;
+    let title = recursive_find_title(conn, book.title_by_id)?;
+    Ok(RecursiveBook::from((book, title)))
 }
 
 pub fn update_book(conn: &MysqlConnection, write_to_id: Id, new_info: NewBook) -> Result<Book, UE> {
