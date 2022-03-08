@@ -17,7 +17,7 @@ pub struct RealmMetadata {
 
 impl RealmMetadata {
     pub async fn fetch_new(keycloak_url: &str, realm: &str) -> Result<Self, InternalError> {
-        let meta_data_endpoint = format!("{}/auth/realms/{}", keycloak_url, realm);
+        let meta_data_endpoint = format!("{}/realms/{}", keycloak_url, realm);
         let meta = reqwest::get(meta_data_endpoint)
             .await
             .map_err(InternalError::KeycloakNotReachable)?
