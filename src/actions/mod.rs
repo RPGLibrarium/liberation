@@ -5,7 +5,7 @@ use diesel::result::DatabaseErrorKind::{ForeignKeyViolation, UniqueViolation};
 use diesel::result::{Error as DE, Error};
 use log::debug;
 
-/// Mapping all the errors is anoying.
+/// Mapping all the errors is annoying.
 fn handle_db_errors(e: Error) -> UE {
     match e {
         DE::DatabaseError(UniqueViolation, cause) => {
