@@ -33,7 +33,7 @@ pub struct RpgSystem {
 #[table_name = "rpg_systems"]
 pub struct NewRpgSystem {
     pub name: String,
-    pub shortname: String,
+    pub shortname: Option<String>,
 }
 
 #[derive(
