@@ -1,6 +1,6 @@
 [package]
 name = "liberation"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Yoann Kehler <mail@yoann.de>", "Richard Z. <git+liberation@richardz.de>", "HFranzen"]
 edition = "2021"
 
