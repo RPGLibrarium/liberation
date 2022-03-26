@@ -1,6 +1,6 @@
-use crate::actions::{handle_db_errors, RowsAffectedAssertions};
+use crate::actions::{book, handle_db_errors, RowsAffectedAssertions};
 use crate::error::UserFacingError as UE;
-use crate::models::{Id, NewRpgSystem, RpgSystem};
+use crate::models::{Id, NewRpgSystem, Owner, RpgSystem};
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 
 pub fn list(conn: &MysqlConnection) -> Result<Vec<RpgSystem>, UE> {
@@ -69,4 +69,14 @@ pub fn delete(conn: &MysqlConnection, delete_id: Id) -> Result<(), UE> {
         "delete rpg_system must affect only a single row."
     );
     Ok(())
+}
+
+pub fn list_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<Vec<RpgSystem>, UE> {
+    let mut rpgsystems: Vec<RpgSystem> = book::double_recursive_list_owned_by(conn, owner)?
+        .into_iter()
+        .map(|book| book.title.rpg_system)
+        .collect();
+    rpgsystems.sort_by_key(|rpg_system| rpg_system.id);
+    rpgsystems.dedup();
+    Ok(rpgsystems)
 }
