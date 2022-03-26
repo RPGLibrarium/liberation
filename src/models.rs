@@ -147,7 +147,6 @@ pub struct Guild {
     pub id: Id,
     pub name: String,
     pub address: String,
-    pub contact_by_account_id: Id,
 }
 
 #[derive(Insertable, AsChangeset, Deserialize, Clone)]
@@ -155,8 +154,6 @@ pub struct Guild {
 pub struct NewGuild {
     pub name: String,
     pub address: String,
-    #[column_name = "contact_by_account_id"]
-    pub contact_account_id: Id,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, Eq, PartialEq)]
