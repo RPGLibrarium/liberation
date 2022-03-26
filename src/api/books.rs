@@ -18,7 +18,7 @@ pub async fn get_all(
     claims.require_scope(ARISTOCRAT_BOOKS_READ)?;
     let conn = app.open_database_connection()?;
     if query.recursive {
-        let books = actions::book::recursive_list(&conn)?;
+        let books = actions::book::double_recursive_list(&conn)?;
         Ok(HttpResponse::Ok().json(books))
     } else {
         let books = actions::book::list(&conn)?;

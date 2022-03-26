@@ -66,8 +66,8 @@ pub struct NewTitle {
     pub coverimage: Option<String>,
 }
 
-#[derive(Serialize, Debug, Clone)]
-pub struct RecursiveTitle {
+#[derive(Serialize, PartialEq, Debug, Clone)]
+pub struct TitleWithRpgSystem {
     pub id: Id,
     pub name: String,
     pub rpg_system: RpgSystem,
@@ -77,9 +77,9 @@ pub struct RecursiveTitle {
     pub coverimage: Option<String>,
 }
 
-impl From<(Title, RpgSystem)> for RecursiveTitle {
+impl From<(Title, RpgSystem)> for TitleWithRpgSystem {
     fn from((title, rpg_system): (Title, RpgSystem)) -> Self {
-        RecursiveTitle {
+        TitleWithRpgSystem {
             id: title.id,
             name: title.name,
             rpg_system,
@@ -267,17 +267,38 @@ pub struct NewBook {
 }
 
 #[derive(Serialize, Debug, Clone)]
-pub struct RecursiveBook {
+pub struct BookWithTitleWithRpgSystem {
     pub id: Id,
-    pub title: RecursiveTitle,
+    pub title: TitleWithRpgSystem,
     pub owner: Owner,
     pub quality: String,
     pub external_inventory_id: Id,
 }
 
-impl From<(Book, RecursiveTitle)> for RecursiveBook {
-    fn from((book, title): (Book, RecursiveTitle)) -> Self {
-        RecursiveBook {
+impl From<(Book, TitleWithRpgSystem)> for BookWithTitleWithRpgSystem {
+    fn from((book, title): (Book, TitleWithRpgSystem)) -> Self {
+        BookWithTitleWithRpgSystem {
+            id: book.id,
+            title,
+            owner: book.owner,
+            quality: book.quality,
+            external_inventory_id: book.external_inventory_id,
+        }
+    }
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct BookWithTitle {
+    pub id: Id,
+    pub title: Title,
+    pub owner: Owner,
+    pub quality: String,
+    pub external_inventory_id: Id,
+}
+
+impl From<(Book, Title)> for BookWithTitle {
+    fn from((book, title): (Book, Title)) -> Self {
+        BookWithTitle {
             id: book.id,
             title,
             owner: book.owner,

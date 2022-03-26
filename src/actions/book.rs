@@ -1,7 +1,7 @@
 use crate::actions;
 use crate::actions::{handle_db_errors, RowsAffectedAssertions};
 use crate::error::UserFacingError as UE;
-use crate::models::{Book, Id, NewBook, Owner, PostOwnedBook, RecursiveBook};
+use crate::models::{Book, Id, NewBook, Owner, PostOwnedBook, BookWithTitleWithRpgSystem, BookWithTitle};
 use diesel::mysql::Mysql;
 use diesel::sql_types::Bool;
 use diesel::{
@@ -40,7 +40,8 @@ pub fn list(conn: &MysqlConnection) -> Result<Vec<Book>, UE> {
     books.load::<Book>(conn).map_err(handle_db_errors)
 }
 
-pub use actions::recursive::books::recursive_list;
+pub use actions::recursive::books::double_recursive_list;
+use crate::actions::recursive::books::recursive_list;
 
 pub fn create(conn: &MysqlConnection, new_book: NewBook) -> Result<Book, UE> {
     use crate::schema::books::dsl::*;
@@ -65,14 +66,14 @@ pub fn find(conn: &MysqlConnection, search_id: Id) -> Result<Book, UE> {
     books.find(search_id).first(conn).map_err(handle_db_errors)
 }
 
-pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<RecursiveBook, UE> {
+pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<BookWithTitleWithRpgSystem, UE> {
     use crate::schema::books::dsl::*;
     let book: Book = books
         .find(search_id)
         .first(conn)
         .map_err(handle_db_errors)?;
     let title = actions::title::recursive_find(conn, book.id)?;
-    Ok(RecursiveBook::from((book, title)))
+    Ok(BookWithTitleWithRpgSystem::from((book, title)))
 }
 
 pub fn update(conn: &MysqlConnection, write_to_id: Id, new_info: NewBook) -> Result<Book, UE> {
@@ -113,17 +114,27 @@ pub fn list_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<Vec<Book>, 
         .map_err(handle_db_errors)
 }
 
+pub fn double_recursive_list_owned_by(
+    conn: &MysqlConnection,
+    owner: Owner,
+) -> Result<Vec<BookWithTitleWithRpgSystem>, UE> {
+    // I couldn't find a way to filter inner_joins, hence we filter on application level
+    Ok(double_recursive_list(conn)?
+        .into_iter()
+        .filter(|book| book.owner == owner)
+        .collect())
+}
+
 pub fn recursive_list_owned_by(
     conn: &MysqlConnection,
     owner: Owner,
-) -> Result<Vec<RecursiveBook>, UE> {
+) -> Result<Vec<BookWithTitle>, UE> {
     // I couldn't find a way to filter inner_joins, hence we filter on application level
     Ok(recursive_list(conn)?
         .into_iter()
         .filter(|book| book.owner == owner)
         .collect())
 }
-
 
 pub fn delete_all_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<(), UE> {
     use crate::schema::books::dsl::*;

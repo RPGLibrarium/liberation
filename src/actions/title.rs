@@ -1,7 +1,7 @@
 use crate::actions;
-use crate::actions::{handle_db_errors, RowsAffectedAssertions};
+use crate::actions::{book, handle_db_errors, RowsAffectedAssertions};
 use crate::error::UserFacingError as UE;
-use crate::models::{Id, NewTitle, RecursiveTitle, Title};
+use crate::models::{Id, NewTitle, Owner, Title, TitleWithRpgSystem};
 use diesel::{ExpressionMethods, MysqlConnection, QueryDsl, RunQueryDsl};
 
 pub fn list(conn: &MysqlConnection) -> Result<Vec<Title>, UE> {
@@ -32,7 +32,7 @@ pub fn find(conn: &MysqlConnection, search_id: Id) -> Result<Title, UE> {
     titles.find(search_id).first(conn).map_err(handle_db_errors)
 }
 
-pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<RecursiveTitle, UE> {
+pub fn recursive_find(conn: &MysqlConnection, search_id: Id) -> Result<TitleWithRpgSystem, UE> {
     use crate::schema::titles::dsl::*;
     let title: Title = titles
         .find(search_id)
@@ -63,4 +63,27 @@ pub fn delete(conn: &MysqlConnection, delete_id: Id) -> Result<(), UE> {
         .assert_row_existed()?;
     assert_eq!(affected, 1, "delete titles must affect only a single row.");
     Ok(())
+}
+
+pub fn list_owned_by(conn: &MysqlConnection, owner: Owner) -> Result<Vec<Title>, UE> {
+    let mut titles: Vec<Title> = book::recursive_list_owned_by(conn, owner)?
+        .into_iter()
+        .map(|book| book.title)
+        .collect();
+    titles.sort_by_key(|title| title.id);
+    titles.dedup();
+    Ok(titles)
+}
+
+pub fn recursive_list_owned_by(
+    conn: &MysqlConnection,
+    owner: Owner,
+) -> Result<Vec<TitleWithRpgSystem>, UE> {
+    let mut titles: Vec<TitleWithRpgSystem> = book::double_recursive_list_owned_by(conn, owner)?
+        .into_iter()
+        .map(|book| book.title)
+        .collect();
+    titles.sort_by_key(|title| title.id);
+    titles.dedup();
+    Ok(titles)
 }

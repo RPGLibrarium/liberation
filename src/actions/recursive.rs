@@ -4,10 +4,10 @@
 pub mod titles {
     use crate::actions::handle_db_errors;
     use crate::error::UserFacingError as UE;
-    use crate::models::{RecursiveTitle, RpgSystem, Title};
+    use crate::models::{RpgSystem, Title, TitleWithRpgSystem};
     use diesel::{MysqlConnection, QueryDsl, RunQueryDsl};
 
-    pub fn recursive_list(conn: &MysqlConnection) -> Result<Vec<RecursiveTitle>, UE> {
+    pub fn recursive_list(conn: &MysqlConnection) -> Result<Vec<TitleWithRpgSystem>, UE> {
         use crate::schema::rpg_systems::dsl::*;
         use crate::schema::titles::dsl::*;
         let recursive = titles
@@ -15,7 +15,7 @@ pub mod titles {
             .load::<(Title, RpgSystem)>(conn)
             .map_err(handle_db_errors)?
             .into_iter()
-            .map(RecursiveTitle::from)
+            .map(TitleWithRpgSystem::from)
             .collect();
         Ok(recursive)
     }
@@ -24,10 +24,14 @@ pub mod titles {
 pub mod books {
     use crate::actions::handle_db_errors;
     use crate::error::UserFacingError as UE;
-    use crate::models::{Book, RecursiveBook, RecursiveTitle, RpgSystem, Title};
+    use crate::models::{
+        Book, BookWithTitle, BookWithTitleWithRpgSystem, RpgSystem, Title, TitleWithRpgSystem,
+    };
     use diesel::{MysqlConnection, QueryDsl, RunQueryDsl};
 
-    pub fn recursive_list(conn: &MysqlConnection) -> Result<Vec<RecursiveBook>, UE> {
+    pub fn double_recursive_list(
+        conn: &MysqlConnection,
+    ) -> Result<Vec<BookWithTitleWithRpgSystem>, UE> {
         use crate::schema::books::dsl::*;
         use crate::schema::rpg_systems::dsl::*;
         use crate::schema::titles::dsl::*;
@@ -37,7 +41,23 @@ pub mod books {
             .load::<(Book, (Title, RpgSystem))>(conn)
             .map_err(handle_db_errors)?
             .into_iter()
-            .map(|(book, title)| RecursiveBook::from((book, RecursiveTitle::from(title))))
+            .map(|(book, title)| {
+                BookWithTitleWithRpgSystem::from((book, TitleWithRpgSystem::from(title)))
+            })
+            .collect();
+        Ok(recursive)
+    }
+
+    pub fn recursive_list(conn: &MysqlConnection) -> Result<Vec<BookWithTitle>, UE> {
+        use crate::schema::books::dsl::*;
+        use crate::schema::titles::dsl::*;
+
+        let recursive = books
+            .inner_join(titles)
+            .load::<(Book, Title)>(conn)
+            .map_err(handle_db_errors)?
+            .into_iter()
+            .map(|(book, title)| BookWithTitle::from((book, title)))
             .collect();
         Ok(recursive)
     }

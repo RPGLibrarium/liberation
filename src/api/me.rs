@@ -95,7 +95,7 @@ pub mod collection {
         let account =
             actions::account::try_find_by_external_id(&conn, external_id)?.assert_active()?;
         if query.recursive {
-            let books = actions::book::recursive_list_owned_by(&conn, account.into())?;
+            let books = actions::book::double_recursive_list_owned_by(&conn, account.into())?;
             Ok(HttpResponse::Ok().json(books))
         } else {
             let books = actions::book::list_owned_by(&conn, account.into())?;
