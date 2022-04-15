@@ -15,8 +15,8 @@ insert ignore into inventories (owner_guild_by_id, description)
 select guild_id, "default inventory" from guilds;
 
 alter table books
-  add column if not exists inventory_by_id int after owner_guild_by_id,
-  add constraint fk_inventory foreign key (inventory_by_id) references inventories (inventory_id);
+  add column inventory_by_id int after owner_guild_by_id,
+  add constraint fk_inventory foreign key if not exists (inventory_by_id) references inventories (inventory_id);
 
 update books set inventory_by_id = (
     select inventory_id from inventories
