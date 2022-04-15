@@ -3,6 +3,7 @@ table! {
         account_id -> Integer,
         active -> Bool,
         external_id -> Varchar,
+        username -> Varchar,
         full_name -> Varchar,
         given_name -> Varchar,
         family_name -> Varchar,
@@ -16,6 +17,7 @@ table! {
         title_by_id -> Integer,
         owner_member_by_id -> Nullable<Integer>,
         owner_guild_by_id -> Nullable<Integer>,
+        inventory_by_id -> Integer,
         quality -> Text,
         external_inventory_id -> Integer,
     }
@@ -24,16 +26,18 @@ table! {
 table! {
     guilds (guild_id) {
         guild_id -> Integer,
+        external_id -> Varchar,
         name -> Varchar,
         address -> Text,
     }
 }
 
 table! {
-    librarians (permission_id) {
-        permission_id -> Integer,
-        guild_id -> Integer,
-        account_id -> Integer,
+    inventories (inventory_id) {
+        inventory_id -> Integer,
+        owner_member_by_id -> Nullable<Integer>,
+        owner_guild_by_id -> Nullable<Integer>,
+        description -> Text,
     }
 }
 
@@ -59,16 +63,17 @@ table! {
 
 joinable!(books -> accounts (owner_member_by_id));
 joinable!(books -> guilds (owner_guild_by_id));
+joinable!(books -> inventories (inventory_by_id));
 joinable!(books -> titles (title_by_id));
-joinable!(librarians -> accounts (account_id));
-joinable!(librarians -> guilds (guild_id));
+joinable!(inventories -> accounts (owner_member_by_id));
+joinable!(inventories -> guilds (owner_guild_by_id));
 joinable!(titles -> rpg_systems (rpg_system_by_id));
 
 allow_tables_to_appear_in_same_query!(
     accounts,
     books,
     guilds,
-    librarians,
+    inventories,
     rpg_systems,
     titles,
 );
