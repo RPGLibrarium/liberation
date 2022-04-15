@@ -1,0 +1,1 @@
+-- it's better to keep consistent constraint names even when downgrading
