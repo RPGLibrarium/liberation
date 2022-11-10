@@ -1032,7 +1032,7 @@ checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
 
 [[package]]
 name = "liberation"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "actix-web",
  "base64",
